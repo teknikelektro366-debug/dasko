@@ -15,18 +15,18 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// Public routes
+// Public routes - Direct access to dashboard (no login required for now)
 Route::get('/', function () {
-    return redirect()->route('login');
+    return redirect()->route('dashboard');
 });
 
-// Authentication routes
-Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [LoginController::class, 'login']);
-Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+// Authentication routes (disabled for now)
+// Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
+// Route::post('/login', [LoginController::class, 'login']);
+// Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
-// Protected routes (require authentication)
-Route::middleware(['auth'])->group(function () {
+// Public routes (no authentication required for now)
+// Route::middleware(['auth'])->group(function () {
     
     // Main Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -45,8 +45,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/reports/device', [App\Http\Controllers\ReportController::class, 'deviceReport'])->name('reports.device');
     Route::post('/reports/efficiency', [App\Http\Controllers\ReportController::class, 'efficiencyReport'])->name('reports.efficiency');
     
-    // Admin routes (require admin role)
-    Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Admin routes (no admin middleware for now)
+    // Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::prefix('admin')->name('admin.')->group(function () {
         
         // Admin Dashboard
         Route::get('/', [AdminController::class, 'index'])->name('dashboard');
@@ -94,4 +95,4 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/logs', [AdminController::class, 'logs'])->name('logs');
         Route::post('/logs/clear', [AdminController::class, 'clearLogs'])->name('logs.clear');
     });
-});
+// });

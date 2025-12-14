@@ -32,8 +32,8 @@ Route::prefix('arduino')->name('arduino.')->group(function () {
     Route::get('/status', [ArduinoController::class, 'getSystemStatus'])->name('status');
 });
 
-// Protected API routes (require authentication)
-Route::middleware(['auth:sanctum'])->group(function () {
+// API routes (no authentication required for now)
+// Route::middleware(['auth:sanctum'])->group(function () {
     
     // Dashboard API endpoints
     Route::get('/dashboard/stats', [ArduinoController::class, 'getDashboardStats'])->name('api.dashboard.stats');
@@ -50,4 +50,4 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // AC automation API
     Route::post('/ac/manual-control', [ArduinoController::class, 'manualACControl'])->name('api.ac.manual');
     Route::post('/ac/automation/toggle', [ArduinoController::class, 'toggleACAutomation'])->name('api.ac.toggle');
-});
+// });

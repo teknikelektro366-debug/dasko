@@ -18,6 +18,8 @@ class DashboardController extends Controller
     public function __construct(ArduinoService $arduinoService)
     {
         $this->arduinoService = $arduinoService;
+        // Remove auth middleware for now
+        // $this->middleware('auth');
     }
 
     public function index()
@@ -42,7 +44,7 @@ class DashboardController extends Controller
         // Get energy saving status
         $energySavingStatus = $this->getEnergySavingStatus();
 
-        return view('dashboard.index', compact(
+        return view('dashboard', compact(
             'sensorData',
             'devices',
             'todayEnergy',

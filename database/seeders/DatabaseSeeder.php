@@ -15,11 +15,25 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
+        // Create admin user
         User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+            'name' => 'Admin User',
+            'email' => 'admin@smartenergy.lab',
+            'role' => 'admin',
+            'is_active' => true,
+        ]);
+
+        // Create operator user
+        User::factory()->create([
+            'name' => 'Operator User',
+            'email' => 'operator@smartenergy.lab',
+            'role' => 'operator',
+            'is_active' => true,
+        ]);
+
+        // Seed dummy data for devices, sensors, etc.
+        $this->call([
+            DummyDataSeeder::class,
         ]);
     }
 }
