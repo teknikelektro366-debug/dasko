@@ -35,6 +35,13 @@ function toggleSidebar() {
     }
 }
 
+/* ===== GLOBAL VARIABLES ===== */
+// Working days configuration
+let workingDaysEnabled = true;
+
+// History data
+let historyData = JSON.parse(localStorage.getItem('energyHistory')) || [];
+
 /* ===== SIMPLE WAKTU REALTIME WIB ===== */
 function updateWIB() {
     const now = new Date();
@@ -128,11 +135,7 @@ Object.keys(deviceData).forEach(deviceId => {
     };
 });
 
-let historyData = JSON.parse(localStorage.getItem('energyHistory')) || [];
-
 // Cek apakah dalam jam kerja (7 AM - 5 PM) dan hari kerja (Senin-Jumat)
-let workingDaysEnabled = true;
-
 function isWorkingDay() {
     if (!workingDaysEnabled) return true; // Jika disabled, anggap setiap hari adalah hari kerja
     

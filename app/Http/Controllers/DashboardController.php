@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Device;
 use App\Models\SensorReading;
+use App\Models\SensorData;
 use App\Models\EnergyLog;
 use App\Models\ACAutomationRule;
 use App\Services\ArduinoService;
@@ -24,7 +25,7 @@ class DashboardController extends Controller
 
     public function index()
     {
-        // Get latest sensor readings
+        // Get latest sensor data from database
         $sensorData = $this->getLatestSensorData();
         
         // Get device status
@@ -44,13 +45,30 @@ class DashboardController extends Controller
         // Get energy saving status
         $energySavingStatus = $this->getEnergySavingStatus();
 
+        // Get daily statistics
+        $dailyStats = SensorData::getDailyStats();
+
+        // Get total records count
+        $totalRecords = SensorData::count();
+
+        // Get recent data for frequency calculation
+        $recentData = SensorData::where('created_at', '>=', now()->subMinutes(10))
+                                ->orderBy('created_at', 'desc')
+                                ->limit(5)
+                                ->get();
+        
+        $updateFrequency = $this->calculateUpdateFrequency($recentData);
+
         return view('dashboard', compact(
             'sensorData',
             'devices',
             'todayEnergy',
             'acRules',
             'workingHoursStatus',
-            'energySavingStatus'
+            'energySavingStatus',
+            'dailyStats',
+            'totalRecords',
+            'updateFrequency'
         ));
     }
 
@@ -156,28 +174,59 @@ class DashboardController extends Controller
     private function getLatestSensorData()
     {
         return Cache::remember('latest_sensor_data', 30, function () {
-            $temperature = SensorReading::byType(SensorReading::TYPE_TEMPERATURE)
-                ->latest()
-                ->first();
-                
-            $humidity = SensorReading::byType(SensorReading::TYPE_HUMIDITY)
-                ->latest()
-                ->first();
-                
-            $light = SensorReading::byType(SensorReading::TYPE_LIGHT)
-                ->latest()
-                ->first();
-                
-            $peopleCount = SensorReading::byType(SensorReading::TYPE_PEOPLE_COUNT)
-                ->latest()
-                ->first();
+            $latestData = SensorData::latest()->first();
+            
+            if (!$latestData) {
+                // Return default values if no data
+                return [
+                    'temperature' => 27.0,
+                    'humidity' => 65.0,
+                    'light_intensity' => 500,
+                    'people_count' => 0,
+                    'ac_status' => 'OFF',
+                    'set_temperature' => null,
+                    'proximity_in' => false,
+                    'proximity_out' => false,
+                    'wifi_rssi' => null,
+                    'last_updated' => now(),
+                    'device_id' => 'ESP32_Smart_Energy',
+                    'location' => 'Lab Teknik Tegangan Tinggi',
+                    'status' => 'offline',
+                    'data_age_minutes' => 0,
+                    'connection_status' => 'offline'
+                ];
+            }
+
+            $dataAgeMinutes = $latestData->created_at->diffInMinutes(now());
+            $connectionStatus = $dataAgeMinutes <= 2 ? 'online' : 'offline';
 
             return [
-                'temperature' => $temperature ? $temperature->value : 27.0,
-                'humidity' => $humidity ? $humidity->value : 65.0,
-                'light_intensity' => $light ? $light->value : 500,
-                'people_count' => $peopleCount ? $peopleCount->value : 0,
-                'last_updated' => $temperature ? $temperature->reading_time : now()
+                'id' => $latestData->id,
+                'temperature' => $latestData->room_temperature ?? 27.0,
+                'humidity' => $latestData->humidity ?? 65.0,
+                'light_intensity' => $latestData->light_level ?? 500,
+                'people_count' => $latestData->people_count ?? 0,
+                'ac_status' => $latestData->ac_status ?? 'OFF',
+                'set_temperature' => $latestData->set_temperature,
+                'proximity_in' => $latestData->proximity_in ?? false,
+                'proximity_out' => $latestData->proximity_out ?? false,
+                'wifi_rssi' => $latestData->wifi_rssi,
+                'last_updated' => $latestData->created_at,
+                'device_id' => $latestData->device_id,
+                'location' => $latestData->location,
+                'status' => $latestData->status ?? 'active',
+                'data_age_minutes' => $dataAgeMinutes,
+                'connection_status' => $connectionStatus,
+                'formatted' => [
+                    'temperature' => $latestData->formatted_temperature ?? $latestData->room_temperature . '°C',
+                    'humidity' => $latestData->formatted_humidity ?? $latestData->humidity . '%',
+                    'light' => $latestData->formatted_light ?? $latestData->light_level . ' lux',
+                    'wifi' => $latestData->formatted_wifi ?? $latestData->wifi_rssi . ' dBm'
+                ],
+                'time_ago' => $latestData->time_ago ?? $latestData->created_at->diffForHumans(),
+                'last_update_time' => $latestData->created_at->format('H:i:s'),
+                'last_update_date' => $latestData->created_at->format('d/m/Y'),
+                'wifi_quality' => $this->getWifiQuality($latestData->wifi_rssi)
             ];
         });
     }
@@ -239,5 +288,30 @@ class DashboardController extends Controller
             'outdoor_temp' => $sensorData['temperature'],
             'timestamp' => $sensorData['last_updated']
         ];
+    }
+
+    private function getWifiQuality($rssi)
+    {
+        if (!$rssi) return 'Unknown';
+        if ($rssi >= -30) return 'Excellent';
+        if ($rssi >= -50) return 'Good';
+        if ($rssi >= -60) return 'Fair';
+        if ($rssi >= -70) return 'Weak';
+        return 'Very Weak';
+    }
+
+    private function calculateUpdateFrequency($recentData)
+    {
+        if ($recentData->count() < 2) {
+            return null;
+        }
+
+        $intervals = [];
+        for ($i = 0; $i < $recentData->count() - 1; $i++) {
+            $interval = $recentData[$i]->created_at->diffInSeconds($recentData[$i + 1]->created_at);
+            $intervals[] = $interval;
+        }
+
+        return round(array_sum($intervals) / count($intervals), 1);
     }
 }

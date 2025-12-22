@@ -1,53 +1,66 @@
 <?php
 
-use App\Http\Controllers\Api\ArduinoController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\SensorDataController;
+use App\Http\Controllers\Api\AcControlController;
 
 /*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
+|
+| Here is where you can register API routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned the "api" middleware group. Make something great!
+|
 */
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// Arduino API routes (no authentication required for Arduino device)
-Route::prefix('arduino')->name('arduino.')->group(function () {
+// API untuk Arduino ESP32 - Tidak perlu authentication
+Route::prefix('sensor')->group(function () {
+    // Endpoint untuk Arduino mengirim data
+    Route::post('/data', [SensorDataController::class, 'store']);
     
-    // Sensor data endpoints
-    Route::post('/sensor-data', [ArduinoController::class, 'receiveSensorData'])->name('sensor-data');
-    Route::get('/sensor-data', [ArduinoController::class, 'getSensorData'])->name('get-sensor-data');
+    // Endpoint untuk mendapatkan data terbaru
+    Route::get('/latest', [SensorDataController::class, 'latest']);
     
-    // Device control endpoints
-    Route::post('/control', [ArduinoController::class, 'controlDevice'])->name('control');
+    // Endpoint untuk data chart
+    Route::get('/chart', [SensorDataController::class, 'chartData']);
     
-    // AC automation endpoints
-    Route::get('/ac-automation', [ArduinoController::class, 'getACAutomation'])->name('ac-automation');
-    Route::post('/ac-automation', [ArduinoController::class, 'updateACAutomation'])->name('update-ac-automation');
+    // Endpoint untuk statistik harian
+    Route::get('/stats', [SensorDataController::class, 'dailyStats']);
     
-    // System status
-    Route::get('/status', [ArduinoController::class, 'getSystemStatus'])->name('status');
+    // Endpoint untuk history data
+    Route::get('/history', [SensorDataController::class, 'history']);
+    
+    // Endpoint untuk cleanup data lama
+    Route::post('/cleanup', [SensorDataController::class, 'cleanup']);
 });
 
-// API routes (no authentication required for now)
-// Route::middleware(['auth:sanctum'])->group(function () {
+// API untuk dashboard realtime
+Route::prefix('dashboard')->group(function () {
+    // Get data realtime untuk dashboard
+    Route::get('/realtime', [SensorDataController::class, 'latest']);
     
-    // Dashboard API endpoints
-    Route::get('/dashboard/stats', [ArduinoController::class, 'getDashboardStats'])->name('api.dashboard.stats');
-    Route::get('/dashboard/real-time', [ArduinoController::class, 'getRealTimeData'])->name('api.dashboard.real-time');
+    // Get chart data untuk dashboard
+    Route::get('/chart/{hours?}', [SensorDataController::class, 'chartData']);
     
-    // Device management API
-    Route::post('/devices/{device}/control', [ArduinoController::class, 'controlDevice'])->name('api.devices.control');
-    Route::get('/devices/status', [ArduinoController::class, 'getDevicesStatus'])->name('api.devices.status');
+    // Get daily statistics
+    Route::get('/stats/daily', [SensorDataController::class, 'dailyStats']);
+});
+
+// API untuk kontrol AC
+Route::prefix('ac')->group(function () {
+    // Arduino endpoints - untuk mendapatkan perintah kontrol
+    Route::get('/control', [AcControlController::class, 'getControl']);
     
-    // Energy monitoring API
-    Route::get('/energy/current', [ArduinoController::class, 'getCurrentEnergyUsage'])->name('api.energy.current');
-    Route::get('/energy/history', [ArduinoController::class, 'getEnergyHistory'])->name('api.energy.history');
-    
-    // AC automation API
-    Route::post('/ac/manual-control', [ArduinoController::class, 'manualACControl'])->name('api.ac.manual');
-    Route::post('/ac/automation/toggle', [ArduinoController::class, 'toggleACAutomation'])->name('api.ac.toggle');
-// });
+    // Dashboard endpoints - untuk mengatur kontrol AC
+    Route::post('/control', [AcControlController::class, 'setControl']);
+    Route::post('/emergency-stop', [AcControlController::class, 'emergencyStop']);
+    Route::post('/auto-mode', [AcControlController::class, 'autoMode']);
+    Route::get('/history', [AcControlController::class, 'history']);
+});
