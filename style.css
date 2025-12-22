@@ -1,14 +1,66 @@
-/* ===== Global Gen Z Styling ===== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+/* ===== Enhanced Modern Styling ===== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+    /* Color Palette */
+    --primary-blue: #4299e1;
+    --primary-blue-dark: #3182ce;
+    --primary-blue-light: #63b3ed;
+    --accent-cyan: #00d4ff;
+    --accent-purple: #8b5cf6;
+    --success-green: #10b981;
+    --warning-orange: #f59e0b;
+    --error-red: #ef4444;
+    
+    /* Background Colors */
+    --bg-dark-primary: #0f172a;
+    --bg-dark-secondary: #1e293b;
+    --bg-dark-tertiary: #334155;
+    --bg-light-primary: #ffffff;
+    --bg-light-secondary: #f8fafc;
+    --bg-light-tertiary: #e2e8f0;
+    
+    /* Text Colors */
+    --text-dark-primary: #f1f5f9;
+    --text-dark-secondary: #cbd5e1;
+    --text-light-primary: #1e293b;
+    --text-light-secondary: #475569;
+    
+    /* Glass Effect */
+    --glass-bg: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.2);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    
+    /* Animations */
+    --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Spacing */
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+    
+    /* Border Radius */
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+    --radius-2xl: 2rem;
+}
 
 * {
     box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 body {
     font-family: 'Inter', 'Space Grotesk', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    margin: 0;
-    background: linear-gradient(135deg, #1a1a1a 0%, #2d1b2e 30%, #1f1f1f 70%, #0f0f0f 100%);
+    background: linear-gradient(135deg, var(--bg-dark-primary) 0%, #1a202c 30%, var(--bg-dark-secondary) 70%, var(--bg-dark-primary) 100%);
     background-attachment: fixed;
     display: flex;
     min-height: 100vh;
@@ -17,13 +69,73 @@ body {
     font-optical-sizing: auto;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: all 0.3s ease;
+    transition: all var(--transition-normal);
+    color: var(--text-dark-primary);
+    overflow-x: hidden;
 }
 
 /* ===== Light Mode Enhanced ===== */
 body.light-mode {
-    background: linear-gradient(135deg, #f7fafc 0%, #fdf2f8 30%, #f1f5f9 70%, #ffffff 100%);
-    color: #2d3748;
+    background: linear-gradient(135deg, var(--bg-light-primary) 0%, #fdf2f8 30%, var(--bg-light-secondary) 70%, var(--bg-light-primary) 100%);
+    color: var(--text-light-primary);
+}
+
+/* ===== Enhanced Scrollbar ===== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--glass-bg);
+    border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-light));
+    border-radius: var(--radius-sm);
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, var(--primary-blue-dark), var(--primary-blue));
+    background-clip: content-box;
+}
+
+/* ===== Enhanced Focus States ===== */
+*:focus {
+    outline: 2px solid var(--primary-blue);
+    outline-offset: 2px;
+}
+
+button:focus,
+input:focus,
+select:focus {
+    outline: 2px solid var(--primary-blue);
+    outline-offset: 2px;
+}
+
+/* ===== Loading Animation ===== */
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.loading {
+    position: relative;
+    overflow: hidden;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    animation: shimmer 1.5s infinite;
 }
 
 body.light-mode .sidebar {
@@ -226,20 +338,36 @@ body.light-mode .notification {
     color: #2d3748;
 }
 
-/* ===== Sidebar Gen Z Style Enhanced ===== */
+/* ===== Enhanced Sidebar ===== */
 .sidebar {
-    width: 250px;
-    background: rgba(255, 255, 255, 0.08);
+    width: 280px;
+    background: var(--glass-bg);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
-    border-right: 2px solid rgba(144, 205, 244, 0.2);
-    color: #fff;
+    border-right: 1px solid var(--glass-border);
+    color: var(--text-dark-primary);
     padding: 0;
     height: 100vh;
     overflow-y: auto;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(144, 205, 244, 0.1);
+    box-shadow: var(--glass-shadow);
     position: relative;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-slow);
+    z-index: 100;
+}
+
+.sidebar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+        rgba(66, 153, 225, 0.05) 0%, 
+        rgba(139, 92, 246, 0.03) 50%, 
+        rgba(16, 185, 129, 0.02) 100%);
+    pointer-events: none;
+    z-index: -1;
 }
 
 .sidebar.collapsed {
