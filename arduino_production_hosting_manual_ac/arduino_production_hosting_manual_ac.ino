@@ -495,69 +495,128 @@ void updateTFT(String acStatus, int setSuhu, float suhuRuang) {
   }
 }
 
-// ================= PROXIMITY SENSOR =================
+// ================= PROXIMITY SENSOR - SIMPLIFIED AND FIXED =================
 void bacaProximity() {
   bool inNow  = digitalRead(PROX_IN);
   bool outNow = digitalRead(PROX_OUT);
   unsigned long now = millis();
   
+  // Update current proximity status (LOW = detected with INPUT_PULLUP)
   currentData.proximity1 = (inNow == LOW);
   currentData.proximity2 = (outNow == LOW);
   
+  // Debug status sensor setiap 10 detik
+  static unsigned long lastDebugPrint = 0;
+  if (now - lastDebugPrint > 10000) {
+    Serial.print("Proximity Debug - IN: ");
+    Serial.print(inNow == LOW ? "DETECTED" : "CLEAR");
+    Serial.print(" (");
+    Serial.print(inNow);
+    Serial.print(") | OUT: ");
+    Serial.print(outNow == LOW ? "DETECTED" : "CLEAR");
+    Serial.print(" (");
+    Serial.print(outNow);
+    Serial.print(") | Total: ");
+    Serial.println(jumlahOrang);
+    lastDebugPrint = now;
+  }
+  
+  // Cooldown untuk mencegah deteksi ganda
   if (now - lastPersonDetected < PERSON_COOLDOWN) {
     return;
   }
   
-  static unsigned long lastInTrigger = 0;
-  static unsigned long lastOutTrigger = 0;
+  // Deteksi perubahan state dengan debouncing
+  static unsigned long lastInChange = 0;
+  static unsigned long lastOutChange = 0;
+  static bool lastInState = HIGH;
+  static bool lastOutState = HIGH;
   
-  if (lastIn == HIGH && inNow == LOW && inTime == 0) {
-    if (now - lastInTrigger > 200) {
-      inTime = now;
-      lastInTrigger = now;
-    }
+  // Debouncing untuk sensor IN
+  if (inNow != lastInState) {
+    lastInChange = now;
+    lastInState = inNow;
   }
   
-  if (lastOut == HIGH && outNow == LOW && outTime == 0) {
-    if (now - lastOutTrigger > 200) {
-      outTime = now;
-      lastOutTrigger = now;
-    }
+  // Debouncing untuk sensor OUT  
+  if (outNow != lastOutState) {
+    lastOutChange = now;
+    lastOutState = outNow;
   }
   
-  // MASUK: IN dulu, baru OUT
+  // Deteksi falling edge (HIGH -> LOW) dengan debouncing 200ms
+  if (lastIn == HIGH && inNow == LOW && inTime == 0 && (now - lastInChange > 200)) {
+    inTime = now;
+    Serial.println("✓ Sensor IN activated");
+  }
+  
+  if (lastOut == HIGH && outNow == LOW && outTime == 0 && (now - lastOutChange > 200)) {
+    outTime = now;
+    Serial.println("✓ Sensor OUT activated");
+  }
+  
+  // MASUK: IN dulu, baru OUT (dalam waktu yang wajar)
   if (inTime > 0 && outTime > 0 && inTime < outTime) {
     unsigned long interval = outTime - inTime;
-    if (interval < MAX_INTERVAL && interval > 50) {
-      jumlahOrang++;
-      lastPersonDetected = now;
-      Serial.println(">>> MASUK! Total: " + String(jumlahOrang));
+    Serial.print("Checking MASUK - Interval: ");
+    Serial.print(interval);
+    Serial.println(" ms");
+    
+    if (interval < MAX_INTERVAL && interval > 100) {
+      if (jumlahOrang < 20) {  // Batas maksimal 20 orang
+        jumlahOrang++;
+        lastPersonDetected = now;
+        Serial.print(">>> ORANG MASUK! Total: ");
+        Serial.println(jumlahOrang);
+      } else {
+        Serial.println("⚠ Ruangan sudah penuh (20 orang)");
+      }
+    } else {
+      Serial.println("❌ Interval tidak valid untuk MASUK");
     }
     inTime = 0;
     outTime = 0;
   }
   
-  // KELUAR: OUT dulu, baru IN
+  // KELUAR: OUT dulu, baru IN (dalam waktu yang wajar)
   if (inTime > 0 && outTime > 0 && outTime < inTime) {
     unsigned long interval = inTime - outTime;
-    if (interval < MAX_INTERVAL && interval > 50 && jumlahOrang > 0) {
+    Serial.print("Checking KELUAR - Interval: ");
+    Serial.print(interval);
+    Serial.println(" ms");
+    
+    if (interval < MAX_INTERVAL && interval > 100 && jumlahOrang > 0) {
       jumlahOrang--;
       lastPersonDetected = now;
-      Serial.println("<<< KELUAR! Total: " + String(jumlahOrang));
+      Serial.print("<<< ORANG KELUAR! Total: ");
+      Serial.println(jumlahOrang);
+    } else if (jumlahOrang == 0) {
+      Serial.println("⚠ Tidak ada orang untuk dikurangi");
+    } else {
+      Serial.println("❌ Interval tidak valid untuk KELUAR");
     }
     inTime = 0;
     outTime = 0;
   }
   
-  // Reset dengan timeout
+  // Reset dengan timeout yang lebih pendek
   if (inTime > 0 && outTime == 0 && (now - inTime) > TIMEOUT) {
+    Serial.println("⏰ Timeout reset IN sensor");
     inTime = 0;
   }
   if (outTime > 0 && inTime == 0 && (now - outTime) > TIMEOUT) {
+    Serial.println("⏰ Timeout reset OUT sensor");
     outTime = 0;
   }
   
-  jumlahOrang = constrain(jumlahOrang, 0, 50);
+  // Reset jika kedua sensor aktif terlalu lama (kemungkinan error)
+  if (inTime > 0 && outTime > 0 && (now - min(inTime, outTime)) > (TIMEOUT * 2)) {
+    Serial.println("⏰ Force reset both sensors (too long active)");
+    inTime = 0;
+    outTime = 0;
+  }
+  
+  jumlahOrang = constrain(jumlahOrang, 0, 20);
   
   lastIn = inNow;
   lastOut = outNow;
@@ -626,7 +685,7 @@ void kontrolAC(String &status, int &temp) {
       temp = 22;
       status = "2 AC ON";
     }
-    else {
+    else if (jumlahOrang <= 20) {  // Updated for max 20 people
       ac1ON = true;
       ac2ON = true;
       targetTemp1 = 20;
@@ -702,9 +761,9 @@ void setup() {
   Serial.println("  Manual AC Control: Supported");
   Serial.println("================================");
   
-  // Initialize pins
-  pinMode(PROX_IN, INPUT);
-  pinMode(PROX_OUT, INPUT);
+  // Initialize pins dengan pull-up untuk proximity sensor
+  pinMode(PROX_IN, INPUT_PULLUP);   // Coba dengan pull-up internal
+  pinMode(PROX_OUT, INPUT_PULLUP);  // Coba dengan pull-up internal
   pinMode(LDR_PIN, INPUT);
   
   // Initialize sensors
@@ -732,11 +791,70 @@ void setup() {
   Serial.println("- Manual AC control via web dashboard");
   Serial.println("- Auto mode fallback");
   Serial.println("- Control expiry support");
+  Serial.println("- Max 20 people capacity");
+  Serial.println("\nSerial Commands:");
+  Serial.println("- 'reset' or 'r' - Reset people count");
+  Serial.println("- 'test' or 't' - Show sensor status");
+  Serial.println("- 'set X' - Set people count to X");
+  Serial.println("- 'help' or 'h' - Show commands");
+  
+  // Test proximity sensors
+  Serial.println("\n=== PROXIMITY SENSOR TEST ===");
+  Serial.print("Pin 32 (IN) - Raw: "); Serial.print(digitalRead(PROX_IN));
+  Serial.print(" | Active when LOW: "); Serial.println(digitalRead(PROX_IN) == LOW ? "DETECTED" : "CLEAR");
+  Serial.print("Pin 33 (OUT) - Raw: "); Serial.print(digitalRead(PROX_OUT));
+  Serial.print(" | Active when LOW: "); Serial.println(digitalRead(PROX_OUT) == LOW ? "DETECTED" : "CLEAR");
+  Serial.println("Configuration: INPUT_PULLUP (HIGH=clear, LOW=detected)");
+  Serial.println("Max people: 20");
+  Serial.println("Detection sequence: IN->OUT = enter, OUT->IN = exit");
+  Serial.println("==============================");
   Serial.println("================================\n");
 }
 
 // ================= MAIN LOOP =================
 void loop() {
+  // Check for serial commands (for debugging/manual control)
+  if (Serial.available()) {
+    String command = Serial.readStringUntil('\n');
+    command.trim();
+    command.toLowerCase();
+    
+    if (command == "reset" || command == "r") {
+      jumlahOrang = 0;
+      inTime = 0;
+      outTime = 0;
+      lastPersonDetected = 0;
+      Serial.println("✓ Manual reset - People count set to 0");
+    }
+    else if (command == "test" || command == "t") {
+      Serial.println("=== SENSOR STATUS ===");
+      Serial.print("IN sensor (pin 32): "); 
+      Serial.println(digitalRead(PROX_IN) == LOW ? "DETECTED" : "CLEAR");
+      Serial.print("OUT sensor (pin 33): "); 
+      Serial.println(digitalRead(PROX_OUT) == LOW ? "DETECTED" : "CLEAR");
+      Serial.print("People count: "); Serial.println(jumlahOrang);
+      Serial.print("WiFi: "); Serial.println(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected");
+      Serial.println("====================");
+    }
+    else if (command.startsWith("set ")) {
+      int newCount = command.substring(4).toInt();
+      if (newCount >= 0 && newCount <= 20) {
+        jumlahOrang = newCount;
+        Serial.println("✓ People count set to: " + String(jumlahOrang));
+      } else {
+        Serial.println("❌ Invalid count. Use 0-20");
+      }
+    }
+    else if (command == "help" || command == "h") {
+      Serial.println("=== AVAILABLE COMMANDS ===");
+      Serial.println("reset/r - Reset people count to 0");
+      Serial.println("test/t - Show sensor status");
+      Serial.println("set X - Set people count to X (0-20)");
+      Serial.println("help/h - Show this help");
+      Serial.println("==========================");
+    }
+  }
+  
   // Read sensors and update data
   bacaProximity();
   updateSensorData();

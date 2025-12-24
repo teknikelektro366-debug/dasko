@@ -519,7 +519,7 @@
                         <div class="card-icon">
                             <i class="fas fa-walking"></i>
                         </div>
-                        <div class="title">Sensor Proximity</div>
+                        <div class="title">Sensor Deteksi Orang</div>
                         <div class="value">
                             IN: {{ $sensorData['proximity_in'] ? 'AKTIF' : 'OFF' }} | 
                             OUT: {{ $sensorData['proximity_out'] ? 'AKTIF' : 'OFF' }}

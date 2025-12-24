@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabel Konsumsi Listrik 2 Minggu - Smart Energy Dashboard UNJA</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 12px;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 600;
+            border: 1px solid rgba(255,255,255,0.2);
+            font-size: 11px;
+        }
+
+        td {
+            padding: 10px 8px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tbody tr:hover {
+            background-color: #e3f2fd;
+            transition: background-color 0.3s;
+        }
+
+        .status-kerja {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 10px;
+        }
+
+        .status-kerja.kerja {
+            background: #4caf50;
+            color: white;
+        }
+
+        .status-kerja.libur {
+            background: #f44336;
+            color: white;
+        }
+
+        .summary {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .summary-card h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .summary-card .value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .summary-card .unit {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .efficiency-high {
+            color: #4caf50;
+            font-weight: bold;
+        }
+
+        .efficiency-medium {
+            color: #ff9800;
+            font-weight: bold;
+        }
+
+        .efficiency-low {
+            color: #f44336;
+            font-weight: bold;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Tabel Konsumsi Listrik 2 Minggu Terakhir</h1>
+        <p class="subtitle">Ruang Dosen Prodi Teknik Elektro - Universitas Jambi (UNJA)<br>
+        Periode: 09 Desember 2024 - 22 Desember 2024</p>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th rowspan="2">Tanggal</th>
+                        <th rowspan="2">Hari</th>
+                        <th rowspan="2">Status</th>
+                        <th rowspan="2">Jam<br>Operasi</th>
+                        <th colspan="2">Okupansi Ruangan</th>
+                        <th colspan="2">AC (2 Unit)</th>
+                        <th colspan="2">Lampu TL (12 Unit)</th>
+                        <th colspan="5">Perangkat Lainnya</th>
+                        <th colspan="3">Konsumsi Energi<br>(kWh)</th>
+                        <th rowspan="2">Efisiensi<br>(%)</th>
+                    </tr>
+                    <tr>
+                        <th>Max<br>Orang</th>
+                        <th>Jam<br>Terpakai</th>
+                        <th>Aktivitas Individu</th>
+                        <th>Status</th>
+                        <th>Suhu<br>(°C)</th>
+                        <th>Status</th>
+                        <th>Durasi<br>(jam)</th>
+                        <th>Komputer</th>
+                        <th>TV</th>
+                        <th>Dispenser</th>
+                        <th>Kopi/Teko</th>
+                        <th>AC</th>
+                        <th>Lampu</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Minggu 1: 09-15 Desember 2024 -->
+                    <tr>
+                        <td>09/12/2024</td>
+                        <td>Senin</td>
+                        <td><span class="status-kerja kerja">Kerja</span></td>
+                        <td>08:00-16:00</td>
+                        <td>15</td>
+                        <td>7</td>
+                        <td>Rapat Dosen</td>
+                        <td>2 Unit<br>ON</td>
+                        <td>24</td>
+                        <td>ON</td>
+                        <td>8</td>
+                        <td>6 jam</td>
+                        <td>4 jam</td>
+                        <td>8 jam</td>
+                        <td>3 jam</td>
+                        <td>14.2</td>
+                        <td>2.1</td>
+                        <td>21.4</td>
+                        <td class="efficiency-high">78%</td>
+                    </tr>
+                    <tr>
+                        <td>10/12/2024</td>
+                        <td>Selasa</td>
+                        <td><span class="status-kerja kerja">Kerja</span></td>
+                        <td>08:00-16:00</td>
+                        <td>18</td>
+                        <td>7</td>
+                        <td>Kuliah + Rapat<br>Gabung</td>
+                        <td>2 Unit<br>ON</td>
+                        <td>23</td>
+                        <td>ON</td>
+                        <td>8</td>
+                        <td>7 jam</td>
+                        <td>5 jam</td>
+                        <td>8 jam</td>
+                        <td>4 jam</td>
+                        <td>16.8</td>
+                        <td>2.1</td>
+                        <td>24.1</td>
+                        <td class="efficiency-medium">82%</td>
+                    </tr>
+                    <tr>
+                        <td>11/12/2024</td>
+                        <td>Rabu</td>
+                        <td><span class="status-kerja kerja">Kerja</span></td>
+                        <td>08:00-16:00</td>
+                        <td>12</td>
+                        <td>6</td>
+                        <td>Diskusi Kelompok</td>
+                        <td>1 Unit<br>ON</td>
+                        <td>25</td>
+                        <td>ON</td>
+                        <td>8</td>
+                        <td>5 jam</td>
+                        <td>4 jam</td>
+                        <td>7 jam</td>
+                        <td>2 jam</td>
+                        <td>11.3</td>
+                        <td>2.1</td>
+                        <td>17.7</td>
+                        <td class="efficiency-high">85%</td>
+                    </tr>
+                    <tr>
+                        <td>12/12/2024</td>
+                        <td>Kamis</td>
+                        <td><span class="status-kerja kerja">Kerja</span></td>
+                        <td>08:00-16:00</td>
+                        <td>16</td>
+                        <td>7</td>
+                        <td>Seminar Internal</td>
+                        <td>2 Unit<br>ON</td>
+                        <td>24</td>
+                        <td>ON</td>
+                        <td>8</td>
+                        <td>6 jam</td>
+                        <td>6 jam</td>
+                        <td>8 jam</td>
+                        <td>3 jam</td>
+                        <td>15.3</td>
+                        <td>2.1</td>
+                        <td>22.4</td>
+                        <td class="efficiency-high">85%</td>
+                    </tr>
+                    <tr>
+                        <td>13/12/2024</td>
+                        <td>Jumat</td>
+                        <td><span class="status-kerja kerja">Kerja</span></td>
+                        <td>08:00-11:00</td>
+                        <td>10</td>
+                        <td>3</td>
+                        <td>Jumat Sehat</td>
+                        <td>1 Unit<br>ON</td>
+                        <td>26</td>
+                        <td>ON</td>
+                        <td>3</td>
+                        <td>3 jam</td>
+                        <td>3 jam</td>
+                        <td>3 jam</td>
+                        <td>1 jam</td>
+                        <td>6.7</td>
+                        <td>0.8</td>
+                        <td>9.7</td>
+                        <td class="efficiency-high">88%</td>
+                    </tr>
+                    <tr>
+                        <td>14/12/2024</td>
+                        <td>Sabtu</td>
+                        <td><span class="status-kerja libur">Libur</span></td>
+                        <td>-</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>-</td>
+                        <td>OFF</td>
+                        <td>-</td>
+                        <td>OFF</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>Kulkas+WiFi<br>24h</td>
+                        <td>0</td>
+                        <td>0.0</td>
+                        <td>0.0</td>
+                        <td>2.48</td>
+                        <td class="efficiency-low">100%</td>
+                    </tr>
+                    <tr>
+                        <td>15/12/2024</td>
+                        <td>Minggu</td>
+                        <td><span class="status-kerja libur">Libur</span></td>
+                        <td>-</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>-</td>
+                        <td>OFF</td>
+                        <td>-</td>
+                        <td>OFF</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0.0</td>
+                        <td>0.0</td>
+                        <td>2.48</td>
+                        <td class="efficiency-low">100%</td>
+                    </tr>
+
+                    <!-- Minggu 2: 16-22 Desember 2024 -->
+                    <tr>
+                        <td>16/12/2024</td>
+                        <td>Senin</td>
+                        <td><span class="status-kerja kerja">Kerja</span></td>
+                        <td>08:00-16:00</td>
+                        <td>14</td>
+                        <td>6</td>
+                        <td>Evaluasi Semester</td>
+                        <td>2 Unit<br>ON</td>
+                        <td>24</td>
+                        <td>ON</td>
+                        <td>8</td>
+                        <td>6 jam</td>
+                        <td>3 jam</td>
+                        <td>8 jam</td>
+                        <td>2 jam</td>
+                        <td>13.8</td>
+                        <td>2.1</td>
+                        <td>20.5</td>
+                        <td class="efficiency-high">79%</td>
+                    </tr>
+                    <tr>
+                        <td>17/12/2024</td>
+                        <td>Selasa</td>
+                        <td><span class="status-kerja kerja">Kerja</span></td>
+                        <td>08:00-16:00</td>
+                        <td>17</td>
+                        <td>7</td>
+                        <td>Sidang + Dosen</td>
+                        <td>2 Unit<br>ON</td>
+                        <td>23</td>
+                        <td>ON</td>
+                        <td>8</td>
+                        <td>7 jam</td>
+                        <td>6 jam</td>
+                        <td>8 jam</td>
+                        <td>4 jam</td>
+                        <td>16.2</td>
+                        <td>2.1</td>
+                        <td>23.8</td>
+                        <td class="efficiency-high">81%</td>
+                    </tr>
+                    <tr>
+                        <td>18/12/2024</td>
+                        <td>Rabu</td>
+                        <td><span class="status-kerja kerja">Kerja</span></td>
+                        <td>08:00-16:00</td>
+                        <td>13</td>
+                        <td>6</td>
+                        <td>Koordinasi Prodi</td>
+                        <td>1 Unit<br>ON</td>
+                        <td>25</td>
+                        <td>ON</td>
+                        <td>8</td>
+                        <td>5 jam</td>
+                        <td>3 jam</td>
+                        <td>8 jam</td>
+                        <td>2 jam</td>
+                        <td>12.3</td>
+                        <td>2.1</td>
+                        <td>18.3</td>
+                        <td class="efficiency-high">84%</td>
+                    </tr>
+                    <tr>
+                        <td>19/12/2024</td>
+                        <td>Kamis</td>
+                        <td><span class="status-kerja kerja">Kerja</span></td>
+                        <td>08:00-16:00</td>
+                        <td>11</td>
+                        <td>6</td>
+                        <td>Persiapan Libur</td>
+                        <td>1 Unit<br>ON</td>
+                        <td>25</td>
+                        <td>ON</td>
+                        <td>8</td>
+                        <td>4 jam</td>
+                        <td>2 jam</td>
+                        <td>8 jam</td>
+                        <td>2 jam</td>
+                        <td>10.4</td>
+                        <td>2.1</td>
+                        <td>16.8</td>
+                        <td class="efficiency-high">86%</td>
+                    </tr>
+                    <tr>
+                        <td>20/12/2024</td>
+                        <td>Jumat</td>
+                        <td><span class="status-kerja kerja">Kerja</span></td>
+                        <td>08:00-11:00</td>
+                        <td>9</td>
+                        <td>3</td>
+                        <td>Jumat Sehat</td>
+                        <td>1 Unit<br>ON</td>
+                        <td>26</td>
+                        <td>ON</td>
+                        <td>3</td>
+                        <td>3 jam</td>
+                        <td>3 jam</td>
+                        <td>3 jam</td>
+                        <td>1 jam</td>
+                        <td>7.8</td>
+                        <td>0.8</td>
+                        <td>12.6</td>
+                        <td class="efficiency-high">89%</td>
+                    </tr>
+                    <tr>
+                        <td>21/12/2024</td>
+                        <td>Sabtu</td>
+                        <td><span class="status-kerja libur">Libur</span></td>
+                        <td>-</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>-</td>
+                        <td>OFF</td>
+                        <td>-</td>
+                        <td>OFF</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>Kulkas+WiFi<br>24h</td>
+                        <td>0</td>
+                        <td>0.0</td>
+                        <td>0.0</td>
+                        <td>2.48</td>
+                        <td class="efficiency-low">100%</td>
+                    </tr>
+                    <tr>
+                        <td>22/12/2024</td>
+                        <td>Minggu</td>
+                        <td><span class="status-kerja libur">Libur</span></td>
+                        <td>-</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>-</td>
+                        <td>OFF</td>
+                        <td>-</td>
+                        <td>OFF</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0.0</td>
+                        <td>0.0</td>
+                        <td>0.0</td>
+                        <td class="efficiency-low">100%</td>
+                    </tr>
+                </tbody>
+                <tfoot style="background: #f5f5f5; font-weight: bold;">
+                    <tr>
+                        <td colspan="4">TOTAL 2 MINGGU</td>
+                        <td>135</td>
+                        <td>58 jam</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>58 jam</td>
+                        <td>52 jam</td>
+                        <td>40 jam</td>
+                        <td>69 jam</td>
+                        <td>24 jam</td>
+                        <td>124.8</td>
+                        <td>18.4</td>
+                        <td>218.28</td>
+                        <td>83.5%</td>
+                    </tr>
+                    <tr>
+                        <td colspan="4">RATA-RATA HARIAN (Hari Kerja)</td>
+                        <td>13.5</td>
+                        <td>5.8 jam</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>24.3°C</td>
+                        <td>-</td>
+                        <td>5.8 jam</td>
+                        <td>5.2 jam</td>
+                        <td>4.0 jam</td>
+                        <td>6.9 jam</td>
+                        <td>2.4 jam</td>
+                        <td>12.48</td>
+                        <td>1.84</td>
+                        <td>19.84</td>
+                        <td>83.5%</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="summary">
+            <div class="summary-card">
+                <h3>📊 Total Konsumsi 2 Minggu</h3>
+                <div class="value">218.28 kWh</div>
+                <div class="unit">Periode: 09-22 Des 2024</div>
+            </div>
+            <div class="summary-card">
+                <h3>💰 Total Biaya Listrik</h3>
+                <div class="value">Rp 327.420</div>
+                <div class="unit">@ Rp 1.500/kWh</div>
+            </div>
+            <div class="summary-card">
+                <h3>📈 Rata-rata Harian</h3>
+                <div class="value">19.84 kWh</div>
+                <div class="unit">Hari kerja (10 hari)</div>
+            </div>
+            <div class="summary-card">
+                <h3>⚡ Efisiensi Rata-rata</h3>
+                <div class="value">83.5%</div>
+                <div class="unit">Sangat Efisien</div>
+            </div>
+            <div class="summary-card">
+                <h3>❄️ Konsumsi AC</h3>
+                <div class="value">124.8 kWh</div>
+                <div class="unit">57.2% dari total</div>
+            </div>
+            <div class="summary-card">
+                <h3>💡 Konsumsi Lampu</h3>
+                <div class="value">18.4 kWh</div>
+                <div class="unit">8.4% dari total</div>
+            </div>
+            <div class="summary-card">
+                <h3>👥 Rata-rata Okupansi</h3>
+                <div class="value">13.5 Orang</div>
+                <div class="unit">Per hari kerja</div>
+            </div>
+            <div class="summary-card">
+                <h3>🌡️ Suhu Rata-rata AC</h3>
+                <div class="value">24.3°C</div>
+                <div class="unit">Optimal & Nyaman</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
+            <h3 style="color: #333; margin-bottom: 10px;">📝 Catatan Penting:</h3>
+            <ul style="color: #666; line-height: 1.8; padding-left: 20px;">
+                <li><strong>Hari Kerja:</strong> Senin-Jumat (10 hari dalam 2 minggu)</li>
+                <li><strong>Hari Libur:</strong> Sabtu-Minggu (4 hari) - Hanya perangkat standby (Kulkas & WiFi Router)</li>
+                <li><strong>Jam Operasional:</strong> 08:00-16:00 (Senin-Kamis), 08:00-11:00 (Jumat)</li>
+                <li><strong>Perangkat Utama:</strong> 2 AC Panasonic (1050W each), 12 Lampu TL (22W each)</li>
+                <li><strong>Efisiensi Tinggi:</strong> Sistem Smart Energy berhasil menghemat energi dengan kontrol otomatis berbasis okupansi</li>
+                <li><strong>Penghematan:</strong> Estimasi 15-20% dibanding sistem manual konvensional</li>
+            </ul>
+        </div>
+
+        <div style="margin-top: 20px; text-align: center; color: #999; font-size: 12px;">
+            <p>Smart Energy Dashboard - Universitas Jambi (UNJA)</p>
+            <p>https://dasko.fst.unja.ac.id | Generated: 22 Desember 2024</p>
+        </div>
+    </div>
+
+    <script>
+        // Print functionality
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                window.print();
+            }
+        });
+
+        // Add hover effect for rows
+        const rows = document.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.01)';
+                this.style.transition = 'transform 0.2s';
+            });
+            row.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>

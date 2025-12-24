@@ -857,14 +857,126 @@
                 <div class="page-header">
                     <h1 class="page-title">
                         <i class="fas fa-history"></i>
-                        Riwayat Pemakaian
+                        Riwayat Pemakaian Harian
                     </h1>
-                    <p class="page-subtitle">Data historis konsumsi energi</p>
+                    <p class="page-subtitle">Data historis sensor dan penggunaan AC</p>
                 </div>
+                
+                <!-- Filter and Download Controls -->
+                <div class="chart-container" style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div style="display: flex; gap: 15px; align-items: center;">
+                            <label for="dateFilter" style="font-weight: 600;">Filter Tanggal:</label>
+                            <input type="date" id="dateFilter" class="btn btn-secondary" style="padding: 8px 12px;" onchange="filterDataByDate()">
+                            <button onclick="resetFilter()" class="btn btn-secondary">
+                                <i class="fas fa-refresh"></i> Reset
+                            </button>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="downloadCSV()" class="btn btn-primary">
+                                <i class="fas fa-download"></i> Download CSV
+                            </button>
+                            <button onclick="downloadExcel()" class="btn btn-primary">
+                                <i class="fas fa-file-excel"></i> Download Excel
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Summary Cards -->
+                    <div class="cards-grid" style="margin-bottom: 20px;">
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <div class="metric-icon" style="background: linear-gradient(135deg, #48bb78, #38a169);">
+                                    <i class="fas fa-database"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <h3>Total Records</h3>
+                                    <div class="metric-value" id="totalRecords">0</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <div class="metric-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                                    <i class="fas fa-snowflake"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <h3>AC Usage Today</h3>
+                                    <div class="metric-value" id="acUsageToday">0h</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <div class="metric-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <h3>Max People Today</h3>
+                                    <div class="metric-value" id="maxPeopleToday">0</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <div class="metric-icon" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">
+                                    <i class="fas fa-thermometer-half"></i>
+                                </div>
+                                <div class="metric-info">
+                                    <h3>Avg Temp Today</h3>
+                                    <div class="metric-value" id="avgTempToday">0°C</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Data Table -->
                 <div class="chart-container">
-                    <p style="text-align: center; color: #718096; font-size: 18px;">
-                        Fitur riwayat pemakaian akan ditampilkan di sini
-                    </p>
+                    <h3 class="chart-title">Tabel Data Sensor dan AC</h3>
+                    <div style="overflow-x: auto; max-height: 600px; overflow-y: auto;">
+                        <table id="sensorDataTable" style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                            <thead style="background: #f7fafc; position: sticky; top: 0; z-index: 10;">
+                                <tr>
+                                    <th style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 600;">No</th>
+                                    <th style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 600;">Tanggal</th>
+                                    <th style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 600;">Waktu</th>
+                                    <th style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 600;">Jumlah Orang</th>
+                                    <th style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 600;">Suhu (°C)</th>
+                                    <th style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 600;">Kelembaban (%)</th>
+                                    <th style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 600;">Cahaya (lux)</th>
+                                    <th style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 600;">Status AC</th>
+                                    <th style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 600;">Set Temp AC</th>
+                                    <th style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 600;">Mode Kontrol</th>
+                                    <th style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 600;">Efisiensi (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sensorDataBody">
+                                <!-- Data will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 10px;">
+                        <div>
+                            <span style="color: #4a5568; font-weight: 500;">
+                                Showing <span id="showingStart">1</span> to <span id="showingEnd">10</span> of <span id="totalEntries">0</span> entries
+                            </span>
+                        </div>
+                        <div style="display: flex; gap: 5px;">
+                            <button onclick="previousPage()" class="btn btn-secondary btn-small" id="prevBtn">
+                                <i class="fas fa-chevron-left"></i> Previous
+                            </button>
+                            <span id="pageNumbers" style="display: flex; gap: 5px;"></span>
+                            <button onclick="nextPage()" class="btn btn-secondary btn-small" id="nextBtn">
+                                Next <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -936,6 +1048,397 @@
         let acUnits = { unit1: false, unit2: false };
         let lampCircuits = { circuit1: false, circuit2: false };
         let panelOn = true;
+        
+        // Data Management Variables
+        let sensorDataHistory = [];
+        let filteredData = [];
+        let currentPage = 1;
+        let itemsPerPage = 10;
+        let dataCounter = 1;
+
+        // Generate Sample Data for Demonstration
+        function generateSampleData() {
+            const sampleData = [];
+            const today = new Date();
+            
+            // Generate data for the last 7 days
+            for (let day = 6; day >= 0; day--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - day);
+                
+                // Generate 20-30 entries per day (every 30-60 minutes during work hours)
+                const entriesPerDay = 20 + Math.floor(Math.random() * 10);
+                
+                for (let i = 0; i < entriesPerDay; i++) {
+                    const hour = 7 + Math.floor((i / entriesPerDay) * 10); // 7 AM to 5 PM
+                    const minute = Math.floor(Math.random() * 60);
+                    
+                    const entryTime = new Date(date);
+                    entryTime.setHours(hour, minute, 0, 0);
+                    
+                    const peopleCount = Math.floor(Math.random() * 21); // 0-20 people
+                    const temperature = (25 + Math.random() * 5).toFixed(1);
+                    const humidity = Math.floor(60 + Math.random() * 20);
+                    const light = Math.floor(300 + Math.random() * 500);
+                    
+                    // AC Status based on people count
+                    let acStatus = "OFF";
+                    let setTemp = 0;
+                    let efficiency = 0;
+                    
+                    if (peopleCount > 0) {
+                        if (peopleCount <= 5) {
+                            acStatus = "1 AC ON";
+                            setTemp = 25;
+                            efficiency = 85 + Math.floor(Math.random() * 10);
+                        } else if (peopleCount <= 10) {
+                            acStatus = "1 AC ON";
+                            setTemp = 22;
+                            efficiency = 80 + Math.floor(Math.random() * 10);
+                        } else if (peopleCount <= 15) {
+                            acStatus = "2 AC ON";
+                            setTemp = 22;
+                            efficiency = 75 + Math.floor(Math.random() * 10);
+                        } else {
+                            acStatus = "2 AC MAX";
+                            setTemp = 20;
+                            efficiency = 70 + Math.floor(Math.random() * 10);
+                        }
+                    } else {
+                        efficiency = 95 + Math.floor(Math.random() * 5);
+                    }
+                    
+                    const controlMode = Math.random() > 0.8 ? "Manual" : "Auto";
+                    
+                    sampleData.push({
+                        id: dataCounter++,
+                        date: entryTime.toLocaleDateString('id-ID'),
+                        time: entryTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+                        timestamp: entryTime,
+                        peopleCount: peopleCount,
+                        temperature: parseFloat(temperature),
+                        humidity: humidity,
+                        light: light,
+                        acStatus: acStatus,
+                        setTemp: setTemp,
+                        controlMode: controlMode,
+                        efficiency: efficiency
+                    });
+                }
+            }
+            
+            return sampleData.sort((a, b) => b.timestamp - a.timestamp); // Sort by newest first
+        }
+
+        // Initialize sensor data
+        function initializeSensorData() {
+            sensorDataHistory = generateSampleData();
+            filteredData = [...sensorDataHistory];
+            updateSummaryCards();
+            renderTable();
+        }
+
+        // Update Summary Cards
+        function updateSummaryCards() {
+            const today = new Date().toLocaleDateString('id-ID');
+            const todayData = filteredData.filter(item => item.date === today);
+            
+            document.getElementById('totalRecords').textContent = filteredData.length;
+            
+            // Calculate AC usage hours today
+            const acOnRecords = todayData.filter(item => item.acStatus !== "OFF");
+            const acUsageHours = (acOnRecords.length * 0.5).toFixed(1); // Assuming 30-min intervals
+            document.getElementById('acUsageToday').textContent = acUsageHours + 'h';
+            
+            // Max people today
+            const maxPeople = todayData.length > 0 ? Math.max(...todayData.map(item => item.peopleCount)) : 0;
+            document.getElementById('maxPeopleToday').textContent = maxPeople;
+            
+            // Average temperature today
+            const avgTemp = todayData.length > 0 ? 
+                (todayData.reduce((sum, item) => sum + item.temperature, 0) / todayData.length).toFixed(1) : 0;
+            document.getElementById('avgTempToday').textContent = avgTemp + '°C';
+        }
+
+        // Render Table
+        function renderTable() {
+            const tbody = document.getElementById('sensorDataBody');
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageData = filteredData.slice(startIndex, endIndex);
+            
+            tbody.innerHTML = '';
+            
+            pageData.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.style.borderBottom = '1px solid #e2e8f0';
+                
+                // Determine row color based on AC status
+                let rowColor = '';
+                if (item.acStatus === 'OFF') {
+                    rowColor = 'background-color: #f0fff4;'; // Light green for OFF
+                } else if (item.acStatus.includes('2 AC')) {
+                    rowColor = 'background-color: #fef5e7;'; // Light orange for 2 AC
+                } else {
+                    rowColor = 'background-color: #eff6ff;'; // Light blue for 1 AC
+                }
+                
+                row.innerHTML = `
+                    <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: center; ${rowColor}">${startIndex + index + 1}</td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0; ${rowColor}">${item.date}</td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: center; ${rowColor}">${item.time}</td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: center; font-weight: 600; ${rowColor}">${item.peopleCount}</td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: center; ${rowColor}">${item.temperature}</td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: center; ${rowColor}">${item.humidity}</td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: center; ${rowColor}">${item.light}</td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: center; font-weight: 600; ${rowColor}">
+                        <span style="color: ${item.acStatus === 'OFF' ? '#48bb78' : '#667eea'};">${item.acStatus}</span>
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: center; ${rowColor}">${item.setTemp === 0 ? '-' : item.setTemp + '°C'}</td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: center; ${rowColor}">${item.controlMode}</td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: center; font-weight: 600; ${rowColor}">
+                        <span style="color: ${item.efficiency >= 80 ? '#48bb78' : item.efficiency >= 70 ? '#f59e0b' : '#f56565'};">${item.efficiency}%</span>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            updatePagination();
+        }
+
+        // Update Pagination
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+            const startItem = (currentPage - 1) * itemsPerPage + 1;
+            const endItem = Math.min(currentPage * itemsPerPage, filteredData.length);
+            
+            document.getElementById('showingStart').textContent = startItem;
+            document.getElementById('showingEnd').textContent = endItem;
+            document.getElementById('totalEntries').textContent = filteredData.length;
+            
+            // Update buttons
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages;
+            
+            // Generate page numbers
+            const pageNumbers = document.getElementById('pageNumbers');
+            pageNumbers.innerHTML = '';
+            
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            if (endPage - startPage < maxVisiblePages - 1) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.textContent = i;
+                pageBtn.className = `btn btn-small ${i === currentPage ? 'btn-primary' : 'btn-secondary'}`;
+                pageBtn.onclick = () => goToPage(i);
+                pageNumbers.appendChild(pageBtn);
+            }
+        }
+
+        // Pagination Functions
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderTable();
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderTable();
+            }
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            renderTable();
+        }
+
+        // Filter Functions
+        function filterDataByDate() {
+            const selectedDate = document.getElementById('dateFilter').value;
+            if (selectedDate) {
+                const filterDate = new Date(selectedDate).toLocaleDateString('id-ID');
+                filteredData = sensorDataHistory.filter(item => item.date === filterDate);
+            } else {
+                filteredData = [...sensorDataHistory];
+            }
+            
+            currentPage = 1;
+            updateSummaryCards();
+            renderTable();
+        }
+
+        function resetFilter() {
+            document.getElementById('dateFilter').value = '';
+            filteredData = [...sensorDataHistory];
+            currentPage = 1;
+            updateSummaryCards();
+            renderTable();
+        }
+
+        // Download Functions
+        function downloadCSV() {
+            const headers = ['No', 'Tanggal', 'Waktu', 'Jumlah Orang', 'Suhu (°C)', 'Kelembaban (%)', 'Cahaya (lux)', 'Status AC', 'Set Temp AC', 'Mode Kontrol', 'Efisiensi (%)'];
+            
+            let csvContent = headers.join(',') + '\n';
+            
+            filteredData.forEach((item, index) => {
+                const row = [
+                    index + 1,
+                    item.date,
+                    item.time,
+                    item.peopleCount,
+                    item.temperature,
+                    item.humidity,
+                    item.light,
+                    `"${item.acStatus}"`,
+                    item.setTemp === 0 ? '-' : item.setTemp,
+                    item.controlMode,
+                    item.efficiency
+                ];
+                csvContent += row.join(',') + '\n';
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `sensor_data_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function downloadExcel() {
+            // Create HTML table for Excel export
+            let excelContent = `
+                <table border="1">
+                    <thead>
+                        <tr style="background-color: #f0f0f0; font-weight: bold;">
+                            <th>No</th>
+                            <th>Tanggal</th>
+                            <th>Waktu</th>
+                            <th>Jumlah Orang</th>
+                            <th>Suhu (°C)</th>
+                            <th>Kelembaban (%)</th>
+                            <th>Cahaya (lux)</th>
+                            <th>Status AC</th>
+                            <th>Set Temp AC</th>
+                            <th>Mode Kontrol</th>
+                            <th>Efisiensi (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            filteredData.forEach((item, index) => {
+                excelContent += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${item.date}</td>
+                        <td>${item.time}</td>
+                        <td>${item.peopleCount}</td>
+                        <td>${item.temperature}</td>
+                        <td>${item.humidity}</td>
+                        <td>${item.light}</td>
+                        <td>${item.acStatus}</td>
+                        <td>${item.setTemp === 0 ? '-' : item.setTemp}</td>
+                        <td>${item.controlMode}</td>
+                        <td>${item.efficiency}</td>
+                    </tr>
+                `;
+            });
+            
+            excelContent += '</tbody></table>';
+            
+            const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `sensor_data_${new Date().toISOString().split('T')[0]}.xls`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Add new sensor data (simulate real-time data)
+        function addNewSensorData() {
+            const now = new Date();
+            const peopleCount = Math.floor(Math.random() * 21);
+            const temperature = (25 + Math.random() * 5).toFixed(1);
+            const humidity = Math.floor(60 + Math.random() * 20);
+            const light = Math.floor(300 + Math.random() * 500);
+            
+            let acStatus = "OFF";
+            let setTemp = 0;
+            let efficiency = 0;
+            
+            if (peopleCount > 0) {
+                if (peopleCount <= 5) {
+                    acStatus = "1 AC ON";
+                    setTemp = 25;
+                    efficiency = 85 + Math.floor(Math.random() * 10);
+                } else if (peopleCount <= 10) {
+                    acStatus = "1 AC ON";
+                    setTemp = 22;
+                    efficiency = 80 + Math.floor(Math.random() * 10);
+                } else if (peopleCount <= 15) {
+                    acStatus = "2 AC ON";
+                    setTemp = 22;
+                    efficiency = 75 + Math.floor(Math.random() * 10);
+                } else {
+                    acStatus = "2 AC MAX";
+                    setTemp = 20;
+                    efficiency = 70 + Math.floor(Math.random() * 10);
+                }
+            } else {
+                efficiency = 95 + Math.floor(Math.random() * 5);
+            }
+            
+            const newData = {
+                id: dataCounter++,
+                date: now.toLocaleDateString('id-ID'),
+                time: now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+                timestamp: now,
+                peopleCount: peopleCount,
+                temperature: parseFloat(temperature),
+                humidity: humidity,
+                light: light,
+                acStatus: acStatus,
+                setTemp: setTemp,
+                controlMode: "Auto",
+                efficiency: efficiency
+            };
+            
+            // Add to beginning of array (newest first)
+            sensorDataHistory.unshift(newData);
+            
+            // Keep only last 1000 records to prevent memory issues
+            if (sensorDataHistory.length > 1000) {
+                sensorDataHistory = sensorDataHistory.slice(0, 1000);
+            }
+            
+            // Update filtered data if no filter is applied
+            if (document.getElementById('dateFilter').value === '') {
+                filteredData = [...sensorDataHistory];
+                updateSummaryCards();
+                if (currentPage === 1) {
+                    renderTable();
+                }
+            }
+        }
 
         // Navigation
         function showSection(sectionId, element) {
@@ -1174,7 +1677,17 @@
             updateSensorData();
             setInterval(updateSensorData, 5000);
             
+            // Initialize sensor data history
+            initializeSensorData();
+            
+            // Add new sensor data every 30 seconds (simulate real-time)
+            setInterval(addNewSensorData, 30000);
+            
             initChart();
+            
+            // Set today's date as default filter
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dateFilter').value = today;
             
             // Show monitoring section by default
             showSection('monitoring', document.querySelector('.nav-link'));
