@@ -53,16 +53,16 @@ const char* rootCACertificate = \
 "emyPxgcYxn/eR44/KJ4EBs+lVDR3veyJm+kXQ99b21/+jh5Xos1AnX5iItreGCc=\n" \
 "-----END CERTIFICATE-----\n";
 
-// Change Detection Configuration
-#define TEMP_CHANGE_THRESHOLD 0.5    // Kirim jika suhu berubah >= 0.5°C
-#define HUMIDITY_CHANGE_THRESHOLD 2.0 // Kirim jika humidity berubah >= 2%
-#define LIGHT_CHANGE_THRESHOLD 50     // Kirim jika cahaya berubah >= 50 lux
-#define MAX_TIME_WITHOUT_UPDATE 300000 // Kirim paksa setiap 5 menit
-#define MIN_UPDATE_INTERVAL 2000      // Minimum 2 detik antar update
-#define AC_CONTROL_CHECK_INTERVAL 10000 // Check AC control setiap 10 detik
+// Change Detection Configuration - ULTRA FAST UPDATES
+#define TEMP_CHANGE_THRESHOLD 0.3    // Kirim jika suhu berubah >= 0.3°C (lebih sensitif)
+#define HUMIDITY_CHANGE_THRESHOLD 1.5 // Kirim jika humidity berubah >= 1.5% (lebih sensitif)
+#define LIGHT_CHANGE_THRESHOLD 30     // Kirim jika cahaya berubah >= 30 lux (lebih sensitif)
+#define MAX_TIME_WITHOUT_UPDATE 120000 // Kirim paksa setiap 2 menit (lebih sering)
+#define MIN_UPDATE_INTERVAL 500       // Minimum 0.5 detik antar update (ULTRA FAST)
+#define AC_CONTROL_CHECK_INTERVAL 5000 // Check AC control setiap 5 detik (lebih sering)
 
 // Device Information
-#define DEVICE_ID "ESP32_Smart_Energy_Production"
+#define DEVICE_ID "ESP32_Proximity_Production"
 #define DEVICE_LOCATION "Lab Teknik Tegangan Tinggi"
 
 // ================= IR =================
@@ -70,32 +70,50 @@ const char* rootCACertificate = \
 #include <IRsend.h>
 #include <ir_Panasonic.h>
 
-#define IR_PIN 4
+#define IR_PIN 14            // Pin IR LED untuk kontrol AC (LED IR langsung + resistor 220Ω)
 IRPanasonicAc ac1(IR_PIN);
 IRPanasonicAc ac2(IR_PIN);
 
 // ================= SENSOR =================
-#define PROX_IN   32
-#define PROX_OUT  33
+// Proximity Sensors (sesuai pin configuration)
+#define PROXIMITY_PIN_IN  2    // Pin sensor MASUK (sisi LUAR)
+#define PROXIMITY_PIN_OUT 15   // Pin sensor KELUAR (sisi DALAM)
+
 #define DHTPIN    27
 #define DHTTYPE   DHT22
-#define LDR_PIN   34
+#define LDR_PIN   34         // Analog pin untuk LDR
 
 DHT dht(DHTPIN, DHTTYPE);
+
+// Proximity Detection Parameters
+#define MAX_PEOPLE 20        // Kapasitas maksimal ruangan
+
+// ================= FUNCTION DECLARATIONS =================
+void sendDataToAPI(String reason);
+void sendDataToAPI();
+void updateSensorData();
+void connectWiFi();
+bool makeHTTPSRequest(const char* url, const char* method, const char* payload, String& response);
+void checkACControlAPI();
+void kontrolAC(String &acStatus, int &setTemp);
+void detectPeople();
+void readSensors();
 
 // ================= VARIABLES =================
 int jumlahOrang = 0;
 int lastJumlahOrang = -1;
 
-// Proximity timing
-bool lastIn  = HIGH;
-bool lastOut = HIGH;
-unsigned long inTime = 0;
-unsigned long outTime = 0;
+// Proximity timing - ULTRA FAST RESPONSE
 unsigned long lastPersonDetected = 0;
-#define MAX_INTERVAL 1000
-#define TIMEOUT 2000
-#define PERSON_COOLDOWN 1500
+#define PERSON_COOLDOWN 300     // Cooldown 300ms antar deteksi (ULTRA FAST)
+
+// Sensor readings - PROXIMITY
+struct SensorData {
+  bool proximityIn = false;      // Sensor LUAR (masuk)
+  bool proximityOut = false;     // Sensor DALAM (keluar)
+  bool objectInDetected = false;   // Objek terdeteksi di sensor LUAR
+  bool objectOutDetected = false;  // Objek terdeteksi di sensor DALAM
+} sensorData;
 
 // AC Control State
 struct ACControlState {
@@ -130,7 +148,7 @@ struct PreviousData {
 } previousData;
 
 // Current sensor data
-struct SensorData {
+struct CurrentData {
   int jumlahOrang = 0;
   String acStatus = "OFF";
   int setTemp = 0;
@@ -186,9 +204,9 @@ bool makeHTTPSRequest(const char* url, const char* method, const char* payload, 
   // Set SSL certificate
   client.setCACert(rootCACertificate);
   
-  // Set timeout
-  client.setTimeout(15000);
-  https.setTimeout(15000);
+  // Set timeout - ULTRA FAST
+  client.setTimeout(8000);   // Reduced for faster response
+  https.setTimeout(8000);    // Reduced for faster response
   
   if (!https.begin(client, url)) {
     Serial.println("✗ HTTPS connection failed");
@@ -198,7 +216,7 @@ bool makeHTTPSRequest(const char* url, const char* method, const char* payload, 
   // Set headers
   https.addHeader("Content-Type", "application/json");
   https.addHeader("Accept", "application/json");
-  https.addHeader("User-Agent", "ESP32-SmartEnergy-Production/1.0");
+  https.addHeader("User-Agent", "ESP32-Ultrasonic-Production/1.0");
   https.addHeader("X-Requested-With", "ESP32");
   
   int httpResponseCode;
@@ -217,6 +235,83 @@ bool makeHTTPSRequest(const char* url, const char* method, const char* payload, 
     https.end();
     return false;
   }
+}
+
+// ================= PROXIMITY FUNCTIONS =================
+// Tidak ada fungsi khusus untuk proximity - langsung baca digital pin
+
+// ================= SENSOR FUNCTIONS =================
+void readSensors() {
+  // Baca status dari kedua sensor proximity (digital input)
+  sensorData.proximityIn = digitalRead(PROXIMITY_PIN_IN);
+  sensorData.proximityOut = digitalRead(PROXIMITY_PIN_OUT);
+  
+  // Deteksi objek berdasarkan status sensor (LOW = terdeteksi untuk kebanyakan proximity sensor)
+  sensorData.objectInDetected = !sensorData.proximityIn;    // Invert karena biasanya LOW = detected
+  sensorData.objectOutDetected = !sensorData.proximityOut;  // Invert karena biasanya LOW = detected
+}
+
+// ================= PROXIMITY DETECTION - ULTRA FAST =================
+void detectPeople() {
+  unsigned long now = millis();
+  
+  // Cooldown untuk mencegah deteksi ganda (ultra fast)
+  if (now - lastPersonDetected < PERSON_COOLDOWN) {
+    return;
+  }
+  
+  // Debug info setiap 2 detik
+  static unsigned long lastDebug = 0;
+  if (now - lastDebug > 2000) {
+    Serial.print("📊 Proximity - Orang: ");
+    Serial.print(jumlahOrang);
+    Serial.print("/20 | LUAR:");
+    Serial.print(sensorData.objectInDetected ? "DETECTED" : "CLEAR");
+    Serial.print(" | DALAM:");
+    Serial.print(sensorData.objectOutDetected ? "DETECTED" : "CLEAR");
+    Serial.println();
+    lastDebug = now;
+  }
+  
+  // LOGIKA ULTRA CEPAT: Deteksi berdasarkan sensor mana yang aktif
+  static bool lastInDetected = false;
+  static bool lastOutDetected = false;
+  
+  // Deteksi MASUK: Sensor LUAR aktif (dari tidak aktif ke aktif)
+  if (sensorData.objectInDetected && !lastInDetected) {
+    jumlahOrang++;
+    lastPersonDetected = now;
+    Serial.println("🚶 → PROXIMITY LUAR AKTIF - ORANG MASUK!");
+    Serial.println("📊 Jumlah orang: " + String(jumlahOrang) + "/20");
+    
+    // FORCE IMMEDIATE UPDATE TO WEBSITE
+    updateSensorData();
+    sendDataToAPI("Proximity entry - Count: " + String(jumlahOrang));
+  }
+  
+  // Deteksi KELUAR: Sensor DALAM aktif (dari tidak aktif ke aktif)  
+  if (sensorData.objectOutDetected && !lastOutDetected && jumlahOrang > 0) {
+    jumlahOrang--;
+    lastPersonDetected = now;
+    Serial.println("🚶 ← PROXIMITY DALAM AKTIF - ORANG KELUAR!");
+    Serial.println("📊 Jumlah orang: " + String(jumlahOrang) + "/20");
+    
+    // FORCE IMMEDIATE UPDATE TO WEBSITE
+    updateSensorData();
+    sendDataToAPI("Proximity exit - Count: " + String(jumlahOrang));
+  } else if (sensorData.objectOutDetected && !lastOutDetected && jumlahOrang == 0) {
+    Serial.println("⚠ Proximity DALAM aktif tapi count sudah 0");
+    // STILL SEND UPDATE TO WEBSITE FOR LOGGING
+    updateSensorData();
+    sendDataToAPI("Proximity exit attempt when count is 0");
+  }
+  
+  // Update state terakhir
+  lastInDetected = sensorData.objectInDetected;
+  lastOutDetected = sensorData.objectOutDetected;
+  
+  // Safety limits
+  jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
 }
 
 // ================= AC CONTROL API =================
@@ -254,9 +349,6 @@ void checkACControlAPI() {
       }
       
       Serial.println("✓ AC Control received from hosting: " + acControl.controlMode);
-      Serial.println("  AC1: " + String(acControl.ac1Status ? "ON" : "OFF") + " (" + String(acControl.ac1Temperature) + "°C)");
-      Serial.println("  AC2: " + String(acControl.ac2Status ? "ON" : "OFF") + " (" + String(acControl.ac2Temperature) + "°C)");
-      Serial.println("  By: " + acControl.createdBy);
     }
   } else {
     // No active control found, use auto mode
@@ -269,22 +361,25 @@ void checkACControlAPI() {
   }
 }
 
-// ================= CHANGE DETECTION =================
+// ================= CHANGE DETECTION - ENHANCED =================
 bool hasSignificantChange() {
   bool hasChange = false;
   
-  // Check people count change
+  // Check people count change - MOST IMPORTANT
   if (currentData.jumlahOrang != previousData.people_count) {
+    Serial.println("🔄 People count changed: " + String(previousData.people_count) + " → " + String(currentData.jumlahOrang));
     hasChange = true;
   }
   
   // Check AC status change
   if (currentData.acStatus != previousData.ac_status) {
+    Serial.println("🔄 AC status changed: " + previousData.ac_status + " → " + currentData.acStatus);
     hasChange = true;
   }
   
   // Check AC temperature change
   if (currentData.setTemp != previousData.set_temperature) {
+    Serial.println("🔄 AC temp changed: " + String(previousData.set_temperature) + " → " + String(currentData.setTemp));
     hasChange = true;
   }
   
@@ -303,12 +398,12 @@ bool hasSignificantChange() {
     hasChange = true;
   }
   
-  // Check proximity sensor change
+  // Check ultrasonic sensor change
   if (currentData.proximity1 != previousData.proximity_in || currentData.proximity2 != previousData.proximity_out) {
     hasChange = true;
   }
   
-  // Check WiFi signal change (significant change = 10 dBm difference)
+  // Check WiFi signal change
   if (abs(currentData.wifiRSSI - previousData.wifi_rssi) >= 10) {
     hasChange = true;
   }
@@ -338,11 +433,17 @@ void updatePreviousData() {
   previousData.wifi_rssi = currentData.wifiRSSI;
 }
 
-// ================= SEND DATA TO HOSTING API =================
-void sendDataToAPI(String reason = "Change detected") {
+// ================= SEND DATA TO HOSTING API - ENHANCED =================
+void sendDataToAPI(String reason) {
   if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("✗ Cannot send to API - WiFi not connected");
     return;
   }
+  
+  Serial.println("📤 Sending proximity data to website...");
+  Serial.println("   Reason: " + reason);
+  Serial.println("   People Count: " + String(currentData.jumlahOrang));
+  Serial.println("   AC Status: " + currentData.acStatus);
   
   // Buat JSON data
   StaticJsonDocument<700> doc;
@@ -362,18 +463,19 @@ void sendDataToAPI(String reason = "Change detected") {
   doc["timestamp"] = millis();
   doc["status"] = "active";
   doc["update_reason"] = reason;
-  doc["update_type"] = "change_based";
+  doc["update_type"] = "proximity_detection";
   doc["control_mode"] = acControl.controlMode;
   doc["manual_override"] = acControl.manualOverride;
   doc["hosting_domain"] = hostingDomain;
   doc["ssl_enabled"] = true;
+  doc["sensor_type"] = "Proximity_Sensor";
   
   String jsonString;
   serializeJson(doc, jsonString);
   
   String response;
   if (makeHTTPSRequest(apiURL, "POST", jsonString.c_str(), response)) {
-    Serial.println("✓ Data sent to hosting: " + reason);
+    Serial.println("✅ SUCCESS: Proximity data sent to website!");
     
     // Update previous data and timing
     updatePreviousData();
@@ -384,11 +486,16 @@ void sendDataToAPI(String reason = "Change detected") {
     StaticJsonDocument<256> responseDoc;
     DeserializationError error = deserializeJson(responseDoc, response);
     if (!error && responseDoc["success"] && responseDoc["data"]["id"]) {
-      Serial.println("✓ Hosting saved ID: " + String(responseDoc["data"]["id"].as<int>()));
+      Serial.println("✅ Website saved with ID: " + String(responseDoc["data"]["id"].as<int>()));
     }
   } else {
-    Serial.println("✗ Failed to send data to hosting");
+    Serial.println("❌ FAILED: Could not send proximity data to website");
   }
+}
+
+// Overload tanpa parameter (default reason)
+void sendDataToAPI() {
+  sendDataToAPI("Change detected");
 }
 
 // ================= TFT DISPLAY =================
@@ -397,7 +504,7 @@ void drawUI() {
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.setTextSize(2);
   tft.setCursor(10, 10);
-  tft.println("SMART ENERGY - HOSTING");
+  tft.println("PROXIMITY - HOSTING");
   tft.drawFastHLine(10, 40, 300, TFT_DARKGREY);
   
   tft.setTextSize(2);
@@ -413,7 +520,7 @@ void drawUI() {
   // Status
   tft.setTextSize(1);
   tft.setCursor(10, 220);
-  tft.println("Mode: Production Hosting");
+  tft.println("Sensor: Proximity Sensor");
   tft.setCursor(10, 235);
   tft.println("Domain: dasko.fst.unja.ac.id");
   tft.setCursor(10, 250);
@@ -452,7 +559,7 @@ void updateTFT(String acStatus, int setSuhu, float suhuRuang) {
   
   // Update status (less frequent)
   static unsigned long lastTftUpdate = 0;
-  if (millis() - lastTftUpdate > 10000) { // Update every 10 seconds
+  if (millis() - lastTftUpdate > 10000) {
     tft.fillRect(10, 235, 310, 80, TFT_BLACK);
     tft.setTextSize(1);
     
@@ -483,147 +590,12 @@ void updateTFT(String acStatus, int setSuhu, float suhuRuang) {
     tft.setTextColor(acControl.manualOverride ? TFT_YELLOW : TFT_GREEN);
     tft.println(acControl.controlMode);
     
-    // Manual override info
-    if (acControl.manualOverride) {
-      tft.setTextColor(TFT_YELLOW);
-      tft.setCursor(10, 295);
-      tft.print("Manual by: ");
-      tft.println(acControl.createdBy);
-    }
-    
     lastTftUpdate = millis();
   }
 }
 
-// ================= PROXIMITY SENSOR - SIMPLIFIED AND FIXED =================
-void bacaProximity() {
-  bool inNow  = digitalRead(PROX_IN);
-  bool outNow = digitalRead(PROX_OUT);
-  unsigned long now = millis();
-  
-  // Update current proximity status (LOW = detected with INPUT_PULLUP)
-  currentData.proximity1 = (inNow == LOW);
-  currentData.proximity2 = (outNow == LOW);
-  
-  // Debug status sensor setiap 10 detik
-  static unsigned long lastDebugPrint = 0;
-  if (now - lastDebugPrint > 10000) {
-    Serial.print("Proximity Debug - IN: ");
-    Serial.print(inNow == LOW ? "DETECTED" : "CLEAR");
-    Serial.print(" (");
-    Serial.print(inNow);
-    Serial.print(") | OUT: ");
-    Serial.print(outNow == LOW ? "DETECTED" : "CLEAR");
-    Serial.print(" (");
-    Serial.print(outNow);
-    Serial.print(") | Total: ");
-    Serial.println(jumlahOrang);
-    lastDebugPrint = now;
-  }
-  
-  // Cooldown untuk mencegah deteksi ganda
-  if (now - lastPersonDetected < PERSON_COOLDOWN) {
-    return;
-  }
-  
-  // Deteksi perubahan state dengan debouncing
-  static unsigned long lastInChange = 0;
-  static unsigned long lastOutChange = 0;
-  static bool lastInState = HIGH;
-  static bool lastOutState = HIGH;
-  
-  // Debouncing untuk sensor IN
-  if (inNow != lastInState) {
-    lastInChange = now;
-    lastInState = inNow;
-  }
-  
-  // Debouncing untuk sensor OUT  
-  if (outNow != lastOutState) {
-    lastOutChange = now;
-    lastOutState = outNow;
-  }
-  
-  // Deteksi falling edge (HIGH -> LOW) dengan debouncing 200ms
-  if (lastIn == HIGH && inNow == LOW && inTime == 0 && (now - lastInChange > 200)) {
-    inTime = now;
-    Serial.println("✓ Sensor IN activated");
-  }
-  
-  if (lastOut == HIGH && outNow == LOW && outTime == 0 && (now - lastOutChange > 200)) {
-    outTime = now;
-    Serial.println("✓ Sensor OUT activated");
-  }
-  
-  // MASUK: IN dulu, baru OUT (dalam waktu yang wajar)
-  if (inTime > 0 && outTime > 0 && inTime < outTime) {
-    unsigned long interval = outTime - inTime;
-    Serial.print("Checking MASUK - Interval: ");
-    Serial.print(interval);
-    Serial.println(" ms");
-    
-    if (interval < MAX_INTERVAL && interval > 100) {
-      if (jumlahOrang < 20) {  // Batas maksimal 20 orang
-        jumlahOrang++;
-        lastPersonDetected = now;
-        Serial.print(">>> ORANG MASUK! Total: ");
-        Serial.println(jumlahOrang);
-      } else {
-        Serial.println("⚠ Ruangan sudah penuh (20 orang)");
-      }
-    } else {
-      Serial.println("❌ Interval tidak valid untuk MASUK");
-    }
-    inTime = 0;
-    outTime = 0;
-  }
-  
-  // KELUAR: OUT dulu, baru IN (dalam waktu yang wajar)
-  if (inTime > 0 && outTime > 0 && outTime < inTime) {
-    unsigned long interval = inTime - outTime;
-    Serial.print("Checking KELUAR - Interval: ");
-    Serial.print(interval);
-    Serial.println(" ms");
-    
-    if (interval < MAX_INTERVAL && interval > 100 && jumlahOrang > 0) {
-      jumlahOrang--;
-      lastPersonDetected = now;
-      Serial.print("<<< ORANG KELUAR! Total: ");
-      Serial.println(jumlahOrang);
-    } else if (jumlahOrang == 0) {
-      Serial.println("⚠ Tidak ada orang untuk dikurangi");
-    } else {
-      Serial.println("❌ Interval tidak valid untuk KELUAR");
-    }
-    inTime = 0;
-    outTime = 0;
-  }
-  
-  // Reset dengan timeout yang lebih pendek
-  if (inTime > 0 && outTime == 0 && (now - inTime) > TIMEOUT) {
-    Serial.println("⏰ Timeout reset IN sensor");
-    inTime = 0;
-  }
-  if (outTime > 0 && inTime == 0 && (now - outTime) > TIMEOUT) {
-    Serial.println("⏰ Timeout reset OUT sensor");
-    outTime = 0;
-  }
-  
-  // Reset jika kedua sensor aktif terlalu lama (kemungkinan error)
-  if (inTime > 0 && outTime > 0 && (now - min(inTime, outTime)) > (TIMEOUT * 2)) {
-    Serial.println("⏰ Force reset both sensors (too long active)");
-    inTime = 0;
-    outTime = 0;
-  }
-  
-  jumlahOrang = constrain(jumlahOrang, 0, 20);
-  
-  lastIn = inNow;
-  lastOut = outNow;
-}
-
 // ================= AC CONTROL =================
-void kontrolAC(String &status, int &temp) {
+void kontrolAC(String &acStatus, int &setTemp) {
   bool ac1ON = false;
   bool ac2ON = false;
   int targetTemp1 = 25;
@@ -639,17 +611,17 @@ void kontrolAC(String &status, int &temp) {
       targetTemp2 = acControl.ac2Temperature;
       
       if (!ac1ON && !ac2ON) {
-        status = "MANUAL OFF";
-        temp = 0;
+        acStatus = "MANUAL OFF";
+        setTemp = 0;
       } else if (ac1ON && ac2ON) {
-        status = "MANUAL 2 AC";
-        temp = (targetTemp1 + targetTemp2) / 2;
+        acStatus = "MANUAL 2 AC";
+        setTemp = (targetTemp1 + targetTemp2) / 2;
       } else {
-        status = "MANUAL 1 AC";
-        temp = ac1ON ? targetTemp1 : targetTemp2;
+        acStatus = "MANUAL 1 AC";
+        setTemp = ac1ON ? targetTemp1 : targetTemp2;
       }
       
-      Serial.println("Manual AC Control from hosting: " + status + " @ " + String(temp) + "°C");
+      Serial.println("Manual AC Control from hosting: " + acStatus + " @ " + String(setTemp) + "°C");
     } else {
       // Manual control expired, return to auto
       Serial.println("Manual control from hosting expired, returning to auto mode");
@@ -662,42 +634,42 @@ void kontrolAC(String &status, int &temp) {
   // Auto mode (default or when manual expires)
   if (!acControl.manualOverride || !acControl.hasActiveControl) {
     if (jumlahOrang == 0) {
-      status = "AC OFF";
-      temp = 0;
+      acStatus = "AC OFF";
+      setTemp = 0;
     }
     else if (jumlahOrang <= 5) {
       ac1ON = true;
       targetTemp1 = 25;
-      temp = 25;
-      status = "1 AC ON";
+      setTemp = 25;
+      acStatus = "1 AC ON";
     }
     else if (jumlahOrang <= 10) {
       ac1ON = true;
       targetTemp1 = 22;
-      temp = 22;
-      status = "1 AC ON";
+      setTemp = 22;
+      acStatus = "1 AC ON";
     }
     else if (jumlahOrang <= 15) {
       ac1ON = true;
       ac2ON = true;
       targetTemp1 = 22;
       targetTemp2 = 22;
-      temp = 22;
-      status = "2 AC ON";
+      setTemp = 22;
+      acStatus = "2 AC ON";
     }
-    else if (jumlahOrang <= 20) {  // Updated for max 20 people
+    else {
       ac1ON = true;
       ac2ON = true;
       targetTemp1 = 20;
       targetTemp2 = 20;
-      temp = 20;
-      status = "2 AC MAX";
+      setTemp = 20;
+      acStatus = "2 AC MAX";
     }
   }
   
   // Apply AC changes only if different
   if (ac1ON != lastAC1 || ac2ON != lastAC2 || targetTemp1 != lastTemp1 || targetTemp2 != lastTemp2) {
-    Serial.println("AC Change: " + status + " @ " + String(temp) + "°C");
+    Serial.println("AC Change: " + acStatus + " @ " + String(setTemp) + "°C");
     
     if (!ac1ON && !ac2ON) {
       ac1.off(); ac1.send();
@@ -740,6 +712,10 @@ void updateSensorData() {
   if (isnan(currentData.suhuRuang)) currentData.suhuRuang = 0.0;
   if (isnan(currentData.humidity)) currentData.humidity = 0.0;
   
+  // Update proximity status
+  currentData.proximity1 = sensorData.objectInDetected;
+  currentData.proximity2 = sensorData.objectOutDetected;
+  
   if (WiFi.isConnected()) {
     currentData.wifiStatus = "Connected";
     currentData.wifiRSSI = WiFi.RSSI();
@@ -755,16 +731,18 @@ void setup() {
   delay(2000);
   
   Serial.println("\n================================");
-  Serial.println("  SMART ENERGY - PRODUCTION HOSTING");
+  Serial.println("  PROXIMITY - PRODUCTION HOSTING");
+  Serial.println("  Sensor: Proximity Sensor");
   Serial.println("  Domain: dasko.fst.unja.ac.id");
   Serial.println("  SSL/HTTPS: Enabled");
-  Serial.println("  Manual AC Control: Supported");
+  Serial.println("  Ultra Fast Response: 300ms");
+  Serial.println("  Pin Config: ESP32 Smart Energy Production");
   Serial.println("================================");
   
-  // Initialize pins dengan pull-up untuk proximity sensor
-  pinMode(PROX_IN, INPUT_PULLUP);   // Coba dengan pull-up internal
-  pinMode(PROX_OUT, INPUT_PULLUP);  // Coba dengan pull-up internal
-  pinMode(LDR_PIN, INPUT);
+  // Initialize proximity pins (sesuai pin configuration)
+  pinMode(PROXIMITY_PIN_IN, INPUT_PULLUP);   // GPIO 2 (PROXIMITY_IN)
+  pinMode(PROXIMITY_PIN_OUT, INPUT_PULLUP);  // GPIO 15 (PROXIMITY_OUT)
+  pinMode(LDR_PIN, INPUT);                   // GPIO 34 (LDR Analog)
   
   // Initialize sensors
   dht.begin();
@@ -783,83 +761,68 @@ void setup() {
   lastForceUpdate = millis();
   lastACControlCheck = millis();
   
-  Serial.println("PRODUCTION SYSTEM READY!");
+  Serial.println("PROXIMITY PRODUCTION SYSTEM READY!");
   Serial.println("Features:");
   Serial.println("- HTTPS/SSL communication");
   Serial.println("- Production hosting integration");
-  Serial.println("- Change-based data updates");
-  Serial.println("- Manual AC control via web dashboard");
-  Serial.println("- Auto mode fallback");
-  Serial.println("- Control expiry support");
-  Serial.println("- Max 20 people capacity");
-  Serial.println("\nSerial Commands:");
-  Serial.println("- 'reset' or 'r' - Reset people count");
-  Serial.println("- 'test' or 't' - Show sensor status");
-  Serial.println("- 'set X' - Set people count to X");
-  Serial.println("- 'help' or 'h' - Show commands");
+  Serial.println("- Proximity sensors");
+  Serial.println("- Ultra fast detection: 300ms cooldown");
+  Serial.println("- Digital input detection");
+  Serial.println("- LUAR sensor = +1 person");
+  Serial.println("- DALAM sensor = -1 person");
   
   // Test proximity sensors
   Serial.println("\n=== PROXIMITY SENSOR TEST ===");
-  Serial.print("Pin 32 (IN) - Raw: "); Serial.print(digitalRead(PROX_IN));
-  Serial.print(" | Active when LOW: "); Serial.println(digitalRead(PROX_IN) == LOW ? "DETECTED" : "CLEAR");
-  Serial.print("Pin 33 (OUT) - Raw: "); Serial.print(digitalRead(PROX_OUT));
-  Serial.print(" | Active when LOW: "); Serial.println(digitalRead(PROX_OUT) == LOW ? "DETECTED" : "CLEAR");
-  Serial.println("Configuration: INPUT_PULLUP (HIGH=clear, LOW=detected)");
-  Serial.println("Max people: 20");
-  Serial.println("Detection sequence: IN->OUT = enter, OUT->IN = exit");
+  Serial.println("Pin Configuration (ESP32 Smart Energy Production):");
+  Serial.println("- PROXIMITY_IN: GPIO 2 (Sensor LUAR)");
+  Serial.println("- PROXIMITY_OUT: GPIO 15 (Sensor DALAM)");
+  Serial.println("- DHT22: GPIO 27");
+  Serial.println("- LDR: GPIO 34 (Analog)");
+  Serial.println("- IR LED: GPIO 14 (+ resistor 220Ω)");
+  Serial.println("Testing Proximity sensors for 5 seconds...");
+  for (int i = 0; i < 25; i++) {
+    bool prox1 = digitalRead(PROXIMITY_PIN_IN);
+    bool prox2 = digitalRead(PROXIMITY_PIN_OUT);
+    bool detected1 = !prox1;  // Invert karena biasanya LOW = detected
+    bool detected2 = !prox2;  // Invert karena biasanya LOW = detected
+    
+    Serial.print("Test " + String(i+1) + "/25 - ");
+    Serial.print("LUAR(2): " + String(prox1 ? "HIGH" : "LOW"));
+    if (detected1) {
+      Serial.print(" ✅ DETECTED");
+    } else {
+      Serial.print(" ❌ CLEAR");
+    }
+    
+    Serial.print(" | DALAM(15): " + String(prox2 ? "HIGH" : "LOW"));
+    if (detected2) {
+      Serial.print(" ✅ DETECTED");
+    } else {
+      Serial.print(" ❌ CLEAR");
+    }
+    
+    if (detected1 || detected2) {
+      Serial.print(" *** OBJECT DETECTED! ***");
+    }
+    Serial.println();
+    delay(200);
+  }
+  
+  Serial.println("Proximity sensor test complete.");
+  Serial.println("Detection: LOW = Object detected");
+  Serial.println("If sensors always show same value, check wiring!");
   Serial.println("==============================");
   Serial.println("================================\n");
 }
 
-// ================= MAIN LOOP =================
+// ================= MAIN LOOP - ULTRA FAST =================
 void loop() {
-  // Check for serial commands (for debugging/manual control)
-  if (Serial.available()) {
-    String command = Serial.readStringUntil('\n');
-    command.trim();
-    command.toLowerCase();
-    
-    if (command == "reset" || command == "r") {
-      jumlahOrang = 0;
-      inTime = 0;
-      outTime = 0;
-      lastPersonDetected = 0;
-      Serial.println("✓ Manual reset - People count set to 0");
-    }
-    else if (command == "test" || command == "t") {
-      Serial.println("=== SENSOR STATUS ===");
-      Serial.print("IN sensor (pin 32): "); 
-      Serial.println(digitalRead(PROX_IN) == LOW ? "DETECTED" : "CLEAR");
-      Serial.print("OUT sensor (pin 33): "); 
-      Serial.println(digitalRead(PROX_OUT) == LOW ? "DETECTED" : "CLEAR");
-      Serial.print("People count: "); Serial.println(jumlahOrang);
-      Serial.print("WiFi: "); Serial.println(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected");
-      Serial.println("====================");
-    }
-    else if (command.startsWith("set ")) {
-      int newCount = command.substring(4).toInt();
-      if (newCount >= 0 && newCount <= 20) {
-        jumlahOrang = newCount;
-        Serial.println("✓ People count set to: " + String(jumlahOrang));
-      } else {
-        Serial.println("❌ Invalid count. Use 0-20");
-      }
-    }
-    else if (command == "help" || command == "h") {
-      Serial.println("=== AVAILABLE COMMANDS ===");
-      Serial.println("reset/r - Reset people count to 0");
-      Serial.println("test/t - Show sensor status");
-      Serial.println("set X - Set people count to X (0-20)");
-      Serial.println("help/h - Show this help");
-      Serial.println("==========================");
-    }
-  }
-  
   // Read sensors and update data
-  bacaProximity();
+  readSensors();
+  detectPeople();
   updateSensorData();
   
-  // Check for AC control commands from hosting (every 10 seconds)
+  // Check for AC control commands from hosting (every 5 seconds)
   if (millis() - lastACControlCheck >= AC_CONTROL_CHECK_INTERVAL) {
     checkACControlAPI();
     lastACControlCheck = millis();
@@ -899,9 +862,9 @@ void loop() {
     sendDataToAPI(sendReason);
   }
   
-  // Reconnect WiFi if disconnected (check every 30 seconds)
+  // Reconnect WiFi if disconnected (check every 15 seconds)
   static unsigned long lastWiFiCheck = 0;
-  if (millis() - lastWiFiCheck > 30000) {
+  if (millis() - lastWiFiCheck > 15000) {
     if (WiFi.status() != WL_CONNECTED) {
       Serial.println("WiFi reconnecting...");
       connectWiFi();
@@ -909,5 +872,5 @@ void loop() {
     lastWiFiCheck = millis();
   }
   
-  delay(100);
+  delay(30);  // Ultra fast main loop delay
 }

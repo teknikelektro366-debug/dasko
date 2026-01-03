@@ -53,16 +53,16 @@ const char* rootCACertificate = \
 "emyPxgcYxn/eR44/KJ4EBs+lVDR3veyJm+kXQ99b21/+jh5Xos1AnX5iItreGCc=\n" \
 "-----END CERTIFICATE-----\n";
 
-// Change Detection Configuration - FASTER UPDATES
+// Change Detection Configuration - ULTRA FAST UPDATES
 #define TEMP_CHANGE_THRESHOLD 0.3    // Kirim jika suhu berubah >= 0.3°C (lebih sensitif)
 #define HUMIDITY_CHANGE_THRESHOLD 1.5 // Kirim jika humidity berubah >= 1.5% (lebih sensitif)
 #define LIGHT_CHANGE_THRESHOLD 30     // Kirim jika cahaya berubah >= 30 lux (lebih sensitif)
 #define MAX_TIME_WITHOUT_UPDATE 120000 // Kirim paksa setiap 2 menit (lebih sering)
-#define MIN_UPDATE_INTERVAL 1000      // Minimum 1 detik antar update (lebih cepat)
+#define MIN_UPDATE_INTERVAL 500       // Minimum 0.5 detik antar update (ULTRA FAST)
 #define AC_CONTROL_CHECK_INTERVAL 5000 // Check AC control setiap 5 detik (lebih sering)
 
 // Device Information
-#define DEVICE_ID "ESP32_Smart_Energy_Production"
+#define DEVICE_ID "ESP32_Ultrasonic_Production"
 #define DEVICE_LOCATION "Lab Teknik Tegangan Tinggi"
 
 // ================= IR =================
@@ -70,42 +70,56 @@ const char* rootCACertificate = \
 #include <IRsend.h>
 #include <ir_Panasonic.h>
 
-#define IR_PIN 4
+#define IR_PIN 14            // Pin IR LED untuk kontrol AC (LED IR langsung + resistor 220Ω)
 IRPanasonicAc ac1(IR_PIN);
 IRPanasonicAc ac2(IR_PIN);
 
 // ================= SENSOR =================
-// Proximity Sensors dengan range 1-10cm
-#define PROX_IN   32    // Pin sensor MASUK (sisi LUAR)
-#define PROX_OUT  33    // Pin sensor KELUAR (sisi DALAM)
+// Ultrasonic Sensors HC-SR04 (sesuai pin configuration)
+#define TRIGGER_PIN_IN  2    // Pin trigger sensor MASUK (sisi LUAR)
+#define ECHO_PIN_IN     15   // Pin echo sensor MASUK (sisi LUAR)
+#define TRIGGER_PIN_OUT 13   // Pin trigger sensor KELUAR (sisi DALAM)
+#define ECHO_PIN_OUT    12   // Pin echo sensor KELUAR (sisi DALAM)
+
 #define DHTPIN    27
 #define DHTTYPE   DHT22
-#define LDR_PIN   34
+#define LDR_PIN   34         // Analog pin untuk LDR
 
 DHT dht(DHTPIN, DHTTYPE);
 
-// Proximity Detection Parameters
-#define MAX_PEOPLE 50            // Kapasitas maksimal ruangan
+// Ultrasonic Detection Parameters
+#define MAX_DISTANCE 20     // Jarak maksimum sensor (20 cm)
+#define MIN_DISTANCE 1       // Jarak minimum deteksi (1 cm)
+#define MAX_DETECTION 15     // Range deteksi optimal (1-15 cm)
+#define MAX_PEOPLE 20        // Kapasitas maksimal ruangan
+
+// ================= FUNCTION DECLARATIONS =================
+void sendDataToAPI(String reason);
+void sendDataToAPI();
+void updateSensorData();
+void connectWiFi();
+bool makeHTTPSRequest(const char* url, const char* method, const char* payload, String& response);
+void checkACControlAPI();
+void kontrolAC(String &acStatus, int &setTemp);
+void detectPeople();
+void readSensors();
+long readUltrasonicDistance(int triggerPin, int echoPin);
 
 // ================= VARIABLES =================
 int jumlahOrang = 0;
 int lastJumlahOrang = -1;
 
-// Proximity sensor data
-struct ProximityData {
-  bool proximityIn = false;      // Status sensor MASUK
-  bool proximityOut = false;     // Status sensor KELUAR
-  bool objectInDetected = false;   // Objek terdeteksi di sensor MASUK
-  bool objectOutDetected = false;  // Objek terdeteksi di sensor KELUAR
-} proximityData;
-
-// Detection timing - FAST RESPONSE
-bool lastInDetected = false;
-bool lastOutDetected = false;
+// Ultrasonic timing - ULTRA FAST RESPONSE
 unsigned long lastPersonDetected = 0;
+#define PERSON_COOLDOWN 300     // Cooldown 300ms antar deteksi (ULTRA FAST)
 
-// Timing constants - ULTRA FAST DETECTION
-#define PERSON_COOLDOWN 300     // Cooldown 300ms antar deteksi (ultra fast)
+// Sensor readings - ULTRASONIC
+struct SensorData {
+  int distanceIn = 0;      // Sensor LUAR (masuk)
+  int distanceOut = 0;     // Sensor DALAM (keluar)
+  bool objectInDetected = false;   // Objek terdeteksi di sensor LUAR
+  bool objectOutDetected = false;  // Objek terdeteksi di sensor DALAM
+} sensorData;
 
 // AC Control State
 struct ACControlState {
@@ -134,21 +148,21 @@ struct PreviousData {
   float room_temperature = -999.0;
   float humidity = -999.0;
   int light_level = -1;
-  bool proximity_in = false;
-  bool proximity_out = false;
+  bool ultrasonic_in = false;
+  bool ultrasonic_out = false;
   int wifi_rssi = 0;
 } previousData;
 
 // Current sensor data
-struct SensorData {
+struct CurrentData {
   int jumlahOrang = 0;
   String acStatus = "OFF";
   int setTemp = 0;
   float suhuRuang = 0.0;
   float humidity = 0.0;
   int lightLevel = 0;
-  bool proximity1 = false;
-  bool proximity2 = false;
+  bool ultrasonic1 = false;
+  bool ultrasonic2 = false;
   unsigned long timestamp = 0;
   String wifiStatus = "Disconnected";
   int wifiRSSI = 0;
@@ -196,9 +210,9 @@ bool makeHTTPSRequest(const char* url, const char* method, const char* payload, 
   // Set SSL certificate
   client.setCACert(rootCACertificate);
   
-  // Set timeout - FASTER
-  client.setTimeout(10000);  // Reduced from 15000
-  https.setTimeout(10000);   // Reduced from 15000
+  // Set timeout - ULTRA FAST
+  client.setTimeout(8000);   // Reduced for faster response
+  https.setTimeout(8000);    // Reduced for faster response
   
   if (!https.begin(client, url)) {
     Serial.println("✗ HTTPS connection failed");
@@ -208,7 +222,7 @@ bool makeHTTPSRequest(const char* url, const char* method, const char* payload, 
   // Set headers
   https.addHeader("Content-Type", "application/json");
   https.addHeader("Accept", "application/json");
-  https.addHeader("User-Agent", "ESP32-SmartEnergy-Production/1.0");
+  https.addHeader("User-Agent", "ESP32-Ultrasonic-Production/1.0");
   https.addHeader("X-Requested-With", "ESP32");
   
   int httpResponseCode;
@@ -227,6 +241,114 @@ bool makeHTTPSRequest(const char* url, const char* method, const char* payload, 
     https.end();
     return false;
   }
+}
+
+// ================= ULTRASONIC FUNCTIONS =================
+long readUltrasonicDistance(int triggerPin, int echoPin) {
+  // Kirim pulse trigger
+  digitalWrite(triggerPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(triggerPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(triggerPin, LOW);
+  
+  // Baca pulse echo dengan timeout yang cepat
+  long duration = pulseIn(echoPin, HIGH, 20000); // Timeout 20ms (ultra fast)
+  
+  // Hitung jarak dalam cm
+  long distance = duration * 0.034 / 2;
+  
+  // Return 0 jika out of range atau error
+  if (distance <= 0 || distance > MAX_DISTANCE) {
+    return 0;
+  }
+  
+  return distance;
+}
+
+// ================= SENSOR FUNCTIONS =================
+void readSensors() {
+  // Baca jarak dari kedua sensor dengan delay minimal
+  sensorData.distanceIn = readUltrasonicDistance(TRIGGER_PIN_IN, ECHO_PIN_IN);
+  delay(10); // Delay minimal antar sensor
+  sensorData.distanceOut = readUltrasonicDistance(TRIGGER_PIN_OUT, ECHO_PIN_OUT);
+  
+  // Validasi pembacaan (0 = out of range atau error)
+  if (sensorData.distanceIn == 0) sensorData.distanceIn = MAX_DISTANCE + 1;
+  if (sensorData.distanceOut == 0) sensorData.distanceOut = MAX_DISTANCE + 1;
+  
+  // Deteksi objek dalam range 1-15cm
+  sensorData.objectInDetected = (sensorData.distanceIn >= MIN_DISTANCE && 
+                                sensorData.distanceIn <= MAX_DETECTION);
+  sensorData.objectOutDetected = (sensorData.distanceOut >= MIN_DISTANCE && 
+                                 sensorData.distanceOut <= MAX_DETECTION);
+}
+
+// ================= ULTRASONIC DETECTION - ULTRA FAST =================
+void detectPeople() {
+  unsigned long now = millis();
+  
+  // Cooldown untuk mencegah deteksi ganda (ultra fast)
+  if (now - lastPersonDetected < PERSON_COOLDOWN) {
+    return;
+  }
+  
+  // Debug info setiap 2 detik
+  static unsigned long lastDebug = 0;
+  if (now - lastDebug > 2000) {
+    Serial.print("📊 Ultrasonic - Orang: ");
+    Serial.print(jumlahOrang);
+    Serial.print("/20 | LUAR:");
+    Serial.print(sensorData.distanceIn);
+    Serial.print("cm");
+    Serial.print(sensorData.objectInDetected ? "✅" : "❌");
+    Serial.print(" | DALAM:");
+    Serial.print(sensorData.distanceOut);
+    Serial.print("cm");
+    Serial.print(sensorData.objectOutDetected ? "✅" : "❌");
+    Serial.println();
+    lastDebug = now;
+  }
+  
+  // LOGIKA ULTRA CEPAT: Deteksi berdasarkan sensor mana yang aktif
+  static bool lastInDetected = false;
+  static bool lastOutDetected = false;
+  
+  // Deteksi MASUK: Sensor LUAR aktif (dari tidak aktif ke aktif)
+  if (sensorData.objectInDetected && !lastInDetected) {
+    jumlahOrang++;
+    lastPersonDetected = now;
+    Serial.println("🚶 → ULTRASONIC LUAR AKTIF - ORANG MASUK!");
+    Serial.println("📊 Jumlah orang: " + String(jumlahOrang) + "/20");
+    
+    // FORCE IMMEDIATE UPDATE TO WEBSITE
+    updateSensorData();
+    sendDataToAPI("Ultrasonic entry - Count: " + String(jumlahOrang));
+  }
+  
+  // Deteksi KELUAR: Sensor DALAM aktif (dari tidak aktif ke aktif)  
+  if (sensorData.objectOutDetected && !lastOutDetected && jumlahOrang > 0) {
+    jumlahOrang--;
+    lastPersonDetected = now;
+    Serial.println("🚶 ← ULTRASONIC DALAM AKTIF - ORANG KELUAR!");
+    Serial.println("📊 Jumlah orang: " + String(jumlahOrang) + "/20");
+    
+    // FORCE IMMEDIATE UPDATE TO WEBSITE
+    updateSensorData();
+    sendDataToAPI("Ultrasonic exit - Count: " + String(jumlahOrang));
+  } else if (sensorData.objectOutDetected && !lastOutDetected && jumlahOrang == 0) {
+    Serial.println("⚠ Ultrasonic DALAM aktif tapi count sudah 0");
+    // STILL SEND UPDATE TO WEBSITE FOR LOGGING
+    updateSensorData();
+    sendDataToAPI("Ultrasonic exit attempt when count is 0");
+  }
+  
+  // Update state terakhir
+  lastInDetected = sensorData.objectInDetected;
+  lastOutDetected = sensorData.objectOutDetected;
+  
+  // Safety limits
+  jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
 }
 
 // ================= AC CONTROL API =================
@@ -264,9 +386,6 @@ void checkACControlAPI() {
       }
       
       Serial.println("✓ AC Control received from hosting: " + acControl.controlMode);
-      Serial.println("  AC1: " + String(acControl.ac1Status ? "ON" : "OFF") + " (" + String(acControl.ac1Temperature) + "°C)");
-      Serial.println("  AC2: " + String(acControl.ac2Status ? "ON" : "OFF") + " (" + String(acControl.ac2Temperature) + "°C)");
-      Serial.println("  By: " + acControl.createdBy);
     }
   } else {
     // No active control found, use auto mode
@@ -316,12 +435,12 @@ bool hasSignificantChange() {
     hasChange = true;
   }
   
-  // Check proximity sensor change
-  if (currentData.proximity1 != previousData.proximity_in || currentData.proximity2 != previousData.proximity_out) {
+  // Check ultrasonic sensor change
+  if (currentData.ultrasonic1 != previousData.ultrasonic_in || currentData.ultrasonic2 != previousData.ultrasonic_out) {
     hasChange = true;
   }
   
-  // Check WiFi signal change (significant change = 10 dBm difference)
+  // Check WiFi signal change
   if (abs(currentData.wifiRSSI - previousData.wifi_rssi) >= 10) {
     hasChange = true;
   }
@@ -346,19 +465,19 @@ void updatePreviousData() {
   previousData.room_temperature = currentData.suhuRuang;
   previousData.humidity = currentData.humidity;
   previousData.light_level = currentData.lightLevel;
-  previousData.proximity_in = currentData.proximity1;
-  previousData.proximity_out = currentData.proximity2;
+  previousData.ultrasonic_in = currentData.ultrasonic1;
+  previousData.ultrasonic_out = currentData.ultrasonic2;
   previousData.wifi_rssi = currentData.wifiRSSI;
 }
 
 // ================= SEND DATA TO HOSTING API - ENHANCED =================
-void sendDataToAPI(String reason = "Change detected") {
+void sendDataToAPI(String reason) {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("✗ Cannot send to API - WiFi not connected");
     return;
   }
   
-  Serial.println("📤 Preparing to send data to website...");
+  Serial.println("📤 Sending ultrasonic data to website...");
   Serial.println("   Reason: " + reason);
   Serial.println("   People Count: " + String(currentData.jumlahOrang));
   Serial.println("   AC Status: " + currentData.acStatus);
@@ -373,30 +492,27 @@ void sendDataToAPI(String reason = "Change detected") {
   doc["room_temperature"] = currentData.suhuRuang;
   doc["humidity"] = currentData.humidity;
   doc["light_level"] = currentData.lightLevel;
-  doc["proximity_in"] = currentData.proximity1;
-  doc["proximity_out"] = currentData.proximity2;
+  doc["ultrasonic_in"] = currentData.ultrasonic1;
+  doc["ultrasonic_out"] = currentData.ultrasonic2;
   doc["wifi_rssi"] = WiFi.RSSI();
   doc["uptime"] = millis() / 1000;
   doc["free_heap"] = ESP.getFreeHeap();
   doc["timestamp"] = millis();
   doc["status"] = "active";
   doc["update_reason"] = reason;
-  doc["update_type"] = "immediate_update";
+  doc["update_type"] = "ultrasonic_detection";
   doc["control_mode"] = acControl.controlMode;
   doc["manual_override"] = acControl.manualOverride;
   doc["hosting_domain"] = hostingDomain;
-  doc["sensor_type"] = "Proximity_Sensor";
-  doc["detection_range"] = "1-10cm_adjustable";
+  doc["ssl_enabled"] = true;
+  doc["sensor_type"] = "HC-SR04_Ultrasonic";
   
   String jsonString;
   serializeJson(doc, jsonString);
   
-  Serial.println("📡 Sending JSON: " + jsonString);
-  
   String response;
   if (makeHTTPSRequest(apiURL, "POST", jsonString.c_str(), response)) {
-    Serial.println("✅ SUCCESS: Data sent to website!");
-    Serial.println("   Response: " + response);
+    Serial.println("✅ SUCCESS: Ultrasonic data sent to website!");
     
     // Update previous data and timing
     updatePreviousData();
@@ -410,9 +526,13 @@ void sendDataToAPI(String reason = "Change detected") {
       Serial.println("✅ Website saved with ID: " + String(responseDoc["data"]["id"].as<int>()));
     }
   } else {
-    Serial.println("❌ FAILED: Could not send data to website");
-    Serial.println("   Check your internet connection and website status");
+    Serial.println("❌ FAILED: Could not send ultrasonic data to website");
   }
+}
+
+// Overload tanpa parameter (default reason)
+void sendDataToAPI() {
+  sendDataToAPI("Change detected");
 }
 
 // ================= TFT DISPLAY =================
@@ -421,7 +541,7 @@ void drawUI() {
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.setTextSize(2);
   tft.setCursor(10, 10);
-  tft.println("SMART ENERGY - HOSTING");
+  tft.println("ULTRASONIC - HOSTING");
   tft.drawFastHLine(10, 40, 300, TFT_DARKGREY);
   
   tft.setTextSize(2);
@@ -437,7 +557,7 @@ void drawUI() {
   // Status
   tft.setTextSize(1);
   tft.setCursor(10, 220);
-  tft.println("Mode: Production Hosting");
+  tft.println("Sensor: HC-SR04 Ultrasonic");
   tft.setCursor(10, 235);
   tft.println("Domain: dasko.fst.unja.ac.id");
   tft.setCursor(10, 250);
@@ -476,7 +596,7 @@ void updateTFT(String acStatus, int setSuhu, float suhuRuang) {
   
   // Update status (less frequent)
   static unsigned long lastTftUpdate = 0;
-  if (millis() - lastTftUpdate > 10000) { // Update every 10 seconds
+  if (millis() - lastTftUpdate > 10000) {
     tft.fillRect(10, 235, 310, 80, TFT_BLACK);
     tft.setTextSize(1);
     
@@ -507,121 +627,87 @@ void updateTFT(String acStatus, int setSuhu, float suhuRuang) {
     tft.setTextColor(acControl.manualOverride ? TFT_YELLOW : TFT_GREEN);
     tft.println(acControl.controlMode);
     
-    // Manual override info
-    if (acControl.manualOverride) {
-      tft.setTextColor(TFT_YELLOW);
-      tft.setCursor(10, 295);
-      tft.print("Manual by: ");
-      tft.println(acControl.createdBy);
-    }
-    
     lastTftUpdate = millis();
   }
 }
 
-// ================= PROXIMITY FUNCTIONS =================
-void readProximitySensors() {
-  // Baca status dari kedua sensor proximity (digital input)
-  proximityData.proximityIn = digitalRead(PROX_IN);
-  proximityData.proximityOut = digitalRead(PROX_OUT);
-  
-  // Deteksi objek berdasarkan status sensor (LOW = terdeteksi untuk kebanyakan proximity sensor)
-  proximityData.objectInDetected = !proximityData.proximityIn;    // Invert karena biasanya LOW = detected
-  proximityData.objectOutDetected = !proximityData.proximityOut;  // Invert karena biasanya LOW = detected
-  
-  // Update current sensor data untuk API
-  currentData.proximity1 = proximityData.objectInDetected;
-  currentData.proximity2 = proximityData.objectOutDetected;
-}
-
-// ================= OBJECT DETECTION - SIMPLE COUNTING =================
-void detectObjects() {
-  unsigned long now = millis();
-  
-  // Cooldown untuk mencegah deteksi ganda
-  if (now - lastPersonDetected < PERSON_COOLDOWN) {
-    return;
-  }
-  
-  // Debug status sensor setiap 3 detik
-  static unsigned long lastDebugPrint = 0;
-  if (now - lastDebugPrint > 3000) {
-    Serial.print("Proximity Status - IN: ");
-    Serial.print(proximityData.objectInDetected ? "DETECTED" : "CLEAR");
-    Serial.print(" (Pin: " + String(proximityData.proximityIn ? "HIGH" : "LOW") + ")");
-    Serial.print(" | OUT: ");
-    Serial.print(proximityData.objectOutDetected ? "DETECTED" : "CLEAR");
-    Serial.print(" (Pin: " + String(proximityData.proximityOut ? "HIGH" : "LOW") + ")");
-    Serial.print(" | Count: ");
-    Serial.println(jumlahOrang);
-    lastDebugPrint = now;
-  }
-  
-  // SIMPLE LOGIC: Deteksi objek melewati sensor IN (masuk)
-  // Trigger saat objek terdeteksi (dari tidak terdeteksi ke terdeteksi)
-  if (!lastInDetected && proximityData.objectInDetected) {
-    jumlahOrang++;
-    lastPersonDetected = now;
-    Serial.println(">>> OBJECT DETECTED at IN sensor! Count: " + String(jumlahOrang));
-    
-    // FORCE IMMEDIATE UPDATE TO WEBSITE
-    updateSensorData();
-    sendDataToAPI("Object entered - Count: " + String(jumlahOrang));
-  }
-  
-  // SIMPLE LOGIC: Deteksi objek melewati sensor OUT (keluar)
-  // Trigger saat objek terdeteksi (dari tidak terdeteksi ke terdeteksi)
-  if (!lastOutDetected && proximityData.objectOutDetected && jumlahOrang > 0) {
-    jumlahOrang--;
-    lastPersonDetected = now;
-    Serial.println("<<< OBJECT DETECTED at OUT sensor! Count: " + String(jumlahOrang));
-    
-    // FORCE IMMEDIATE UPDATE TO WEBSITE
-    updateSensorData();
-    sendDataToAPI("Object exited - Count: " + String(jumlahOrang));
-  } else if (!lastOutDetected && proximityData.objectOutDetected && jumlahOrang == 0) {
-    Serial.println("⚠ Object detected at OUT sensor but count is already 0");
-    // STILL SEND UPDATE TO WEBSITE FOR LOGGING
-    updateSensorData();
-    sendDataToAPI("Exit attempt when count is 0");
-  }
-  
-  // Safety limits
-  jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
-  
-  // Update previous detection states
-  lastInDetected = proximityData.objectInDetected;
-  lastOutDetected = proximityData.objectOutDetected;
-}
-
-// ================= AC + IR =================
-void kontrolAC(String &status, int &temp) {
+// ================= AC CONTROL =================
+void kontrolAC(String &acStatus, int &setTemp) {
   bool ac1ON = false;
   bool ac2ON = false;
+  int targetTemp1 = 25;
+  int targetTemp2 = 25;
   
-  if (jumlahOrang == 0) {
-    status = "AC OFF";
-    temp = 0;
-  }
-  else if (jumlahOrang <= 5) {
-    ac1ON = true;
-    temp = 25;
-    status = "1 AC ON";
-  }
-  else if (jumlahOrang <= 10) {
-    ac1ON = true;
-    temp = 20;
-    status = "1 AC ON";
-  }
-  else {
-    ac1ON = true;
-    ac2ON = true;
-    temp = 20;
-    status = "2 AC ON";
+  // Check if manual override is active and not expired
+  if (acControl.manualOverride && acControl.hasActiveControl) {
+    if (acControl.expiresAt == 0 || millis() < acControl.expiresAt) {
+      // Use manual control settings from hosting
+      ac1ON = acControl.ac1Status;
+      ac2ON = acControl.ac2Status;
+      targetTemp1 = acControl.ac1Temperature;
+      targetTemp2 = acControl.ac2Temperature;
+      
+      if (!ac1ON && !ac2ON) {
+        acStatus = "MANUAL OFF";
+        setTemp = 0;
+      } else if (ac1ON && ac2ON) {
+        acStatus = "MANUAL 2 AC";
+        setTemp = (targetTemp1 + targetTemp2) / 2;
+      } else {
+        acStatus = "MANUAL 1 AC";
+        setTemp = ac1ON ? targetTemp1 : targetTemp2;
+      }
+      
+      Serial.println("Manual AC Control from hosting: " + acStatus + " @ " + String(setTemp) + "°C");
+    } else {
+      // Manual control expired, return to auto
+      Serial.println("Manual control from hosting expired, returning to auto mode");
+      acControl.manualOverride = false;
+      acControl.hasActiveControl = false;
+      acControl.controlMode = "auto";
+    }
   }
   
-  // ===== Kirim IR hanya jika berubah =====
-  if (ac1ON != lastAC1 || ac2ON != lastAC2 || temp != lastTemp) {
+  // Auto mode (default or when manual expires)
+  if (!acControl.manualOverride || !acControl.hasActiveControl) {
+    if (jumlahOrang == 0) {
+      acStatus = "AC OFF";
+      setTemp = 0;
+    }
+    else if (jumlahOrang <= 5) {
+      ac1ON = true;
+      targetTemp1 = 25;
+      setTemp = 25;
+      acStatus = "1 AC ON";
+    }
+    else if (jumlahOrang <= 10) {
+      ac1ON = true;
+      targetTemp1 = 22;
+      setTemp = 22;
+      acStatus = "1 AC ON";
+    }
+    else if (jumlahOrang <= 15) {
+      ac1ON = true;
+      ac2ON = true;
+      targetTemp1 = 22;
+      targetTemp2 = 22;
+      setTemp = 22;
+      acStatus = "2 AC ON";
+    }
+    else {
+      ac1ON = true;
+      ac2ON = true;
+      targetTemp1 = 20;
+      targetTemp2 = 20;
+      setTemp = 20;
+      acStatus = "2 AC MAX";
+    }
+  }
+  
+  // Apply AC changes only if different
+  if (ac1ON != lastAC1 || ac2ON != lastAC2 || targetTemp1 != lastTemp1 || targetTemp2 != lastTemp2) {
+    Serial.println("AC Change: " + acStatus + " @ " + String(setTemp) + "°C");
+    
     if (!ac1ON && !ac2ON) {
       ac1.off(); ac1.send();
       ac2.off(); ac2.send();
@@ -629,7 +715,7 @@ void kontrolAC(String &status, int &temp) {
       if (ac1ON) {
         ac1.on();
         ac1.setMode(kPanasonicAcCool);
-        ac1.setTemp(temp);
+        ac1.setTemp(targetTemp1);
         ac1.send();
       } else {
         ac1.off(); ac1.send();
@@ -638,7 +724,7 @@ void kontrolAC(String &status, int &temp) {
       if (ac2ON) {
         ac2.on();
         ac2.setMode(kPanasonicAcCool);
-        ac2.setTemp(temp);
+        ac2.setTemp(targetTemp2);
         ac2.send();
       } else {
         ac2.off(); ac2.send();
@@ -647,7 +733,8 @@ void kontrolAC(String &status, int &temp) {
     
     lastAC1 = ac1ON;
     lastAC2 = ac2ON;
-    lastTemp = temp;
+    lastTemp1 = targetTemp1;
+    lastTemp2 = targetTemp2;
   }
 }
 
@@ -662,8 +749,9 @@ void updateSensorData() {
   if (isnan(currentData.suhuRuang)) currentData.suhuRuang = 0.0;
   if (isnan(currentData.humidity)) currentData.humidity = 0.0;
   
-  // Update proximity status (sudah diupdate di readProximitySensors)
-  // currentData.proximity1 dan proximity2 sudah diset di readProximitySensors()
+  // Update ultrasonic status
+  currentData.ultrasonic1 = sensorData.objectInDetected;
+  currentData.ultrasonic2 = sensorData.objectOutDetected;
   
   if (WiFi.isConnected()) {
     currentData.wifiStatus = "Connected";
@@ -680,17 +768,23 @@ void setup() {
   delay(2000);
   
   Serial.println("\n================================");
-  Serial.println("  SMART ENERGY - PROXIMITY DETECTION");
+  Serial.println("  ULTRASONIC - PRODUCTION HOSTING");
+  Serial.println("  Sensor: HC-SR04 Ultrasonic");
   Serial.println("  Domain: dasko.fst.unja.ac.id");
   Serial.println("  SSL/HTTPS: Enabled");
-  Serial.println("  Detection Range: 1-10cm (adjustable)");
-  Serial.println("  Manual AC Control: Supported");
+  Serial.println("  Ultra Fast Response: 300ms");
+  Serial.println("  Pin Config: ESP32 Smart Energy Production");
   Serial.println("================================");
   
-  // Initialize proximity pins dengan pull-up
-  pinMode(PROX_IN, INPUT_PULLUP);   // GPIO 32 (PROX_IN)
-  pinMode(PROX_OUT, INPUT_PULLUP);  // GPIO 33 (PROX_OUT)
-  pinMode(LDR_PIN, INPUT);          // GPIO 34 (LDR Analog)
+  // Initialize ultrasonic pins (sesuai pin configuration)
+  pinMode(TRIGGER_PIN_IN, OUTPUT);   // GPIO 2 (TRIG_IN)
+  pinMode(ECHO_PIN_IN, INPUT);       // GPIO 15 (ECHO_IN)
+  pinMode(TRIGGER_PIN_OUT, OUTPUT);  // GPIO 13 (TRIG_OUT)
+  pinMode(ECHO_PIN_OUT, INPUT);      // GPIO 12 (ECHO_OUT)
+  pinMode(LDR_PIN, INPUT);           // GPIO 34 (LDR Analog)
+  
+  digitalWrite(TRIGGER_PIN_IN, LOW);
+  digitalWrite(TRIGGER_PIN_OUT, LOW);
   
   // Initialize sensors
   dht.begin();
@@ -709,67 +803,67 @@ void setup() {
   lastForceUpdate = millis();
   lastACControlCheck = millis();
   
-  Serial.println("PROXIMITY PRODUCTION SYSTEM READY!");
+  Serial.println("ULTRASONIC PRODUCTION SYSTEM READY!");
   Serial.println("Features:");
   Serial.println("- HTTPS/SSL communication");
   Serial.println("- Production hosting integration");
-  Serial.println("- Proximity sensors (adjustable 1-10cm)");
+  Serial.println("- HC-SR04 ultrasonic sensors");
   Serial.println("- Ultra fast detection: 300ms cooldown");
-  Serial.println("- IN sensor = +1 object");
-  Serial.println("- OUT sensor = -1 object");
+  Serial.println("- Range: 1-15cm detection");
+  Serial.println("- LUAR sensor = +1 person");
+  Serial.println("- DALAM sensor = -1 person");
   
-  // Test proximity sensors
-  Serial.println("\n=== PROXIMITY SENSOR TEST ===");
-  Serial.println("Pin Configuration:");
-  Serial.println("- PROX_IN: GPIO 32 (Sensor MASUK)");
-  Serial.println("- PROX_OUT: GPIO 33 (Sensor KELUAR)");
+  // Test ultrasonic sensors
+  Serial.println("\n=== ULTRASONIC SENSOR TEST ===");
+  Serial.println("Pin Configuration (ESP32 Smart Energy Production):");
+  Serial.println("- TRIGGER_IN: GPIO 2 (Sensor LUAR)");
+  Serial.println("- ECHO_IN: GPIO 15 (Sensor LUAR)");
+  Serial.println("- TRIGGER_OUT: GPIO 13 (Sensor DALAM)");
+  Serial.println("- ECHO_OUT: GPIO 12 (Sensor DALAM)");
   Serial.println("- DHT22: GPIO 27");
   Serial.println("- LDR: GPIO 34 (Analog)");
-  Serial.println("- IR LED: GPIO 4");
-  Serial.println("Testing Proximity sensors for 5 seconds...");
-  Serial.println("Note: Adjust sensor potentiometer for 1-10cm range");
-  
+  Serial.println("- IR LED: GPIO 14 (+ resistor 220Ω)");
+  Serial.println("Testing HC-SR04 sensors for 5 seconds...");
   for (int i = 0; i < 25; i++) {
-    bool prox1 = digitalRead(PROX_IN);
-    bool prox2 = digitalRead(PROX_OUT);
-    bool detected1 = !prox1;  // Invert karena biasanya LOW = detected
-    bool detected2 = !prox2;  // Invert karena biasanya LOW = detected
+    int dist1 = readUltrasonicDistance(TRIGGER_PIN_IN, ECHO_PIN_IN);
+    delay(50);
+    int dist2 = readUltrasonicDistance(TRIGGER_PIN_OUT, ECHO_PIN_OUT);
     
     Serial.print("Test " + String(i+1) + "/25 - ");
-    Serial.print("IN: " + String(prox1 ? "HIGH" : "LOW"));
-    if (detected1) {
-      Serial.print(" ✅ DETECTED");
+    Serial.print("LUAR(2/15): " + String(dist1) + "cm");
+    if (dist1 >= MIN_DISTANCE && dist1 <= MAX_DETECTION) {
+      Serial.print(" ✅");
     } else {
-      Serial.print(" ❌ CLEAR");
+      Serial.print(" ❌");
     }
     
-    Serial.print(" | OUT: " + String(prox2 ? "HIGH" : "LOW"));
-    if (detected2) {
-      Serial.print(" ✅ DETECTED");
+    Serial.print(" | DALAM(13/12): " + String(dist2) + "cm");
+    if (dist2 >= MIN_DISTANCE && dist2 <= MAX_DETECTION) {
+      Serial.print(" ✅");
     } else {
-      Serial.print(" ❌ CLEAR");
+      Serial.print(" ❌");
     }
     
-    if (detected1 || detected2) {
-      Serial.print(" *** OBJECT IN RANGE! ***");
+    if ((dist1 >= MIN_DISTANCE && dist1 <= MAX_DETECTION) || 
+        (dist2 >= MIN_DISTANCE && dist2 <= MAX_DETECTION)) {
+      Serial.print(" *** OBJECT DETECTED! ***");
     }
     Serial.println();
-    delay(200);
+    delay(100);
   }
   
-  Serial.println("Proximity sensor test complete.");
-  Serial.println("Detection: LOW = Object detected (within 1-10cm)");
-  Serial.println("Adjust potentiometer on sensor for desired range!");
-  Serial.println("If sensors always show same value, check wiring!");
+  Serial.println("Ultrasonic sensor test complete.");
+  Serial.println("Detection range: 1-15cm");
+  Serial.println("If sensors show 0cm, check wiring!");
   Serial.println("==============================");
   Serial.println("================================\n");
 }
 
-// ================= MAIN LOOP =================
+// ================= MAIN LOOP - ULTRA FAST =================
 void loop() {
-  // Read proximity sensors and detect objects
-  readProximitySensors();
-  detectObjects();
+  // Read sensors and update data
+  readSensors();
+  detectPeople();
   updateSensorData();
   
   // Check for AC control commands from hosting (every 5 seconds)
@@ -788,12 +882,6 @@ void loop() {
   // Update TFT if people count changed
   if (jumlahOrang != lastJumlahOrang) {
     updateTFT(acStatus, setTemp, currentData.suhuRuang);
-    Serial.println("========================");
-    Serial.print("Jumlah Objek : "); Serial.println(jumlahOrang);
-    Serial.print("AC Status    : "); Serial.println(acStatus);
-    Serial.print("Set Suhu AC  : "); Serial.println(setTemp);
-    Serial.print("Suhu Ruang   : "); Serial.println(currentData.suhuRuang);
-    Serial.println("========================");
     lastJumlahOrang = jumlahOrang;
   }
   

@@ -9,21 +9,27 @@
 TFT_eSPI tft;
 
 // ================= CONFIGURATION =================
-// WiFi Configuration
+// WiFi Configuration - Multiple Options
 const char* ssid = "LAB TEKNIK TEGANGAN TINGGI";
 const char* password = "LABTTT2026";
+
+// Alternative WiFi networks (uncomment to use)
+// const char* ssid = "AndroidAP";
+// const char* password = "12345678";
+// const char* ssid = "iPhone";  
+// const char* password = "password123";
 
 // Laravel API Configuration
 const char* apiURL = "http://192.168.0.111:8000/api/sensor/data";
 const char* acControlURL = "http://192.168.0.111:8000/api/ac/control";
 
-// Change Detection Configuration
+// Change Detection Configuration - FASTER UPDATES
 #define TEMP_CHANGE_THRESHOLD 0.5    // Kirim jika suhu berubah >= 0.5°C
 #define HUMIDITY_CHANGE_THRESHOLD 2.0 // Kirim jika humidity berubah >= 2%
 #define LIGHT_CHANGE_THRESHOLD 50     // Kirim jika cahaya berubah >= 50 lux
 #define MAX_TIME_WITHOUT_UPDATE 300000 // Kirim paksa setiap 5 menit
-#define MIN_UPDATE_INTERVAL 2000      // Minimum 2 detik antar update
-#define AC_CONTROL_CHECK_INTERVAL 10000 // Check AC control setiap 10 detik
+#define MIN_UPDATE_INTERVAL 1000      // Minimum 1 detik antar update (dipercepat)
+#define AC_CONTROL_CHECK_INTERVAL 5000 // Check AC control setiap 5 detik (dipercepat)
 
 // Device Information
 #define DEVICE_ID "ESP32_Smart_Energy_ChangeDetection"
@@ -39,27 +45,36 @@ IRPanasonicAc ac1(IR_PIN);
 IRPanasonicAc ac2(IR_PIN);
 
 // ================= SENSOR =================
-#define PROX_IN   32
-#define PROX_OUT  33
+// Ultrasonic Sensors (menggantikan proximity)
+#define TRIGGER_PIN_IN  5    // Pin trigger sensor MASUK (sisi LUAR)
+#define ECHO_PIN_IN     18   // Pin echo sensor MASUK (sisi LUAR)
+#define TRIGGER_PIN_OUT 19   // Pin trigger sensor KELUAR (sisi DALAM)
+#define ECHO_PIN_OUT    21   // Pin echo sensor KELUAR (sisi DALAM)
+
 #define DHTPIN    27
 #define DHTTYPE   DHT22
 #define LDR_PIN   34
 
 DHT dht(DHTPIN, DHTTYPE);
 
+// Ultrasonic Detection Parameters
+#define MAX_DISTANCE 20     // Jarak maksimum sensor (20 cm)
+#define MIN_DISTANCE 1       // Jarak minimum deteksi (1 cm)
+#define MAX_DETECTION 15     // Range deteksi optimal (1-15 cm)
+
 // ================= VARIABLES =================
 int jumlahOrang = 0;
 int lastJumlahOrang = -1;
 
-// Proximity timing
+// Proximity timing - ULTRA FAST RESPONSE
 bool lastIn  = HIGH;
 bool lastOut = HIGH;
 unsigned long inTime = 0;
 unsigned long outTime = 0;
 unsigned long lastPersonDetected = 0;
-#define MAX_INTERVAL 1000
-#define TIMEOUT 2000
-#define PERSON_COOLDOWN 1500
+#define MAX_INTERVAL 500        // Diperkecil dari 1000 ke 500ms
+#define TIMEOUT 1000           // Diperkecil dari 2000 ke 1000ms  
+#define PERSON_COOLDOWN 300    // Diperkecil dari 1500 ke 300ms - ULTRA FAST!
 
 // AC Control State
 struct ACControlState {
@@ -113,32 +128,143 @@ unsigned long lastAPIUpdate = 0;
 unsigned long lastForceUpdate = 0;
 unsigned long lastACControlCheck = 0;
 
-// ================= WIFI CONNECTION =================
+// ================= WIFI CONNECTION - IMPROVED =================
 void connectWiFi() {
   Serial.println("=== CONNECTING TO WIFI ===");
+  
+  // Disconnect any previous connection
+  WiFi.disconnect(true);
+  delay(1000);
+  
+  // Set WiFi mode and power
   WiFi.mode(WIFI_STA);
+  WiFi.setAutoConnect(true);
+  WiFi.setAutoReconnect(true);
+  
+  // Try different WiFi settings
+  Serial.println("Trying WiFi connection...");
+  Serial.println("SSID: " + String(ssid));
+  Serial.println("Password length: " + String(strlen(password)));
+  
   WiFi.begin(ssid, password);
   
   int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 30) {
+  while (WiFi.status() != WL_CONNECTED && attempts < 60) { // Increased attempts
     delay(500);
     Serial.print(".");
+    
+    // Print WiFi status for debugging
+    if (attempts % 10 == 0) {
+      Serial.println();
+      Serial.print("WiFi Status: ");
+      switch(WiFi.status()) {
+        case WL_IDLE_STATUS: Serial.print("IDLE"); break;
+        case WL_NO_SSID_AVAIL: Serial.print("NO_SSID_AVAILABLE"); break;
+        case WL_SCAN_COMPLETED: Serial.print("SCAN_COMPLETED"); break;
+        case WL_CONNECTED: Serial.print("CONNECTED"); break;
+        case WL_CONNECT_FAILED: Serial.print("CONNECT_FAILED"); break;
+        case WL_CONNECTION_LOST: Serial.print("CONNECTION_LOST"); break;
+        case WL_DISCONNECTED: Serial.print("DISCONNECTED"); break;
+        default: Serial.print("UNKNOWN"); break;
+      }
+      Serial.println(" (Attempt " + String(attempts+1) + "/60)");
+    }
+    
     attempts++;
+    
+    // Try reconnecting every 20 attempts
+    if (attempts % 20 == 0 && attempts < 60) {
+      Serial.println("\nRetrying connection...");
+      WiFi.disconnect();
+      delay(1000);
+      WiFi.begin(ssid, password);
+    }
   }
   Serial.println();
   
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("✓ WiFi CONNECTED!");
     Serial.println("✓ IP: " + WiFi.localIP().toString());
+    Serial.println("✓ Gateway: " + WiFi.gatewayIP().toString());
+    Serial.println("✓ DNS: " + WiFi.dnsIP().toString());
+    Serial.println("✓ RSSI: " + String(WiFi.RSSI()) + " dBm");
     Serial.println("✓ API: " + String(apiURL));
     Serial.println("✓ AC Control: " + String(acControlURL));
     currentData.wifiStatus = "Connected";
     currentData.wifiRSSI = WiFi.RSSI();
   } else {
     Serial.println("✗ WiFi FAILED!");
-    currentData.wifiStatus = "Failed";
+    Serial.println("✗ Final Status: " + String(WiFi.status()));
+    Serial.println("✗ Trying alternative connection methods...");
+    
+    // Try alternative connection method
+    tryAlternativeWiFi();
   }
   Serial.println("========================");
+}
+
+// ================= ALTERNATIVE WIFI CONNECTION =================
+void tryAlternativeWiFi() {
+  Serial.println("=== ALTERNATIVE WIFI CONNECTION ===");
+  
+  // Scan for available networks
+  Serial.println("Scanning for WiFi networks...");
+  int n = WiFi.scanNetworks();
+  
+  if (n == 0) {
+    Serial.println("No networks found");
+  } else {
+    Serial.println("Found " + String(n) + " networks:");
+    bool ssidFound = false;
+    
+    for (int i = 0; i < n; ++i) {
+      String foundSSID = WiFi.SSID(i);
+      Serial.println("  " + String(i+1) + ": " + foundSSID + " (" + String(WiFi.RSSI(i)) + " dBm)");
+      
+      if (foundSSID == ssid) {
+        ssidFound = true;
+        Serial.println("    ✓ Target SSID found!");
+      }
+    }
+    
+    if (!ssidFound) {
+      Serial.println("✗ Target SSID '" + String(ssid) + "' not found in scan!");
+      Serial.println("✗ Please check SSID name or move closer to router");
+    }
+  }
+  
+  // Try manual IP configuration
+  Serial.println("Trying with manual IP configuration...");
+  IPAddress local_IP(192, 168, 0, 200);  // Change this to match your network
+  IPAddress gateway(192, 168, 0, 1);     // Your router IP
+  IPAddress subnet(255, 255, 255, 0);
+  IPAddress primaryDNS(8, 8, 8, 8);
+  IPAddress secondaryDNS(8, 8, 4, 4);
+  
+  if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) {
+    Serial.println("Failed to configure static IP");
+  }
+  
+  WiFi.begin(ssid, password);
+  
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && attempts < 30) {
+    delay(1000);
+    Serial.print(".");
+    attempts++;
+  }
+  Serial.println();
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("✓ Alternative connection successful!");
+    Serial.println("✓ IP: " + WiFi.localIP().toString());
+    currentData.wifiStatus = "Connected";
+    currentData.wifiRSSI = WiFi.RSSI();
+  } else {
+    Serial.println("✗ Alternative connection failed");
+    currentData.wifiStatus = "Failed";
+    currentData.wifiRSSI = 0;
+  }
 }
 
 // ================= AC CONTROL API =================
@@ -445,7 +571,7 @@ void updateTFT(String acStatus, int setSuhu, float suhuRuang) {
   }
 }
 
-// ================= PROXIMITY SENSOR =================
+// ================= PROXIMITY SENSOR - ULTRA FAST =================
 void bacaProximity() {
   bool inNow  = digitalRead(PROX_IN);
   bool outNow = digitalRead(PROX_OUT);
@@ -454,6 +580,7 @@ void bacaProximity() {
   currentData.proximity1 = (inNow == LOW);
   currentData.proximity2 = (outNow == LOW);
   
+  // Cooldown diperkecil untuk respon ultra cepat
   if (now - lastPersonDetected < PERSON_COOLDOWN) {
     return;
   }
@@ -461,27 +588,30 @@ void bacaProximity() {
   static unsigned long lastInTrigger = 0;
   static unsigned long lastOutTrigger = 0;
   
+  // Deteksi trigger dengan debounce yang lebih cepat
   if (lastIn == HIGH && inNow == LOW && inTime == 0) {
-    if (now - lastInTrigger > 200) {
+    if (now - lastInTrigger > 100) { // Diperkecil dari 200ms ke 100ms
       inTime = now;
       lastInTrigger = now;
+      Serial.println("IN sensor triggered!");
     }
   }
   
   if (lastOut == HIGH && outNow == LOW && outTime == 0) {
-    if (now - lastOutTrigger > 200) {
+    if (now - lastOutTrigger > 100) { // Diperkecil dari 200ms ke 100ms
       outTime = now;
       lastOutTrigger = now;
+      Serial.println("OUT sensor triggered!");
     }
   }
   
   // MASUK: IN dulu, baru OUT
   if (inTime > 0 && outTime > 0 && inTime < outTime) {
     unsigned long interval = outTime - inTime;
-    if (interval < MAX_INTERVAL && interval > 50) {
+    if (interval < MAX_INTERVAL && interval > 30) { // Diperkecil dari 50ms ke 30ms
       jumlahOrang++;
       lastPersonDetected = now;
-      Serial.println(">>> MASUK! Total: " + String(jumlahOrang));
+      Serial.println("🚶 >>> MASUK! Total: " + String(jumlahOrang) + " (interval: " + String(interval) + "ms)");
     }
     inTime = 0;
     outTime = 0;
@@ -490,20 +620,22 @@ void bacaProximity() {
   // KELUAR: OUT dulu, baru IN
   if (inTime > 0 && outTime > 0 && outTime < inTime) {
     unsigned long interval = inTime - outTime;
-    if (interval < MAX_INTERVAL && interval > 50 && jumlahOrang > 0) {
+    if (interval < MAX_INTERVAL && interval > 30 && jumlahOrang > 0) { // Diperkecil dari 50ms ke 30ms
       jumlahOrang--;
       lastPersonDetected = now;
-      Serial.println("<<< KELUAR! Total: " + String(jumlahOrang));
+      Serial.println("🚶 <<< KELUAR! Total: " + String(jumlahOrang) + " (interval: " + String(interval) + "ms)");
     }
     inTime = 0;
     outTime = 0;
   }
   
-  // Reset dengan timeout
+  // Reset dengan timeout yang lebih cepat
   if (inTime > 0 && outTime == 0 && (now - inTime) > TIMEOUT) {
+    Serial.println("IN timeout reset");
     inTime = 0;
   }
   if (outTime > 0 && inTime == 0 && (now - outTime) > TIMEOUT) {
+    Serial.println("OUT timeout reset");
     outTime = 0;
   }
   
@@ -514,7 +646,7 @@ void bacaProximity() {
 }
 
 // ================= AC CONTROL =================
-void kontrolAC(String &status, int &temp) {
+void kontrolAC(String &acStatus, int &setTemp) {
   bool ac1ON = false;
   bool ac2ON = false;
   int targetTemp1 = 25;
@@ -530,17 +662,17 @@ void kontrolAC(String &status, int &temp) {
       targetTemp2 = acControl.ac2Temperature;
       
       if (!ac1ON && !ac2ON) {
-        status = "MANUAL OFF";
-        temp = 0;
+        acStatus = "MANUAL OFF";
+        setTemp = 0;
       } else if (ac1ON && ac2ON) {
-        status = "MANUAL 2 AC";
-        temp = (targetTemp1 + targetTemp2) / 2;
+        acStatus = "MANUAL 2 AC";
+        setTemp = (targetTemp1 + targetTemp2) / 2;
       } else {
-        status = "MANUAL 1 AC";
-        temp = ac1ON ? targetTemp1 : targetTemp2;
+        acStatus = "MANUAL 1 AC";
+        setTemp = ac1ON ? targetTemp1 : targetTemp2;
       }
       
-      Serial.println("Manual AC Control: " + status + " @ " + String(temp) + "°C");
+      Serial.println("Manual AC Control: " + acStatus + " @ " + String(setTemp) + "°C");
     } else {
       // Manual control expired, return to auto
       Serial.println("Manual control expired, returning to auto mode");
@@ -553,42 +685,42 @@ void kontrolAC(String &status, int &temp) {
   // Auto mode (default or when manual expires)
   if (!acControl.manualOverride || !acControl.hasActiveControl) {
     if (jumlahOrang == 0) {
-      status = "AC OFF";
-      temp = 0;
+      acStatus = "AC OFF";
+      setTemp = 0;
     }
     else if (jumlahOrang <= 5) {
       ac1ON = true;
       targetTemp1 = 25;
-      temp = 25;
-      status = "1 AC ON";
+      setTemp = 25;
+      acStatus = "1 AC ON";
     }
     else if (jumlahOrang <= 10) {
       ac1ON = true;
       targetTemp1 = 22;
-      temp = 22;
-      status = "1 AC ON";
+      setTemp = 22;
+      acStatus = "1 AC ON";
     }
     else if (jumlahOrang <= 15) {
       ac1ON = true;
       ac2ON = true;
       targetTemp1 = 22;
       targetTemp2 = 22;
-      temp = 22;
-      status = "2 AC ON";
+      setTemp = 22;
+      acStatus = "2 AC ON";
     }
     else {
       ac1ON = true;
       ac2ON = true;
       targetTemp1 = 20;
       targetTemp2 = 20;
-      temp = 20;
-      status = "2 AC MAX";
+      setTemp = 20;
+      acStatus = "2 AC MAX";
     }
   }
   
   // Apply AC changes only if different
   if (ac1ON != lastAC1 || ac2ON != lastAC2 || targetTemp1 != lastTemp1 || targetTemp2 != lastTemp2) {
-    Serial.println("AC Change: " + status + " @ " + String(temp) + "°C");
+    Serial.println("AC Change: " + acStatus + " @ " + String(setTemp) + "°C");
     
     if (!ac1ON && !ac2ON) {
       ac1.off(); ac1.send();
@@ -646,7 +778,8 @@ void setup() {
   delay(2000);
   
   Serial.println("\n================================");
-  Serial.println("  SMART ENERGY - MANUAL AC CONTROL");
+  Serial.println("  SMART ENERGY - ULTRA FAST MANUAL AC");
+  Serial.println("  Ultra Fast Response: 300ms detection");
   Serial.println("  Supports manual AC control via API");
   Serial.println("================================");
   
@@ -672,22 +805,24 @@ void setup() {
   lastForceUpdate = millis();
   lastACControlCheck = millis();
   
-  Serial.println("SYSTEM READY!");
+  Serial.println("SYSTEM READY - ULTRA FAST MODE!");
   Serial.println("Features:");
-  Serial.println("- Change-based data updates");
-  Serial.println("- Manual AC control via API");
+  Serial.println("- Ultra fast detection: 300ms cooldown");
+  Serial.println("- Change-based data updates: 1s interval");
+  Serial.println("- Manual AC control via API: 5s check");
   Serial.println("- Auto mode fallback");
   Serial.println("- Control expiry support");
+  Serial.println("- Proximity debounce: 100ms");
   Serial.println("================================\n");
 }
 
-// ================= MAIN LOOP =================
+// ================= MAIN LOOP - ULTRA FAST =================
 void loop() {
   // Read sensors and update data
   bacaProximity();
   updateSensorData();
   
-  // Check for AC control commands (every 10 seconds)
+  // Check for AC control commands (every 5 seconds - dipercepat)
   if (millis() - lastACControlCheck >= AC_CONTROL_CHECK_INTERVAL) {
     checkACControlAPI();
     lastACControlCheck = millis();
@@ -737,5 +872,5 @@ void loop() {
     lastWiFiCheck = millis();
   }
   
-  delay(100);
+  delay(50); // Diperkecil dari 100ms ke 50ms untuk respon ultra cepat
 }
