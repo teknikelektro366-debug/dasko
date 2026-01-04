@@ -76,8 +76,8 @@ IRPanasonicAc ac2(IR_PIN);
 
 // ================= SENSOR =================
 // Proximity Sensors (sesuai pin configuration)
-#define PROXIMITY_PIN_IN  2    // Pin sensor MASUK (sisi LUAR)
-#define PROXIMITY_PIN_OUT 15   // Pin sensor KELUAR (sisi DALAM)
+#define PROXIMITY_PIN_IN  32    // Pin sensor MASUK (sisi LUAR)
+#define PROXIMITY_PIN_OUT 33   // Pin sensor KELUAR (sisi DALAM)
 
 #define DHTPIN    27
 #define DHTTYPE   DHT22
