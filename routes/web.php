@@ -20,6 +20,15 @@ Route::get('/', function () {
     return redirect()->route('dashboard');
 });
 
+// Static HTML dashboard route
+Route::get('/index.html', function () {
+    return view('dashboard-static');
+});
+
+Route::get('/dashboard.html', function () {
+    return view('dashboard-static');
+});
+
 // Authentication routes (disabled for now)
 // Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 // Route::post('/login', [LoginController::class, 'login']);

@@ -12,6 +12,54 @@ use Illuminate\Support\Facades\Validator;
 class SensorDataController extends Controller
 {
     /**
+     * Get all sensor data (for testing and API access)
+     */
+    public function index(Request $request): JsonResponse
+    {
+        try {
+            $perPage = $request->input('per_page', 20);
+            $perPage = min(max($perPage, 5), 100); // Limit 5-100
+
+            $data = SensorData::latest()
+                             ->paginate($perPage);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sensor data retrieved successfully',
+                'data' => $data->items(),
+                'pagination' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'from' => $data->firstItem(),
+                    'to' => $data->lastItem()
+                ],
+                'meta' => [
+                    'endpoint' => '/api/sensor/data',
+                    'method' => 'GET',
+                    'description' => 'Get paginated sensor data',
+                    'parameters' => [
+                        'per_page' => 'Number of items per page (5-100, default: 20)'
+                    ]
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting sensor data index:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving sensor data',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
+    }
+
+    /**
      * Terima data dari Arduino ESP32
      */
     public function store(Request $request): JsonResponse
@@ -114,6 +162,14 @@ class SensorDataController extends Controller
                 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
             ], 500);
         }
+    }
+
+    /**
+     * Get latest sensor data (alias for realtime method)
+     */
+    public function latest(): JsonResponse
+    {
+        return $this->realtime();
     }
 
     /**

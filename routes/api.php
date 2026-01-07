@@ -25,6 +25,9 @@ Route::prefix('sensor')->group(function () {
     // Endpoint untuk Arduino mengirim data
     Route::post('/data', [SensorDataController::class, 'store']);
     
+    // Endpoint untuk testing - GET method
+    Route::get('/data', [SensorDataController::class, 'index']);
+    
     // Endpoint untuk mendapatkan data terbaru
     Route::get('/latest', [SensorDataController::class, 'latest']);
     
