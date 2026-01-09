@@ -657,10 +657,7 @@
                 <li><a href="#" onclick="showSection('analytics', this)" title="Analisa"><i class="fas fa-chart-line"></i> <span class="sidebar-text">Analisa</span></a></li>
                 <li><a href="#" onclick="showSection('history', this)" title="History"><i class="fas fa-history"></i> <span class="sidebar-text">History</span></a></li>
                 <li><a href="#" onclick="showSection('reports', this)" title="Laporan"><i class="fas fa-file-alt"></i> <span class="sidebar-text">Laporan</span></a></li>
-                <li><a href="#" onclick="showSection('devices', this)" title="Perangkat"><i class="fas fa-microchip"></i> <span class="sidebar-text">Perangkat</span></a></li>
-                <li><a href="#" onclick="showSection('automation', this)" title="Otomasi"><i class="fas fa-robot"></i> <span class="sidebar-text">Otomasi</span></a></li>
-                <li><a href="#" onclick="showSection('alerts', this)" title="Notifikasi"><i class="fas fa-bell"></i> <span class="sidebar-text">Notifikasi</span></a></li>
-                <li><a href="#" onclick="showSection('settings', this)" title="Pengaturan"><i class="fas fa-cog"></i> <span class="sidebar-text">Pengaturan</span></a></li>
+               
             </ul>
             
             <div class="sidebar-footer">
@@ -1360,7 +1357,7 @@
                             </div>
                             <div class="title">Avg Temperature</div>
                             <div class="value" id="avgACTemp">--°C</div>
-                            <div class="data-timestamp">Suhu rata-rata setting</div>
+                            <div class="data-timestamp">Suhu rata-rata setting</div>`
                         </div>
                         <div class="card sensor-card">
                             <div class="card-icon">
