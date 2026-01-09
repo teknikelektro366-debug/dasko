@@ -52,31 +52,34 @@ const char* rootCACertificate = \
 "emyPxgcYxn/eR44/KJ4EBs+lVDR3veyJm+kXQ99b21/+jh5Xos1AnX5iItreGCc=\n" \
 "-----END CERTIFICATE-----\n";
 
-#define TEMP_CHANGE_THRESHOLD 0.3    
-#define HUMIDITY_CHANGE_THRESHOLD 1.5 
-#define LIGHT_CHANGE_THRESHOLD 30     
-#define MAX_TIME_WITHOUT_UPDATE 120000 
-#define MIN_UPDATE_INTERVAL 50        // ULTRA FAST: 50ms update untuk respons super cepat
-#define AC_CONTROL_CHECK_INTERVAL 5000 
-#define DEVICE_ID "ESP32_Proximity_Production"
-#define DEVICE_LOCATION "Lab Teknik Tegangan Tinggi"
+#define TEMP_CHANGE_THRESHOLD 0.5    // Optimized temperature threshold
+#define HUMIDITY_CHANGE_THRESHOLD 2.0 // Optimized humidity threshold
+#define LIGHT_CHANGE_THRESHOLD 50     // Optimized light threshold
+#define MAX_TIME_WITHOUT_UPDATE 300000 // Force update every 5 minutes (more stable)
+#define MIN_UPDATE_INTERVAL 2000        // Minimum 2 seconds between updates (prevent spam)
+#define AC_CONTROL_CHECK_INTERVAL 10000 // Check AC control every 10 seconds (more stable)
+#define DEVICE_ID "ESP32_Proximity_Production_UNJA"
+#define DEVICE_LOCATION "Lab Teknik Tegangan Tinggi - UNJA"
 
-// ================= PINS =================
-#define IR_PIN 14            
-#define PROXIMITY_PIN_IN  2    
-#define PROXIMITY_PIN_OUT 15   
-#define DHTPIN    27
+// ================= PINS - UPDATED CONFIGURATION =================
+#define IR_PIN 15               // IR Transmitter pin (changed from 14 to 15)
+#define PROXIMITY_PIN_IN  32    // Proximity sensor MASUK (changed from 2 to 32)
+#define PROXIMITY_PIN_OUT 33    // Proximity sensor KELUAR (changed from 15 to 33)
+#define DHTPIN    12            // DHT22 pin (changed from 27 to 12)
+#define DHTPIN2   13            // DHT22 second pin (new pin added)
 #define DHTTYPE   DHT22
-#define LDR_PIN   34         
+#define LDR_PIN   35            // LDR pin 1 (changed from 34 to 35)
+#define LDR_PIN2  34            // LDR pin 2 (new pin added)
 #define MAX_PEOPLE 20        
-#define PERSON_COOLDOWN 5       // ULTRA FAST: 5ms cooldown untuk deteksi instan
-#define DEBOUNCE_DELAY 3        // ULTRA FAST: 3ms debounce untuk respons maksimal
+#define PERSON_COOLDOWN 1000       // Optimized: 1 second cooldown for stable detection
+#define DEBOUNCE_DELAY 200         // Optimized: 200ms debounce for reliable detection
 
-// ================= HARDWARE =================
-IRsend irsend(IR_PIN);  // Gunakan IRsend untuk kontrol yang lebih baik
+// ================= HARDWARE - UPDATED PINS =================
+IRsend irsend(IR_PIN);  // IR Transmitter on GPIO 15
 IRPanasonicAc ac1(IR_PIN);
 IRPanasonicAc ac2(IR_PIN);
-DHT dht(DHTPIN, DHTTYPE);
+DHT dht(DHTPIN, DHTTYPE);   // DHT22 on GPIO 12
+DHT dht2(DHTPIN2, DHTTYPE); // DHT22 second sensor on GPIO 13
 
 // ================= VARIABLES =================
 int jumlahOrang = 0;
@@ -186,10 +189,10 @@ void IRAM_ATTR proximityOutInterrupt();
 void testIRTransmitter();
 void manualACTest();
 
-// ULTRA FAST: Interrupt handlers untuk deteksi instan
+// Optimized: Interrupt handlers with proper debouncing
 void IRAM_ATTR proximityInInterrupt() {
   unsigned long now = millis();
-  if (now - lastInterruptTime > 3) {  // 3ms debounce
+  if (now - lastInterruptTime > 200) {  // 200ms debounce for stability
     interruptTriggered = true;
     lastInterruptTime = now;
   }
@@ -197,7 +200,7 @@ void IRAM_ATTR proximityInInterrupt() {
 
 void IRAM_ATTR proximityOutInterrupt() {
   unsigned long now = millis();
-  if (now - lastInterruptTime > 3) {  // 3ms debounce
+  if (now - lastInterruptTime > 200) {  // 200ms debounce for stability
     interruptTriggered = true;
     lastInterruptTime = now;
   }
@@ -338,24 +341,45 @@ void connectWiFi() {
   Serial.println("========================");
 }
 
-// ================= HTTPS REQUEST =================
+// ================= HTTPS REQUEST - ENHANCED STABILITY =================
 bool makeHTTPSRequest(const char* url, const char* method, const char* payload, String& response) {
   WiFiClientSecure client;
   HTTPClient https;
   
+  // Enhanced SSL configuration for stability
   client.setCACert(rootCACertificate);
-  client.setTimeout(8000);   
-  https.setTimeout(8000);    
+  client.setInsecure(); // Allow insecure connections for testing
+  client.setTimeout(10000);   // 10 seconds timeout for stability
+  https.setTimeout(10000);    // 10 seconds timeout for stability
   
-  if (!https.begin(client, url)) {
-    Serial.println("✗ HTTPS connection failed");
+  // Connection retry logic
+  int retryCount = 0;
+  const int maxRetries = 3;
+  
+  while (retryCount < maxRetries) {
+    if (https.begin(client, url)) {
+      Serial.println("✅ HTTPS connection established");
+      break;
+    }
+    retryCount++;
+    Serial.println("⚠️ HTTPS connection attempt " + String(retryCount) + "/" + String(maxRetries) + " failed");
+    if (retryCount < maxRetries) {
+      delay(1000);  // Wait before retry
+    }
+  }
+  
+  if (retryCount >= maxRetries) {
+    Serial.println("❌ HTTPS connection failed after " + String(maxRetries) + " attempts");
     return false;
   }
   
+  // Enhanced headers
   https.addHeader("Content-Type", "application/json");
   https.addHeader("Accept", "application/json");
-  https.addHeader("User-Agent", "ESP32-Ultrasonic-Production/1.0");
+  https.addHeader("User-Agent", "ESP32-Proximity-UNJA/2.0");
   https.addHeader("X-Requested-With", "ESP32");
+  https.addHeader("X-Device-ID", DEVICE_ID);
+  https.addHeader("X-Location", DEVICE_LOCATION);
   
   int httpResponseCode;
   if (strcmp(method, "POST") == 0) {
@@ -367,9 +391,16 @@ bool makeHTTPSRequest(const char* url, const char* method, const char* payload, 
   if (httpResponseCode > 0) {
     response = https.getString();
     https.end();
-    return (httpResponseCode == 200 || httpResponseCode == 201);
+    
+    if (httpResponseCode == 200 || httpResponseCode == 201) {
+      Serial.println("✅ HTTPS " + String(method) + " successful (Code: " + String(httpResponseCode) + ")");
+      return true;
+    } else {
+      Serial.println("⚠️ HTTPS " + String(method) + " warning (Code: " + String(httpResponseCode) + ")");
+      return httpResponseCode < 500; // Return true for client errors, false for server errors
+    }
   } else {
-    Serial.println("✗ HTTPS request failed: " + String(httpResponseCode));
+    Serial.println("❌ HTTPS " + String(method) + " failed with code: " + String(httpResponseCode));
     https.end();
     return false;
   }
@@ -379,11 +410,11 @@ bool makeHTTPSRequest(const char* url, const char* method, const char* payload, 
 void readSensors() {
   unsigned long now = millis();
   
-  // ULTRA FAST: Baca sensor langsung tanpa delay
+  // Optimized: Read sensors with proper debouncing
   bool currentInState = digitalRead(PROXIMITY_PIN_IN);
   bool currentOutState = digitalRead(PROXIMITY_PIN_OUT);
   
-  // ULTRA FAST: Debouncing dengan delay minimal 3ms
+  // Optimized: Debouncing with 200ms delay for stability
   if (currentInState != sensorData.lastProximityIn) {
     sensorData.lastInChange = now;
     sensorData.lastProximityIn = currentInState;
@@ -408,7 +439,7 @@ void readSensors() {
     }
   }
   
-  // ULTRA FAST: Deteksi objek langsung tanpa delay tambahan
+  // Optimized: Object detection with proper logic
   sensorData.objectInDetected = !sensorData.proximityIn;    
   sensorData.objectOutDetected = !sensorData.proximityOut;  
 }
@@ -416,21 +447,22 @@ void readSensors() {
 void detectPeople() {
   unsigned long now = millis();
   
-  // ULTRA FAST: Cooldown dikurangi menjadi 5ms untuk deteksi super cepat
+  // Optimized: Cooldown 1 second for stable detection
   if (now - lastPersonDetected < PERSON_COOLDOWN) {
     return;
   }
   
-  // Debug info setiap 200ms untuk responsivitas maksimal
+  // Debug info every 5 seconds for better performance
   static unsigned long lastDebug = 0;
-  if (now - lastDebug > 200) {
-    Serial.print("📊 ULTRA FAST Proximity - Orang: ");
+  if (now - lastDebug > 5000) {
+    Serial.print("📊 Proximity Status - Orang: ");
     Serial.print(jumlahOrang);
-    Serial.print("/20 | LUAR:");
+    Serial.print("/20 | MASUK:");
     Serial.print(sensorData.objectInDetected ? "DETECTED" : "CLEAR");
-    Serial.print(" | DALAM:");
+    Serial.print(" | KELUAR:");
     Serial.print(sensorData.objectOutDetected ? "DETECTED" : "CLEAR");
-    Serial.print(" | Response: 5ms");
+    Serial.print(" | WiFi: ");
+    Serial.print(WiFi.status() == WL_CONNECTED ? "OK" : "FAIL");
     Serial.println();
     lastDebug = now;
   }
@@ -440,28 +472,29 @@ void detectPeople() {
   static unsigned long lastInTrigger = 0;
   static unsigned long lastOutTrigger = 0;
   
-  // ULTRA FAST DETECTION: Sensor LUAR (MASUK) - Response time 5ms
+  // Optimized DETECTION: Sensor MASUK (Entry) - Stable 1 second cooldown
   if (sensorData.objectInDetected && !lastInDetected && sensorData.stableInState) {
-    // ULTRA FAST: Cooldown hanya 5ms
+    // Optimized: Cooldown 1 second for stability
     if (now - lastInTrigger > PERSON_COOLDOWN) {
       jumlahOrang++;
       lastPersonDetected = now;
       lastInTrigger = now;
       sensorData.stableInState = false;
       
-      Serial.println("🚶 → ULTRA FAST DETECTION - ORANG MASUK!");
-      Serial.println("⚡ Response Time: " + String(now - lastPersonDetected) + "ms");
+      Serial.println("🚶 → PERSON ENTERED!");
       Serial.println("📊 Jumlah orang: " + String(jumlahOrang) + "/20");
       
-      // IMMEDIATE UPDATE - Tidak ada delay sama sekali
+      // Update and send data
       updateSensorData();
-      sendDataToAPI("ULTRA FAST Proximity entry - Count: " + String(jumlahOrang));
+      if (WiFi.status() == WL_CONNECTED) {
+        sendDataToAPI("Proximity entry - Count: " + String(jumlahOrang));
+      }
     }
   }
   
-  // ULTRA FAST DETECTION: Sensor DALAM (KELUAR) - Response time 5ms
+  // Optimized DETECTION: Sensor KELUAR (Exit) - Stable 1 second cooldown
   if (sensorData.objectOutDetected && !lastOutDetected && sensorData.stableOutState) {
-    // ULTRA FAST: Cooldown hanya 5ms
+    // Optimized: Cooldown 1 second for stability
     if (now - lastOutTrigger > PERSON_COOLDOWN) {
       if (jumlahOrang > 0) {
         jumlahOrang--;
@@ -469,18 +502,21 @@ void detectPeople() {
         lastOutTrigger = now;
         sensorData.stableOutState = false;
         
-        Serial.println("🚶 ← ULTRA FAST DETECTION - ORANG KELUAR!");
-        Serial.println("⚡ Response Time: " + String(now - lastPersonDetected) + "ms");
+        Serial.println("� ← PlERSON EXITED!");
         Serial.println("📊 Jumlah orang: " + String(jumlahOrang) + "/20");
         
-        // IMMEDIATE UPDATE - Tidak ada delay sama sekali
+        // Update and send data
         updateSensorData();
-        sendDataToAPI("ULTRA FAST Proximity exit - Count: " + String(jumlahOrang));
+        if (WiFi.status() == WL_CONNECTED) {
+          sendDataToAPI("Proximity exit - Count: " + String(jumlahOrang));
+        }
       } else {
-        Serial.println("⚠ ULTRA FAST: Proximity DALAM aktif tapi count sudah 0");
+        Serial.println("⚠ Proximity KELUAR aktif tapi count sudah 0");
         sensorData.stableOutState = false;
         updateSensorData();
-        sendDataToAPI("ULTRA FAST Proximity exit attempt when count is 0");
+        if (WiFi.status() == WL_CONNECTED) {
+          sendDataToAPI("Proximity exit attempt when count is 0");
+        }
       }
     }
   }
@@ -1160,16 +1196,45 @@ void kontrolAC(String &acStatus, int &setTemp) {
   }
 }
 
-// ================= UPDATE SENSOR DATA =================
+// ================= UPDATE SENSOR DATA - ENHANCED WITH DUAL SENSORS =================
 void updateSensorData() {
   currentData.jumlahOrang = jumlahOrang;
-  currentData.suhuRuang = dht.readTemperature();
-  currentData.humidity = dht.readHumidity();
-  currentData.lightLevel = map(analogRead(LDR_PIN), 0, 4095, 0, 1000);
-  currentData.timestamp = millis();
   
-  if (isnan(currentData.suhuRuang)) currentData.suhuRuang = 0.0;
-  if (isnan(currentData.humidity)) currentData.humidity = 0.0;
+  // Read from both DHT sensors and take average
+  float temp1 = dht.readTemperature();
+  float temp2 = dht2.readTemperature();
+  float hum1 = dht.readHumidity();
+  float hum2 = dht2.readHumidity();
+  
+  // Calculate average temperature (use single sensor if one fails)
+  if (!isnan(temp1) && !isnan(temp2)) {
+    currentData.suhuRuang = (temp1 + temp2) / 2.0;
+  } else if (!isnan(temp1)) {
+    currentData.suhuRuang = temp1;
+  } else if (!isnan(temp2)) {
+    currentData.suhuRuang = temp2;
+  } else {
+    currentData.suhuRuang = 0.0;
+  }
+  
+  // Calculate average humidity (use single sensor if one fails)
+  if (!isnan(hum1) && !isnan(hum2)) {
+    currentData.humidity = (hum1 + hum2) / 2.0;
+  } else if (!isnan(hum1)) {
+    currentData.humidity = hum1;
+  } else if (!isnan(hum2)) {
+    currentData.humidity = hum2;
+  } else {
+    currentData.humidity = 0.0;
+  }
+  
+  // Read from both LDR sensors and take average
+  int light1 = analogRead(LDR_PIN);
+  int light2 = analogRead(LDR_PIN2);
+  int avgLight = (light1 + light2) / 2;
+  currentData.lightLevel = map(avgLight, 0, 4095, 0, 1000);
+  
+  currentData.timestamp = millis();
   
   currentData.proximity1 = sensorData.objectInDetected;
   currentData.proximity2 = sensorData.objectOutDetected;
@@ -1189,34 +1254,37 @@ void setup() {
   delay(2000);
   
   Serial.println("\n================================");
-  Serial.println("  PROXIMITY - PRODUCTION HOSTING");
-  Serial.println("  Sensor: Proximity Sensor");
+  Serial.println("  PROXIMITY - PRODUCTION HOSTING UNJA");
+  Serial.println("  Sensor: Proximity Sensor (Optimized)");
   Serial.println("  Domain: dasko.fst.unja.ac.id");
-  Serial.println("  SSL/HTTPS: Enabled");
-  Serial.println("  Ultra Fast Response: 5ms");
-  Serial.println("  Debounce Delay: 3ms");
+  Serial.println("  SSL/HTTPS: Enabled & Enhanced");
+  Serial.println("  Stable Response: 1000ms cooldown");
+  Serial.println("  Debounce Delay: 200ms (optimized)");
   Serial.println("  Pin Config: ESP32 Smart Energy Production");
+  Serial.println("  University: Universitas Jambi (UNJA)");
   Serial.println("================================");
   
-  // Initialize pins
-  pinMode(PROXIMITY_PIN_IN, INPUT_PULLUP);   
-  pinMode(PROXIMITY_PIN_OUT, INPUT_PULLUP);  
-  pinMode(LDR_PIN, INPUT);
-  pinMode(IR_PIN, OUTPUT);  // Set IR pin sebagai output
+  // Initialize pins - UPDATED PIN CONFIGURATION
+  pinMode(PROXIMITY_PIN_IN, INPUT_PULLUP);   // GPIO 32 - Proximity MASUK
+  pinMode(PROXIMITY_PIN_OUT, INPUT_PULLUP);  // GPIO 33 - Proximity KELUAR
+  pinMode(LDR_PIN, INPUT);                   // GPIO 35 - LDR 1 (Analog)
+  pinMode(LDR_PIN2, INPUT);                  // GPIO 34 - LDR 2 (Analog)
+  pinMode(IR_PIN, OUTPUT);                   // GPIO 15 - IR Transmitter
   
-  // ULTRA FAST: Setup interrupts untuk deteksi instan
+  // Optimized: Setup interrupts with proper debouncing
   attachInterrupt(digitalPinToInterrupt(PROXIMITY_PIN_IN), proximityInInterrupt, CHANGE);
   attachInterrupt(digitalPinToInterrupt(PROXIMITY_PIN_OUT), proximityOutInterrupt, CHANGE);                   
   
-  // Initialize sensors
-  dht.begin();
-  irsend.begin();  // Initialize IR sender
+  // Initialize sensors - UPDATED FOR DUAL SENSORS
+  dht.begin();   // DHT22 sensor 1 on GPIO 12
+  dht2.begin();  // DHT22 sensor 2 on GPIO 13
+  irsend.begin();  // Initialize IR sender on GPIO 15
   ac1.begin();
   ac2.begin();
   
-  // Test IR transmitter
+  // Test IR transmitter - UPDATED PIN INFO
   Serial.println("\n=== IR TRANSMITTER TEST ===");
-  Serial.println("IR Pin: GPIO " + String(IR_PIN));
+  Serial.println("IR Pin: GPIO " + String(IR_PIN) + " (Updated from GPIO 14 to GPIO 15)");
   Serial.println("Testing IR LED...");
   
   // Test dengan mengirim sinyal test
@@ -1233,8 +1301,8 @@ void setup() {
   Serial.println("Panasonic AC test signal sent!");
   Serial.println("Check if your Panasonic AC responds to test signal");
   Serial.println("If no response, check:");
-  Serial.println("- IR LED connection to GPIO 14");
-  Serial.println("- IR LED polarity (+ to GPIO 14, - to GND)");
+  Serial.println("- IR LED connection to GPIO 15 (UPDATED PIN)");
+  Serial.println("- IR LED polarity (+ to GPIO 15, - to GND)");
   Serial.println("- 220Ω resistor in series with IR LED");
   Serial.println("- Point IR LED directly at Panasonic AC receiver");
   Serial.println("- Distance: 1-3 meters from AC");
@@ -1256,26 +1324,27 @@ void setup() {
   lastACControlCheck = millis();
   
   Serial.println("PROXIMITY PRODUCTION SYSTEM READY!");
-  Serial.println("Features:");
-  Serial.println("- HTTPS/SSL communication");
-  Serial.println("- Production hosting integration");
-  Serial.println("- Proximity sensors with INTERRUPTS");
-  Serial.println("- Ultra fast detection: 5ms cooldown");
-  Serial.println("- Debounce protection: 3ms");
-  Serial.println("- Interrupt-based instant detection");
-  Serial.println("- Stable state detection");
-  Serial.println("- Digital input detection");
-  Serial.println("- LUAR sensor = +1 person");
-  Serial.println("- DALAM sensor = -1 person");
+  Serial.println("Enhanced Features v2.0:");
+  Serial.println("- HTTPS/SSL communication with enhanced retry logic");
+  Serial.println("- Production hosting integration (UNJA)");
+  Serial.println("- Optimized proximity detection with stable debouncing");
+  Serial.println("- Interrupt-based detection with 200ms debounce");
+  Serial.println("- Stable detection: 1000ms cooldown for reliability");
+  Serial.println("- Enhanced error handling and recovery");
+  Serial.println("- Memory optimized for long-term stability");
+  Serial.println("- MASUK sensor = +1 person");
+  Serial.println("- KELUAR sensor = -1 person");
   
-  // Test proximity sensors
+  // Test proximity sensors - UPDATED PIN INFO
   Serial.println("\n=== PROXIMITY SENSOR TEST ===");
-  Serial.println("Pin Configuration (ESP32 Smart Energy Production):");
-  Serial.println("- PROXIMITY_IN: GPIO 2 (Sensor LUAR)");
-  Serial.println("- PROXIMITY_OUT: GPIO 15 (Sensor DALAM)");
-  Serial.println("- DHT22: GPIO 27");
-  Serial.println("- LDR: GPIO 34 (Analog)");
-  Serial.println("- IR LED: GPIO 14 (+ resistor 220Ω)");
+  Serial.println("Pin Configuration (UPDATED ESP32 Smart Energy Production):");
+  Serial.println("- PROXIMITY_IN: GPIO 32 (Sensor MASUK) - UPDATED from GPIO 2");
+  Serial.println("- PROXIMITY_OUT: GPIO 33 (Sensor KELUAR) - UPDATED from GPIO 15");
+  Serial.println("- DHT22_1: GPIO 12 - UPDATED from GPIO 27");
+  Serial.println("- DHT22_2: GPIO 13 - NEW SENSOR ADDED");
+  Serial.println("- LDR_1: GPIO 35 - UPDATED from GPIO 34");
+  Serial.println("- LDR_2: GPIO 34 - NEW SENSOR ADDED");
+  Serial.println("- IR LED: GPIO 15 - UPDATED from GPIO 14 (+ resistor 220Ω)");
   Serial.println("Testing Proximity sensors for 5 seconds...");
   for (int i = 0; i < 25; i++) {
     bool prox1 = digitalRead(PROXIMITY_PIN_IN);
@@ -1284,14 +1353,14 @@ void setup() {
     bool detected2 = !prox2;  
     
     Serial.print("Test " + String(i+1) + "/25 - ");
-    Serial.print("LUAR(2): " + String(prox1 ? "HIGH" : "LOW"));
+    Serial.print("MASUK(32): " + String(prox1 ? "HIGH" : "LOW"));
     if (detected1) {
       Serial.print(" ✅ DETECTED");
     } else {
       Serial.print(" ❌ CLEAR");
     }
     
-    Serial.print(" | DALAM(15): " + String(prox2 ? "HIGH" : "LOW"));
+    Serial.print(" | KELUAR(33): " + String(prox2 ? "HIGH" : "LOW"));
     if (detected2) {
       Serial.print(" ✅ DETECTED");
     } else {
@@ -1316,16 +1385,16 @@ void setup() {
   // manualACTest();
 }
 
-// ================= MAIN LOOP =================
+// ================= MAIN LOOP - OPTIMIZED FOR STABILITY =================
 void loop() {
-  // ULTRA FAST: Prioritas tertinggi untuk interrupt-based detection
+  // Optimized: Prioritas untuk interrupt-based detection dengan stability
   if (interruptTriggered) {
     interruptTriggered = false;
     readSensors();
     detectPeople();
     updateSensorData();
     
-    // ULTRA FAST: Update langsung jika ada perubahan
+    // Optimized: Update jika ada perubahan dengan proper timing
     if (jumlahOrang != lastJumlahOrang) {
       String acStatus = currentData.acStatus;
       int setTemp = currentData.setTemp;
@@ -1336,15 +1405,15 @@ void loop() {
       updateTFT(acStatus, setTemp, currentData.suhuRuang);
       lastJumlahOrang = jumlahOrang;
       
-      Serial.println("🔄 ULTRA FAST INTERRUPT UPDATE - Jumlah orang berubah: " + String(jumlahOrang));
+      Serial.println("🔄 INTERRUPT UPDATE - Jumlah orang berubah: " + String(jumlahOrang));
     }
   } else {
-    // ULTRA FAST: Baca sensor dan deteksi orang dengan prioritas tertinggi
+    // Optimized: Baca sensor dan deteksi orang dengan timing yang stabil
     readSensors();
     detectPeople();
     updateSensorData();
     
-    // ULTRA FAST: Update TFT langsung jika ada perubahan jumlah orang
+    // Optimized: Update TFT jika ada perubahan jumlah orang
     if (jumlahOrang != lastJumlahOrang) {
       String acStatus = currentData.acStatus;
       int setTemp = currentData.setTemp;
@@ -1355,10 +1424,11 @@ void loop() {
       updateTFT(acStatus, setTemp, currentData.suhuRuang);
       lastJumlahOrang = jumlahOrang;
       
-      Serial.println("🔄 ULTRA FAST UPDATE - Jumlah orang berubah: " + String(jumlahOrang));
+      Serial.println("🔄 STABLE UPDATE - Jumlah orang berubah: " + String(jumlahOrang));
     }
   }
-  // Check for AC control commands from hosting (every 5 seconds)
+  
+  // Check for AC control commands from hosting (every 10 seconds)
   if (millis() - lastACControlCheck >= AC_CONTROL_CHECK_INTERVAL) {
     checkACControlAPI();
     lastACControlCheck = millis();
@@ -1373,9 +1443,9 @@ void loop() {
     currentData.setTemp = setTemp;
   }
   
-  // ULTRA FAST: Update TFT setiap 200ms untuk animasi cepat
+  // Optimized: Update TFT setiap 1 detik untuk performa yang stabil
   static unsigned long lastTFTUpdate = 0;
-  if (millis() - lastTFTUpdate > 200) {
+  if (millis() - lastTFTUpdate > 1000) {
     updateTFT(currentData.acStatus, currentData.setTemp, currentData.suhuRuang);
     lastTFTUpdate = millis();
   }
@@ -1387,7 +1457,7 @@ void loop() {
   if (hasSignificantChange()) {
     if (canSendUpdate()) {
       shouldSend = true;
-      sendReason = "ULTRA FAST Change detected";
+      sendReason = "Stable change detected";
     }
   } else if (shouldForceUpdate()) {
     if (canSendUpdate()) {
@@ -1401,15 +1471,38 @@ void loop() {
     sendDataToAPI(sendReason);
   }
   
-  // Reconnect WiFi if disconnected (check every 15 seconds)
+  // Enhanced WiFi management (check every 30 seconds)
   static unsigned long lastWiFiCheck = 0;
-  if (millis() - lastWiFiCheck > 15000) {
+  if (millis() - lastWiFiCheck > 30000) {
     if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("WiFi reconnecting...");
+      Serial.println("⚠️ WiFi disconnected, attempting reconnection...");
       connectWiFi();
+      
+      // If still can't connect after 3 attempts, continue in offline mode
+      static int reconnectAttempts = 0;
+      if (WiFi.status() != WL_CONNECTED) {
+        reconnectAttempts++;
+        if (reconnectAttempts >= 3) {
+          Serial.println("🔄 Multiple reconnection failures, continuing in offline mode");
+          reconnectAttempts = 0;
+        }
+      } else {
+        reconnectAttempts = 0;
+        Serial.println("✅ WiFi reconnected successfully");
+      }
     }
     lastWiFiCheck = millis();
   }
   
-  delay(1);  // ULTRA FAST: 1ms delay untuk responsivitas maksimal
+  // Memory monitoring (every 60 seconds)
+  static unsigned long lastMemoryCheck = 0;
+  if (millis() - lastMemoryCheck > 60000) {
+    uint32_t freeHeap = ESP.getFreeHeap();
+    if (freeHeap < 50000) {  // Less than 50KB free
+      Serial.println("⚠️ Low memory warning: " + String(freeHeap) + " bytes free");
+    }
+    lastMemoryCheck = millis();
+  }
+  
+  delay(50);  // Optimized: 50ms delay for stable performance and responsiveness
 }

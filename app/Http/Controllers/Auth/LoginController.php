@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
 {
-    // use AuthenticatesUsers;
+    use AuthenticatesUsers;
 
     protected $redirectTo = '/dashboard';
 
@@ -165,30 +165,5 @@ class LoginController extends Controller
                 'minutes' => ceil($seconds / 60),
             ])],
         ])->status(429);
-    }
-
-    protected function guard()
-    {
-        return Auth::guard();
-    }
-
-    protected function redirectPath()
-    {
-        return $this->redirectTo ?? '/dashboard';
-    }
-
-    protected function authenticated(Request $request, $user)
-    {
-        return null;
-    }
-
-    protected function loggedOut(Request $request)
-    {
-        return null;
-    }
-
-    protected function fireLockoutEvent(Request $request)
-    {
-        // Event can be fired here if needed
     }
 }

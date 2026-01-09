@@ -14,121 +14,75 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Alpine.js -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-
-</head>
-<body class="bg-gray-100">
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <!-- Toggle Button -->
-        <div class="sidebar-toggle" onclick="toggleSidebar()">
-            <i class="fas fa-bars" id="toggleIcon"></i>
-        </div>
+    <style>
+        .card-hover {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
         
-        <div class="sidebar-content">
-            <h2><i class="fas fa-home"></i> <span class="sidebar-text">Smart Energy</span></h2>
-            <ul>
-                <li><a href="#" onclick="showSection('Kontrol', this)" class="active" title="Monitoring"><i class="fas fa-desktop"></i> <span class="sidebar-text">Monitoring</span></a></li>
-                <li><a href="#" onclick="showSection('analytics', this)" title="Analisa"><i class="fas fa-chart-line"></i> <span class="sidebar-text">Analisa</span></a></li>
-                <li><a href="#" onclick="showSection('history', this)" title="History"><i class="fas fa-history"></i> <span class="sidebar-text">History</span></a></li>
-                <li><a href="#" onclick="showSection('reports', this)" title="Laporan"><i class="fas fa-file-alt"></i> <span class="sidebar-text">Laporan</span></a></li>
-                <li><a href="#" onclick="showSection('devices', this)" title="Perangkat"><i class="fas fa-microchip"></i> <span class="sidebar-text">Perangkat</span></a></li>
-                <li><a href="#" onclick="showSection('automation', this)" title="Otomasi"><i class="fas fa-robot"></i> <span class="sidebar-text">Otomasi</span></a></li>
-                <li><a href="#" onclick="showSection('alerts', this)" title="Notifikasi"><i class="fas fa-bell"></i> <span class="sidebar-text">Notifikasi</span></a></li>
-                <li><a href="#" onclick="showSection('settings', this)" title="Pengaturan"><i class="fas fa-cog"></i> <span class="sidebar-text">Pengaturan</span></a></li>
-            </ul>
-            
-            <div class="sidebar-footer">
-                <div class="user-info">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="sidebar-text">Admin User</span>
-                </div>
-                <div class="system-status">
-                    <i class="fas fa-circle status-online"></i>
-                    <span class="sidebar-text">System Online</span>
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .status-online {
+            background-color: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+        }
+        
+        .status-offline {
+            background-color: #ef4444;
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900">
+    <div class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-bolt text-2xl text-indigo-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h1 class="text-xl font-semibold text-gray-900 dark:text-white">
+                                @yield('page-title', 'Smart Energy Management')
+                            </h1>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">
+                            Welcome, Admin User
+                        </span>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-circle text-green-500 mr-1"></i>System Online
+                        </span>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </nav>
 
-    <!-- Main Content -->
-    <div class="main-content" id="mainContent">
-        @yield('content')
+        <!-- Main Content -->
+        <main>
+            @yield('content')
+        </main>
     </div>
 
     @stack('scripts')
-    
-    <script>
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('mainContent');
-            const toggleIcon = document.getElementById('toggleIcon');
-            
-            sidebar.classList.toggle('collapsed');
-            mainContent.classList.toggle('expanded');
-            
-            if (sidebar.classList.contains('collapsed')) {
-                toggleIcon.classList.remove('fa-bars');
-                toggleIcon.classList.add('fa-chevron-right');
-            } else {
-                toggleIcon.classList.remove('fa-chevron-right');
-                toggleIcon.classList.add('fa-bars');
-            }
-        }
-        
-        function showSection(sectionName, element) {
-            // Hide all sections
-            const sections = document.querySelectorAll('.content-section');
-            sections.forEach(section => {
-                section.classList.remove('active');
-            });
-            
-            // Show selected section
-            const targetSection = document.getElementById(sectionName);
-            if (targetSection) {
-                targetSection.classList.add('active');
-            }
-            
-            // Update active menu item
-            const menuItems = document.querySelectorAll('.sidebar ul li a');
-            menuItems.forEach(item => {
-                item.classList.remove('active');
-            });
-            element.classList.add('active');
-        }
-        
-        // Update real-time clock
-        function updateClock() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('id-ID', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            const dayString = now.toLocaleDateString('id-ID', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-            
-            const clockElement = document.getElementById('waktuRealtime');
-            if (clockElement) {
-                clockElement.innerHTML = `<i class="fas fa-clock"></i> ${timeString} - ${dayString}`;
-            }
-        }
-        
-        // Update clock every second
-        setInterval(updateClock, 1000);
-        updateClock(); // Initial call
-    </script>
 </body>
 </html>

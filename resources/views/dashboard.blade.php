@@ -317,6 +317,327 @@
                 justify-content: center;
             }
         }
+
+        /* History Section Styles - Consistent with existing template */
+        .history-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+            overflow-x: auto;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .tab-button {
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            white-space: nowrap;
+            font-weight: 500;
+            border-radius: 5px;
+        }
+
+        .tab-button:hover {
+            background: #e9ecef;
+            color: #007bff;
+        }
+
+        .tab-button.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .history-table-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .history-table th {
+            background: #f8f9fa;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e9ecef;
+            white-space: nowrap;
+        }
+
+        .history-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: middle;
+        }
+
+        .history-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .loading-row,
+        .no-data,
+        .error-row {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .error-row {
+            color: #dc3545;
+        }
+
+        .device-badge {
+            background: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .people-count {
+            background: #007bff;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .ac-status.status-on {
+            background: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .ac-status.status-off {
+            background: #6c757d;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .mode-badge {
+            background: #17a2b8;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .change-indicator.increase {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .change-indicator.decrease {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .change-indicator.same {
+            color: #6c757d;
+        }
+
+        .ac-response {
+            background: #ffc107;
+            color: #212529;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .condition-badge {
+            background: #17a2b8;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .event-type-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .event-type-badge.sensor_update {
+            background: #007bff;
+        }
+
+        .event-type-badge.ac_control {
+            background: #28a745;
+        }
+
+        .event-type-badge.connection {
+            background: #17a2b8;
+        }
+
+        .event-type-badge.system_error {
+            background: #dc3545;
+        }
+
+        .event-type-badge.manual_control {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .status-badge.status-success {
+            background: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .status-badge.status-error {
+            background: #dc3545;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .status-badge.status-info {
+            background: #17a2b8;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .table-pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .btn-refresh,
+        .btn-export,
+        .btn-search {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        .btn-refresh {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-refresh:hover {
+            background: #138496;
+        }
+
+        .btn-export {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-export:hover {
+            background: #218838;
+        }
+
+        .btn-search {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-search:hover {
+            background: #0056b3;
+        }
+
+        .chart-tab-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .chart-tab-btn:hover {
+            background: #f8f9fa;
+            color: #007bff;
+        }
+
+        .chart-tab-btn.active {
+            background: #007bff;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        @media (max-width: 768px) {
+            .history-tabs {
+                flex-direction: column;
+            }
+            
+            .tab-button {
+                text-align: center;
+            }
+        }
     </style>
 </head>
 
@@ -892,130 +1213,375 @@
 
         <!-- ===== History Section ===== -->
         <section id="history" style="display:none;">
-            <header>
-                <h1><i class="fas fa-table"></i> Riwayat Pemakaian Harian</h1>
-            </header>
+            <div class="navbar">
+                <i class="fas fa-history"></i> Riwayat Data Sensor & Aktivitas Sistem
+                <span class="realtime-indicator">
+                    <div class="realtime-dot"></div>
+                    HISTORY
+                </span>
+            </div>
+            <div class="subnav">
+                <i class="fas fa-database"></i> Riwayat lengkap data sensor ESP32, aktivitas AC, dan perubahan sistem Smart Energy UNJA
+            </div>
+
+           
+
+            <!-- Summary Cards -->
+            <div class="sensor-section">
+                <h3><i class="fas fa-chart-bar"></i> Ringkasan Data</h3>
+                <div class="sensor-grid">
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div class="title">Total Records</div>
+                        <div class="value" id="totalRecords">{{ number_format($totalRecords) }}</div>
+                        <div class="data-timestamp">Data tersimpan</div>
+                    </div>
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="title">Data Terakhir</div>
+                        <div class="value" id="lastUpdate">{{ $sensorData['last_update_time'] ?? '--' }}</div>
+                        <div class="data-timestamp">{{ $sensorData['time_ago'] ?? 'Belum ada data' }}</div>
+                    </div>
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-wifi"></i>
+                        </div>
+                        <div class="title">Status Koneksi</div>
+                        <div class="value">
+                            <span class="connection-status {{ $sensorData['connection_status'] ?? 'offline' }}">
+                                {{ $sensorData['status'] === 'active' ? 'Online' : 'Offline' }}
+                            </span>
+                        </div>
+                        <div class="data-timestamp">ESP32 Connection</div>
+                    </div>
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="title">Update Frequency</div>
+                        <div class="value" id="updateFreq">
+                            @if($updateFrequency)
+                                {{ $updateFrequency }}s
+                            @else
+                                --s
+                            @endif
+                        </div>
+                        <div class="data-timestamp">Interval rata-rata</div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Tab Navigation -->
-            <div class="history-tabs">
-                <button class="tab-button active" onclick="showHistoryTab('summary')">
-                    <i class="fas fa-chart-bar"></i> Ringkasan
-                </button>
-                <button class="tab-button" onclick="showHistoryTab('lamp')">
-                    <i class="fas fa-lightbulb"></i> Lampu
-                </button>
-                <button class="tab-button" onclick="showHistoryTab('ac')">
-                    <i class="fas fa-snowflake"></i> AC
-                </button>
-                <button class="tab-button" onclick="showHistoryTab('other-devices')">
-                    <i class="fas fa-plug"></i> Perangkat Lain
-                </button>
-                <button class="tab-button" onclick="showHistoryTab('environment')">
-                    <i class="fas fa-thermometer-half"></i> Lingkungan
-                </button>
+            <div class="sensor-section">
+                <h3><i class="fas fa-table"></i> Data History</h3>
+                <div class="history-tabs">
+                    <button class="tab-button active" onclick="showHistoryTab('sensor-data')">
+                        <i class="fas fa-chart-line"></i> Data Sensor
+                    </button>
+                    <button class="tab-button" onclick="showHistoryTab('ac-activity')">
+                        <i class="fas fa-snowflake"></i> Aktivitas AC
+                    </button>
+                    <button class="tab-button" onclick="showHistoryTab('people-count')">
+                        <i class="fas fa-users"></i> Jumlah Orang
+                    </button>
+                    <button class="tab-button" onclick="showHistoryTab('environment')">
+                        <i class="fas fa-thermometer-half"></i> Lingkungan
+                    </button>
+                    <button class="tab-button" onclick="showHistoryTab('system-events')">
+                        <i class="fas fa-cog"></i> System Events
+                    </button>
+                </div>
+
+                <!-- Data Sensor Tab -->
+                <div id="sensor-data-table" class="history-table-container">
+                    <div class="table-responsive">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-hashtag"></i> ID</th>
+                                    <th><i class="fas fa-clock"></i> Timestamp</th>
+                                    <th><i class="fas fa-microchip"></i> Device</th>
+                                    <th><i class="fas fa-users"></i> Orang</th>
+                                    <th><i class="fas fa-thermometer-half"></i> Suhu</th>
+                                    <th><i class="fas fa-tint"></i> Kelembaban</th>
+                                    <th><i class="fas fa-sun"></i> Cahaya</th>
+                                    <th><i class="fas fa-snowflake"></i> AC Status</th>
+                                    <th><i class="fas fa-temperature-low"></i> Set Temp</th>
+                                    <th><i class="fas fa-walking"></i> Proximity</th>
+                                    <th><i class="fas fa-signal"></i> WiFi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sensor-data-body">
+                                <tr>
+                                    <td colspan="11" class="loading-row">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading data sensor...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="table-pagination">
+                        <button onclick="previousPage('sensor')" id="sensorPrevBtn" class="btn-small" disabled>
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                        <span id="sensorPageInfo">Page 1 of 1</span>
+                        <button onclick="nextPage('sensor')" id="sensorNextBtn" class="btn-small" disabled>
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- AC Activity Tab -->
+                <div id="ac-activity-table" class="history-table-container" style="display:none;">
+                    <div class="sensor-grid" style="margin-bottom: 20px;">
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-snowflake"></i>
+                            </div>
+                            <div class="title">Total AC Events</div>
+                            <div class="value" id="totalACEvents">--</div>
+                            <div class="data-timestamp">Perubahan status AC</div>
+                        </div>
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="title">AC ON Duration</div>
+                            <div class="value" id="acOnDuration">--</div>
+                            <div class="data-timestamp">Total waktu AC menyala</div>
+                        </div>
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-temperature-low"></i>
+                            </div>
+                            <div class="title">Avg Temperature</div>
+                            <div class="value" id="avgACTemp">--°C</div>
+                            <div class="data-timestamp">Suhu rata-rata setting</div>
+                        </div>
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="title">Control Mode</div>
+                            <div class="value" id="controlMode">Auto</div>
+                            <div class="data-timestamp">Mode kontrol aktif</div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-clock"></i> Waktu</th>
+                                    <th><i class="fas fa-snowflake"></i> AC Status</th>
+                                    <th><i class="fas fa-temperature-low"></i> Set Temperature</th>
+                                    <th><i class="fas fa-users"></i> Jumlah Orang</th>
+                                    <th><i class="fas fa-thermometer-half"></i> Suhu Ruang</th>
+                                    <th><i class="fas fa-robot"></i> Mode</th>
+                                    <th><i class="fas fa-info-circle"></i> Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ac-activity-body">
+                                <tr>
+                                    <td colspan="7" class="loading-row">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading aktivitas AC...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- People Count Tab -->
+                <div id="people-count-table" class="history-table-container" style="display:none;">
+                    <div class="sensor-grid" style="margin-bottom: 20px;">
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="title">Max Hari Ini</div>
+                            <div class="value" id="maxPeopleToday">{{ $dailyStats['max_people'] ?? 0 }}</div>
+                            <div class="data-timestamp">Jumlah maksimum</div>
+                        </div>
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="title">Rata-rata</div>
+                            <div class="value" id="avgPeopleToday">{{ isset($dailyStats['avg_people']) ? number_format($dailyStats['avg_people'], 1) : '0.0' }}</div>
+                            <div class="data-timestamp">Rata-rata harian</div>
+                        </div>
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="title">Waktu Puncak</div>
+                            <div class="value" id="peakTimeToday">{{ $dailyStats['peak_time'] ?? '--:--' }}</div>
+                            <div class="data-timestamp">Jam tersibuk</div>
+                        </div>
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-walking"></i>
+                            </div>
+                            <div class="title">Total Movement</div>
+                            <div class="value" id="totalMovement">--</div>
+                            <div class="data-timestamp">Deteksi masuk/keluar</div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-clock"></i> Waktu</th>
+                                    <th><i class="fas fa-users"></i> Jumlah Orang</th>
+                                    <th><i class="fas fa-arrow-up"></i> Perubahan</th>
+                                    <th><i class="fas fa-walking"></i> Sensor MASUK</th>
+                                    <th><i class="fas fa-walking"></i> Sensor KELUAR</th>
+                                    <th><i class="fas fa-snowflake"></i> Respon AC</th>
+                                    <th><i class="fas fa-info-circle"></i> Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="people-count-body">
+                                <tr>
+                                    <td colspan="7" class="loading-row">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading data jumlah orang...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Environment Tab -->
+                <div id="environment-table" class="history-table-container" style="display:none;">
+                    <div class="sensor-grid" style="margin-bottom: 20px;">
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-thermometer-half"></i>
+                            </div>
+                            <div class="title">Suhu Rata-rata</div>
+                            <div class="value" id="avgTempToday">{{ isset($dailyStats['avg_temperature']) ? number_format($dailyStats['avg_temperature'], 1) : '--' }}°C</div>
+                            <div class="data-timestamp">Hari ini</div>
+                        </div>
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-tint"></i>
+                            </div>
+                            <div class="title">Kelembaban Rata-rata</div>
+                            <div class="value" id="avgHumidityToday">{{ isset($dailyStats['avg_humidity']) ? number_format($dailyStats['avg_humidity'], 1) : '--' }}%</div>
+                            <div class="data-timestamp">Hari ini</div>
+                        </div>
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-sun"></i>
+                            </div>
+                            <div class="title">Cahaya Rata-rata</div>
+                            <div class="value" id="avgLightToday">{{ isset($dailyStats['avg_light']) ? number_format($dailyStats['avg_light']) : '--' }} lux</div>
+                            <div class="data-timestamp">Hari ini</div>
+                        </div>
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-leaf"></i>
+                            </div>
+                            <div class="title">Kondisi Ruangan</div>
+                            <div class="value" id="roomCondition">Normal</div>
+                            <div class="data-timestamp">Status lingkungan</div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-clock"></i> Waktu</th>
+                                    <th><i class="fas fa-thermometer-half"></i> Suhu (°C)</th>
+                                    <th><i class="fas fa-tint"></i> Kelembaban (%)</th>
+                                    <th><i class="fas fa-sun"></i> Cahaya (lux)</th>
+                                    <th><i class="fas fa-users"></i> Orang</th>
+                                    <th><i class="fas fa-snowflake"></i> AC Status</th>
+                                    <th><i class="fas fa-leaf"></i> Kondisi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="environment-body">
+                                <tr>
+                                    <td colspan="7" class="loading-row">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading data lingkungan...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- System Events Tab -->
+                <div id="system-events-table" class="history-table-container" style="display:none;">
+                    <div class="sensor-grid" style="margin-bottom: 20px;">
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-cog"></i>
+                            </div>
+                            <div class="title">Total Events</div>
+                            <div class="value" id="totalEvents">--</div>
+                            <div class="data-timestamp">System events</div>
+                        </div>
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="title">Success Events</div>
+                            <div class="value" id="successEvents">--</div>
+                            <div class="data-timestamp">Berhasil</div>
+                        </div>
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="title">Error Events</div>
+                            <div class="value" id="errorEvents">--</div>
+                            <div class="data-timestamp">Error/Warning</div>
+                        </div>
+                        <div class="card sensor-card">
+                            <div class="card-icon">
+                                <i class="fas fa-filter"></i>
+                            </div>
+                            <div class="title">Filter Events</div>
+                            <select id="eventTypeFilter" onchange="loadSystemEvents()" class="form-control">
+                                <option value="">Semua Events</option>
+                                <option value="connection">Connection</option>
+                                <option value="ac_control">AC Control</option>
+                                <option value="sensor_update">Sensor Update</option>
+                                <option value="system_error">System Error</option>
+                                <option value="manual_control">Manual Control</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-clock"></i> Timestamp</th>
+                                    <th><i class="fas fa-tag"></i> Event Type</th>
+                                    <th><i class="fas fa-microchip"></i> Device</th>
+                                    <th><i class="fas fa-info-circle"></i> Description</th>
+                                    <th><i class="fas fa-database"></i> Data</th>
+                                    <th><i class="fas fa-exclamation-triangle"></i> Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="system-events-body">
+                                <tr>
+                                    <td colspan="6" class="loading-row">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading system events...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
-            <!-- Tabel Ringkasan -->
-            <div id="summary-table" class="history-table-container">
-                <h3><i class="fas fa-chart-bar"></i> Ringkasan Harian</h3>
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th><i class="fas fa-hashtag"></i> No</th>
-                            <th><i class="fas fa-calendar-alt"></i> Tanggal</th>
-                            <th><i class="fas fa-bolt"></i> Total Energi (Wh)</th>
-                            <th><i class="fas fa-clock"></i> Total Waktu Operasi</th>
-                            <th><i class="fas fa-users"></i> Max Orang</th>
-                            <th><i class="fas fa-leaf"></i> Efisiensi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="summary-body">
-                        <!-- Data akan diisi oleh JavaScript -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Tabel Pemakaian Lampu -->
-            <div id="lamp-table" class="history-table-container" style="display:none;">
-                <h3><i class="fas fa-lightbulb"></i> Detail Pemakaian Lampu</h3>
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th><i class="fas fa-hashtag"></i> No</th>
-                            <th><i class="fas fa-calendar-alt"></i> Tanggal</th>
-                            <th><i class="fas fa-clock"></i> Durasi Menyala (menit)</th>
-                            <th><i class="fas fa-bolt"></i> Energi Lampu (Wh)</th>
-                            <th><i class="fas fa-percentage"></i> % dari Total</th>
-                            <th><i class="fas fa-sun"></i> Intensitas Cahaya Avg</th>
-                        </tr>
-                    </thead>
-                    <tbody id="lamp-body">
-                        <!-- Data akan diisi oleh JavaScript -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Tabel Pemakaian AC -->
-            <div id="ac-table" class="history-table-container" style="display:none;">
-                <h3><i class="fas fa-snowflake"></i> Detail Pemakaian AC</h3>
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th><i class="fas fa-hashtag"></i> No</th>
-                            <th><i class="fas fa-calendar-alt"></i> Tanggal</th>
-                            <th><i class="fas fa-clock"></i> Durasi Menyala (menit)</th>
-                            <th><i class="fas fa-bolt"></i> Energi AC (Wh)</th>
-                            <th><i class="fas fa-percentage"></i> % dari Total</th>
-                            <th><i class="fas fa-temperature-low"></i> Suhu Setting Avg</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ac-body">
-                        <!-- Data akan diisi oleh JavaScript -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Tabel Perangkat Lainnya -->
-            <div id="other-devices-table" class="history-table-container" style="display:none;">
-                <h3><i class="fas fa-plug"></i> Detail Pemakaian Perangkat Lainnya</h3>
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th><i class="fas fa-hashtag"></i> No</th>
-                            <th><i class="fas fa-calendar-alt"></i> Tanggal</th>
-                            <th><i class="fas fa-desktop"></i> Komputer (menit)</th>
-                            <th><i class="fas fa-tv"></i> Smart TV (menit)</th>
-                            <th><i class="fas fa-tint"></i> Dispenser (menit)</th>
-                            <th><i class="fas fa-coffee"></i> Teko Listrik (menit)</th>
-                            <th><i class="fas fa-mug-hot"></i> Mesin Kopi (menit)</th>
-                            <th><i class="fas fa-bolt"></i> Total Energi (Wh)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="other-devices-body">
-                        <!-- Data akan diisi oleh JavaScript -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Tabel Data Lingkungan -->
-            <div id="environment-table" class="history-table-container" style="display:none;">
-                <h3><i class="fas fa-thermometer-half"></i> Data Lingkungan Harian</h3>
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th><i class="fas fa-hashtag"></i> No</th>
-                            <th><i class="fas fa-calendar-alt"></i> Tanggal</th>
-                            <th><i class="fas fa-thermometer-half"></i> Suhu Rata-rata</th>
-                            <th><i class="fas fa-tint"></i> Kelembaban Avg</th>
-                            <th><i class="fas fa-users"></i> Max Orang</th>
-                            <th><i class="fas fa-sun"></i> Cahaya Avg</th>
-                        </tr>
-                    </thead>
-                    <tbody id="environment-body">
-                        <!-- Data akan diisi oleh JavaScript -->
-                    </tbody>
-                </table>
-            </div>
+           
         </section>
 
         <!-- ===== Reports Section ===== -->
@@ -1545,6 +2111,807 @@
             }, 30000);
         }
 
+        // ===== HISTORY FUNCTIONS =====
+        let historyChart = null;
+        let currentHistoryPage = 1;
+        let historyData = {};
+
+        function initializeHistory() {
+            // Initialize history data loading
+            loadSensorData();
+            
+            // Set up period filter change handler
+            const periodSelect = document.getElementById('historyPeriod');
+            if (periodSelect) {
+                periodSelect.addEventListener('change', function() {
+                    const customRange = document.getElementById('customDateRange');
+                    if (customRange) {
+                        if (this.value === 'custom') {
+                            customRange.style.display = 'flex';
+                            // Set default dates
+                            const today = new Date();
+                            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                            const dateToInput = document.getElementById('dateTo');
+                            const dateFromInput = document.getElementById('dateFrom');
+                            if (dateToInput) dateToInput.value = today.toISOString().split('T')[0];
+                            if (dateFromInput) dateFromInput.value = weekAgo.toISOString().split('T')[0];
+                        } else {
+                            customRange.style.display = 'none';
+                        }
+                    }
+                });
+            }
+        }
+
+        function showHistoryTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.history-table-container');
+            tabContents.forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            // Remove active class from all tab buttons
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            const selectedTab = document.getElementById(tabName + '-table');
+            if (selectedTab) {
+                selectedTab.style.display = 'block';
+            }
+            
+            // Add active class to clicked button
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+            
+            // Load data for the selected tab
+            switch(tabName) {
+                case 'sensor-data':
+                    loadSensorData();
+                    break;
+                case 'ac-activity':
+                    loadACActivity();
+                    break;
+                case 'people-count':
+                    loadPeopleCountData();
+                    break;
+                case 'environment':
+                    loadEnvironmentData();
+                    break;
+                case 'system-events':
+                    loadSystemEvents();
+                    break;
+            }
+        }
+
+        function loadHistoryData() {
+            // Load data based on current active tab
+            const activeTab = document.querySelector('.tab-button.active');
+            if (activeTab) {
+                const tabText = activeTab.textContent.trim();
+                if (tabText.includes('Data Sensor')) {
+                    loadSensorData();
+                } else if (tabText.includes('Aktivitas AC')) {
+                    loadACActivity();
+                } else if (tabText.includes('Jumlah Orang')) {
+                    loadPeopleCountData();
+                } else if (tabText.includes('Lingkungan')) {
+                    loadEnvironmentData();
+                } else if (tabText.includes('System Events')) {
+                    loadSystemEvents();
+                }
+            }
+        }
+
+        function loadSensorData() {
+            const tbody = document.getElementById('sensor-data-body');
+            if (!tbody) return;
+            
+            const limitSelect = document.getElementById('sensorDataLimit');
+            const periodSelect = document.getElementById('historyPeriod');
+            const deviceFilterSelect = document.getElementById('deviceFilter');
+            
+            const limit = limitSelect ? limitSelect.value : '100';
+            const period = periodSelect ? periodSelect.value : 'week';
+            const deviceFilter = deviceFilterSelect ? deviceFilterSelect.value : '';
+            
+            tbody.innerHTML = '<tr><td colspan="11" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading data sensor...</td></tr>';
+            
+            let url = `/api/sensor/history?per_page=${limit}`;
+            if (deviceFilter) {
+                url += `&device_id=${deviceFilter}`;
+            }
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data.length > 0) {
+                        let html = '';
+                        data.data.forEach((item, index) => {
+                            const timestamp = new Date(item.created_at).toLocaleString('id-ID');
+                            const proximityStatus = `IN: ${item.proximity_in ? 'ON' : 'OFF'} | OUT: ${item.proximity_out ? 'ON' : 'OFF'}`;
+                            
+                            html += `
+                                <tr>
+                                    <td>${item.id}</td>
+                                    <td>${timestamp}</td>
+                                    <td><span class="device-badge">${item.device_id || 'ESP32'}</span></td>
+                                    <td><span class="people-count">${item.people_count || 0}</span></td>
+                                    <td>${item.room_temperature ? item.room_temperature.toFixed(1) : '--'}</td>
+                                    <td>${item.humidity ? item.humidity.toFixed(1) : '--'}</td>
+                                    <td>${item.light_level || '--'}</td>
+                                    <td><span class="ac-status ${item.ac_status === 'OFF' ? 'status-off' : 'status-on'}">${item.ac_status || 'OFF'}</span></td>
+                                    <td>${item.set_temperature || '--'}°C</td>
+                                    <td><small>${proximityStatus}</small></td>
+                                    <td>${item.wifi_rssi || '--'}</td>
+                                </tr>
+                            `;
+                        });
+                        tbody.innerHTML = html;
+                        
+                        // Update pagination info
+                        const pageInfo = document.getElementById('sensorPageInfo');
+                        if (data.pagination && pageInfo) {
+                            pageInfo.textContent = `Page ${data.pagination.current_page} of ${data.pagination.last_page}`;
+                        }
+                        
+                        // Update summary stats
+                        updateSummaryStats(data.data);
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="11" class="no-data">Tidak ada data sensor ditemukan</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading sensor data:', error);
+                    tbody.innerHTML = '<tr><td colspan="11" class="error-row">Error loading data. Please try again.</td></tr>';
+                });
+        }
+
+        function loadACActivity() {
+            const tbody = document.getElementById('ac-activity-body');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '<tr><td colspan="7" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading aktivitas AC...</td></tr>';
+            
+            // Load AC control history from API
+            fetch('/api/ac/history')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data && data.data.length > 0) {
+                        let html = '';
+                        let acEvents = 0;
+                        let totalOnTime = 0;
+                        let tempSum = 0;
+                        let tempCount = 0;
+                        
+                        data.data.forEach((item, index) => {
+                            const timestamp = new Date(item.created_at).toLocaleString('id-ID');
+                            const mode = item.control_mode === 'manual' ? 'Manual Control' : 'Auto Control';
+                            
+                            let keterangan = '';
+                            if (item.control_mode === 'manual') {
+                                keterangan = `Manual control by ${item.created_by || 'user'}`;
+                            } else {
+                                keterangan = 'Automatic control based on people count';
+                            }
+                            
+                            const ac1Status = item.ac1_status ? 'ON' : 'OFF';
+                            const ac2Status = item.ac2_status ? 'ON' : 'OFF';
+                            const acStatus = (item.ac1_status && item.ac2_status) ? '2 AC ON' : 
+                                           (item.ac1_status || item.ac2_status) ? '1 AC ON' : 'AC OFF';
+                            
+                            html += `
+                                <tr>
+                                    <td>${timestamp}</td>
+                                    <td><span class="ac-status ${acStatus === 'AC OFF' ? 'status-off' : 'status-on'}">${acStatus}</span></td>
+                                    <td>${item.ac1_temperature || item.ac2_temperature || '--'}°C</td>
+                                    <td>--</td>
+                                    <td>--°C</td>
+                                    <td><span class="mode-badge">${mode}</span></td>
+                                    <td><small>${keterangan}</small></td>
+                                </tr>
+                            `;
+                            
+                            acEvents++;
+                            if (item.ac1_temperature) {
+                                tempSum += item.ac1_temperature;
+                                tempCount++;
+                            }
+                            if (item.ac2_temperature && item.ac2_temperature !== item.ac1_temperature) {
+                                tempSum += item.ac2_temperature;
+                                tempCount++;
+                            }
+                        });
+                        
+                        tbody.innerHTML = html;
+                        
+                        // Update AC activity stats
+                        document.getElementById('totalACEvents').textContent = acEvents;
+                        document.getElementById('avgACTemp').textContent = tempCount > 0 ? (tempSum / tempCount).toFixed(1) + '°C' : '--°C';
+                        document.getElementById('controlMode').textContent = 'Auto/Manual';
+                        
+                    } else {
+                        // Fallback to sensor data for AC activity
+                        loadACActivityFromSensorData();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading AC history:', error);
+                    // Fallback to sensor data
+                    loadACActivityFromSensorData();
+                });
+        }
+
+        function loadACActivityFromSensorData() {
+            const tbody = document.getElementById('ac-activity-body');
+            
+            fetch('/api/sensor/history?per_page=100')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data.length > 0) {
+                        let html = '';
+                        let lastACStatus = '';
+                        let acEvents = 0;
+                        let tempSum = 0;
+                        let tempCount = 0;
+                        
+                        data.data.forEach((item, index) => {
+                            // Only show records where AC status changed
+                            if (item.ac_status !== lastACStatus) {
+                                const timestamp = new Date(item.created_at).toLocaleString('id-ID');
+                                const mode = 'Auto (People Detection)';
+                                let keterangan = '';
+                                
+                                if (item.ac_status === 'OFF') {
+                                    keterangan = 'AC dimatikan karena tidak ada orang';
+                                } else if (item.people_count <= 5) {
+                                    keterangan = '1 AC aktif untuk 1-5 orang';
+                                } else if (item.people_count <= 10) {
+                                    keterangan = '1 AC aktif untuk 6-10 orang';
+                                } else {
+                                    keterangan = '2 AC aktif untuk 11+ orang';
+                                }
+                                
+                                html += `
+                                    <tr>
+                                        <td>${timestamp}</td>
+                                        <td><span class="ac-status ${item.ac_status === 'OFF' ? 'status-off' : 'status-on'}">${item.ac_status}</span></td>
+                                        <td>${item.set_temperature || '--'}°C</td>
+                                        <td>${item.people_count || 0}</td>
+                                        <td>${item.room_temperature ? item.room_temperature.toFixed(1) : '--'}°C</td>
+                                        <td><span class="mode-badge">${mode}</span></td>
+                                        <td><small>${keterangan}</small></td>
+                                    </tr>
+                                `;
+                                lastACStatus = item.ac_status;
+                                acEvents++;
+                                
+                                if (item.set_temperature) {
+                                    tempSum += item.set_temperature;
+                                    tempCount++;
+                                }
+                            }
+                        });
+                        
+                        if (html) {
+                            tbody.innerHTML = html;
+                        } else {
+                            tbody.innerHTML = '<tr><td colspan="7" class="no-data">Tidak ada perubahan aktivitas AC ditemukan</td></tr>';
+                        }
+                        
+                        // Update AC activity stats
+                        document.getElementById('totalACEvents').textContent = acEvents;
+                        document.getElementById('avgACTemp').textContent = tempCount > 0 ? (tempSum / tempCount).toFixed(1) + '°C' : '--°C';
+                        document.getElementById('controlMode').textContent = 'Auto';
+                        
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="7" class="no-data">Tidak ada data aktivitas AC ditemukan</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading AC activity:', error);
+                    tbody.innerHTML = '<tr><td colspan="7" class="error-row">Error loading data. Please try again.</td></tr>';
+                });
+        }
+
+        function loadPeopleCountData() {
+            const tbody = document.getElementById('people-count-body');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '<tr><td colspan="7" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading data jumlah orang...</td></tr>';
+            
+            fetch('/api/sensor/history?per_page=100')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data.length > 0) {
+                        let html = '';
+                        let lastPeopleCount = -1;
+                        let totalMovement = 0;
+                        
+                        data.data.forEach((item, index) => {
+                            // Only show records where people count changed
+                            if (item.people_count !== lastPeopleCount) {
+                                const timestamp = new Date(item.created_at).toLocaleString('id-ID');
+                                const change = lastPeopleCount === -1 ? 0 : item.people_count - lastPeopleCount;
+                                const changeIcon = change > 0 ? '↑' : change < 0 ? '↓' : '=';
+                                const changeClass = change > 0 ? 'increase' : change < 0 ? 'decrease' : 'same';
+                                
+                                let acResponse = 'Tidak ada perubahan';
+                                if (item.people_count === 0) {
+                                    acResponse = 'AC OFF';
+                                } else if (item.people_count <= 5) {
+                                    acResponse = '1 AC ON (25°C)';
+                                } else if (item.people_count <= 10) {
+                                    acResponse = '1 AC ON (22°C)';
+                                } else {
+                                    acResponse = '2 AC ON (20°C)';
+                                }
+                                
+                                let keterangan = '';
+                                if (change > 0) {
+                                    keterangan = `${change} orang masuk ruangan`;
+                                    totalMovement += change;
+                                } else if (change < 0) {
+                                    keterangan = `${Math.abs(change)} orang keluar ruangan`;
+                                    totalMovement += Math.abs(change);
+                                } else if (lastPeopleCount === -1) {
+                                    keterangan = 'Data awal sistem';
+                                }
+                                
+                                html += `
+                                    <tr>
+                                        <td>${timestamp}</td>
+                                        <td><span class="people-count">${item.people_count}</span></td>
+                                        <td><span class="change-indicator ${changeClass}">${changeIcon} ${Math.abs(change)}</span></td>
+                                        <td>${item.proximity_in ? 'AKTIF' : 'OFF'}</td>
+                                        <td>${item.proximity_out ? 'AKTIF' : 'OFF'}</td>
+                                        <td><span class="ac-response">${acResponse}</span></td>
+                                        <td><small>${keterangan}</small></td>
+                                    </tr>
+                                `;
+                                lastPeopleCount = item.people_count;
+                            }
+                        });
+                        
+                        if (html) {
+                            tbody.innerHTML = html;
+                        } else {
+                            tbody.innerHTML = '<tr><td colspan="7" class="no-data">Tidak ada perubahan jumlah orang ditemukan</td></tr>';
+                        }
+                        
+                        // Update total movement
+                        document.getElementById('totalMovement').textContent = totalMovement;
+                        
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="7" class="no-data">Tidak ada data jumlah orang ditemukan</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading people count data:', error);
+                    tbody.innerHTML = '<tr><td colspan="7" class="error-row">Error loading data. Please try again.</td></tr>';
+                });
+        }
+
+        function loadEnvironmentData() {
+            const tbody = document.getElementById('environment-body');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '<tr><td colspan="7" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading data lingkungan...</td></tr>';
+            
+            fetch('/api/sensor/history?per_page=50')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data.length > 0) {
+                        let html = '';
+                        let tempSum = 0, humSum = 0, lightSum = 0, count = 0;
+                        
+                        data.data.forEach((item, index) => {
+                            const timestamp = new Date(item.created_at).toLocaleString('id-ID');
+                            
+                            // Determine condition based on environment data
+                            let kondisi = 'Normal';
+                            if (item.room_temperature > 28) {
+                                kondisi = 'Panas';
+                            } else if (item.room_temperature < 20) {
+                                kondisi = 'Dingin';
+                            }
+                            
+                            if (item.humidity > 70) {
+                                kondisi += ', Lembab';
+                            } else if (item.humidity < 40) {
+                                kondisi += ', Kering';
+                            }
+                            
+                            if (item.light_level < 200) {
+                                kondisi += ', Gelap';
+                            } else if (item.light_level > 800) {
+                                kondisi += ', Terang';
+                            }
+                            
+                            html += `
+                                <tr>
+                                    <td>${timestamp}</td>
+                                    <td>${item.room_temperature ? item.room_temperature.toFixed(1) : '--'}</td>
+                                    <td>${item.humidity ? item.humidity.toFixed(1) : '--'}</td>
+                                    <td>${item.light_level || '--'}</td>
+                                    <td>${item.people_count || 0}</td>
+                                    <td><span class="ac-status ${item.ac_status === 'OFF' ? 'status-off' : 'status-on'}">${item.ac_status || 'OFF'}</span></td>
+                                    <td><span class="condition-badge">${kondisi}</span></td>
+                                </tr>
+                            `;
+                            
+                            // Calculate averages
+                            if (item.room_temperature) {
+                                tempSum += item.room_temperature;
+                                count++;
+                            }
+                            if (item.humidity) humSum += item.humidity;
+                            if (item.light_level) lightSum += item.light_level;
+                        });
+                        
+                        tbody.innerHTML = html;
+                        
+                        // Update room condition
+                        if (count > 0) {
+                            const avgTemp = tempSum / count;
+                            const avgHum = humSum / count;
+                            let roomCondition = 'Normal';
+                            
+                            if (avgTemp > 28) roomCondition = 'Panas';
+                            else if (avgTemp < 20) roomCondition = 'Dingin';
+                            
+                            if (avgHum > 70) roomCondition += ', Lembab';
+                            else if (avgHum < 40) roomCondition += ', Kering';
+                            
+                            document.getElementById('roomCondition').textContent = roomCondition;
+                        }
+                        
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="7" class="no-data">Tidak ada data lingkungan ditemukan</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading environment data:', error);
+                    tbody.innerHTML = '<tr><td colspan="7" class="error-row">Error loading data. Please try again.</td></tr>';
+                });
+        }
+
+        function loadSystemEvents() {
+            const tbody = document.getElementById('system-events-body');
+            if (!tbody) return;
+            
+            const eventFilterSelect = document.getElementById('eventTypeFilter');
+            const eventFilter = eventFilterSelect ? eventFilterSelect.value : '';
+            tbody.innerHTML = '<tr><td colspan="6" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading system events...</td></tr>';
+            
+            // Generate system events based on sensor data and AC control history
+            Promise.all([
+                fetch('/api/sensor/history?per_page=30').then(r => r.json()),
+                fetch('/api/ac/history').then(r => r.json()).catch(() => ({success: false}))
+            ])
+            .then(([sensorData, acData]) => {
+                let html = '';
+                let events = [];
+                let totalEvents = 0;
+                let successEvents = 0;
+                let errorEvents = 0;
+                
+                // Generate events from sensor data
+                if (sensorData.success && sensorData.data) {
+                    sensorData.data.forEach((item, index) => {
+                        const timestamp = new Date(item.created_at);
+                        
+                        // Connection events
+                        events.push({
+                            timestamp: timestamp,
+                            type: 'sensor_update',
+                            device: item.device_id || 'ESP32',
+                            description: 'Sensor data received',
+                            data: `People: ${item.people_count}, Temp: ${item.room_temperature}°C`,
+                            status: 'success'
+                        });
+                        
+                        // AC control events
+                        if (item.ac_status !== 'OFF') {
+                            events.push({
+                                timestamp: timestamp,
+                                type: 'ac_control',
+                                device: item.device_id || 'ESP32',
+                                description: `AC activated: ${item.ac_status}`,
+                                data: `Set temp: ${item.set_temperature}°C, People: ${item.people_count}`,
+                                status: 'info'
+                            });
+                        }
+                    });
+                }
+                
+                // Generate events from AC control history
+                if (acData.success && acData.data) {
+                    acData.data.forEach((item, index) => {
+                        const timestamp = new Date(item.created_at);
+                        
+                        events.push({
+                            timestamp: timestamp,
+                            type: 'manual_control',
+                            device: 'Dashboard',
+                            description: `Manual AC control activated`,
+                            data: `AC1: ${item.ac1_status ? 'ON' : 'OFF'}, AC2: ${item.ac2_status ? 'ON' : 'OFF'}`,
+                            status: 'info'
+                        });
+                    });
+                }
+                
+                // Sort events by timestamp (newest first)
+                events.sort((a, b) => b.timestamp - a.timestamp);
+                
+                // Filter events if needed
+                if (eventFilter) {
+                    events = events.filter(event => event.type === eventFilter);
+                }
+                
+                // Generate HTML
+                events.slice(0, 50).forEach(event => {
+                    const timestampStr = event.timestamp.toLocaleString('id-ID');
+                    const statusClass = event.status === 'success' ? 'status-success' : 
+                                      event.status === 'error' ? 'status-error' : 'status-info';
+                    
+                    html += `
+                        <tr>
+                            <td>${timestampStr}</td>
+                            <td><span class="event-type-badge ${event.type}">${event.type.replace('_', ' ').toUpperCase()}</span></td>
+                            <td><span class="device-badge">${event.device}</span></td>
+                            <td>${event.description}</td>
+                            <td><small>${event.data}</small></td>
+                            <td><span class="status-badge ${statusClass}">${event.status.toUpperCase()}</span></td>
+                        </tr>
+                    `;
+                    
+                    totalEvents++;
+                    if (event.status === 'success') successEvents++;
+                    if (event.status === 'error') errorEvents++;
+                });
+                
+                if (html) {
+                    tbody.innerHTML = html;
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" class="no-data">Tidak ada system events ditemukan</td></tr>';
+                }
+                
+                // Update event stats
+                document.getElementById('totalEvents').textContent = totalEvents;
+                document.getElementById('successEvents').textContent = successEvents;
+                document.getElementById('errorEvents').textContent = errorEvents;
+                
+            })
+            .catch(error => {
+                console.error('Error loading system events:', error);
+                tbody.innerHTML = '<tr><td colspan="6" class="error-row">Error loading data. Please try again.</td></tr>';
+            });
+        }
+
+        function updateSummaryStats(data) {
+            if (!data || data.length === 0) return;
+            
+            // Update total records
+            const totalRecordsEl = document.getElementById('totalRecords');
+            if (totalRecordsEl) {
+                totalRecordsEl.textContent = data.length.toLocaleString();
+            }
+            
+            // Update last update time
+            const lastUpdateEl = document.getElementById('lastUpdate');
+            if (lastUpdateEl && data[0]) {
+                const lastUpdate = new Date(data[0].created_at);
+                lastUpdateEl.textContent = lastUpdate.toLocaleString('id-ID');
+            }
+            
+            // Calculate update frequency
+            if (data.length > 1) {
+                const firstTime = new Date(data[0].created_at);
+                const lastTime = new Date(data[data.length - 1].created_at);
+                const diffMinutes = (firstTime - lastTime) / (1000 * 60);
+                const avgInterval = diffMinutes / data.length;
+                
+                const updateFreqEl = document.getElementById('updateFreq');
+                if (updateFreqEl) {
+                    updateFreqEl.textContent = Math.round(avgInterval * 60) + 's';
+                }
+            }
+        }
+
+        function refreshHistoryData() {
+            loadHistoryData();
+        }
+
+        function exportHistoryData() {
+            const periodSelect = document.getElementById('historyPeriod');
+            const deviceFilterSelect = document.getElementById('deviceFilter');
+            
+            const period = periodSelect ? periodSelect.value : 'week';
+            const deviceFilter = deviceFilterSelect ? deviceFilterSelect.value : '';
+            
+            let url = '/api/sensor/history?format=csv';
+            if (deviceFilter) {
+                url += `&device_id=${deviceFilter}`;
+            }
+            
+            // Create download link
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `sensor_history_${period}_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function previousPage(type) {
+            if (currentHistoryPage > 1) {
+                currentHistoryPage--;
+                loadHistoryData();
+            }
+        }
+
+        function nextPage(type) {
+            currentHistoryPage++;
+            loadHistoryData();
+        }
+
+        function showChart(chartType) {
+            // Remove active class from all chart tab buttons
+            document.querySelectorAll('.chart-tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to clicked button
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+            
+            // Load chart data
+            loadChartData(chartType);
+        }
+
+        function loadChartData(chartType) {
+            fetch('/api/dashboard/chart/24')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data.length > 0) {
+                        const canvas = document.getElementById('historyChart');
+                        if (!canvas) return;
+                        
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Destroy existing chart
+                        if (historyChart) {
+                            historyChart.destroy();
+                        }
+                        
+                        const labels = data.data.map(item => item.time);
+                        let chartData, label, color;
+                        
+                        switch(chartType) {
+                            case 'temperature':
+                                chartData = data.data.map(item => item.temperature);
+                                label = 'Suhu (°C)';
+                                color = 'rgb(255, 99, 132)';
+                                break;
+                            case 'humidity':
+                                chartData = data.data.map(item => item.humidity);
+                                label = 'Kelembaban (%)';
+                                color = 'rgb(54, 162, 235)';
+                                break;
+                            case 'people':
+                                chartData = data.data.map(item => item.people_count);
+                                label = 'Jumlah Orang';
+                                color = 'rgb(75, 192, 192)';
+                                break;
+                            case 'light':
+                                chartData = data.data.map(item => item.light_level);
+                                label = 'Intensitas Cahaya (lux)';
+                                color = 'rgb(255, 205, 86)';
+                                break;
+                        }
+                        
+                        historyChart = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: label,
+                                    data: chartData,
+                                    borderColor: color,
+                                    backgroundColor: color + '20',
+                                    tension: 0.1,
+                                    fill: true
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: `Grafik ${label} - 24 Jam Terakhir`
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        // Show message if no data available
+                        const canvas = document.getElementById('historyChart');
+                        if (canvas) {
+                            const ctx = canvas.getContext('2d');
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            ctx.font = '16px Arial';
+                            ctx.fillStyle = '#666';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('Tidak ada data untuk ditampilkan', canvas.width / 2, canvas.height / 2);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading chart data:', error);
+                    const canvas = document.getElementById('historyChart');
+                    if (canvas) {
+                        const ctx = canvas.getContext('2d');
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.font = '16px Arial';
+                        ctx.fillStyle = '#dc3545';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Error loading chart data', canvas.width / 2, canvas.height / 2);
+                    }
+                });
+        }
+        // ===== BASIC UI FUNCTIONS =====
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            sidebar.classList.toggle('collapsed');
+            
+            if (sidebar.classList.contains('collapsed')) {
+                toggleIcon.classList.remove('fa-bars');
+                toggleIcon.classList.add('fa-chevron-right');
+            } else {
+                toggleIcon.classList.remove('fa-chevron-right');
+                toggleIcon.classList.add('fa-bars');
+            }
+        }
+
+        function showSection(sectionId, element) {
+            // Hide all sections
+            const sections = document.querySelectorAll('section');
+            sections.forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).style.display = 'block';
+            
+            // Update active menu item
+            const menuItems = document.querySelectorAll('.sidebar a');
+            menuItems.forEach(item => {
+                item.classList.remove('active');
+            });
+            element.classList.add('active');
+        }
+
+        // ===== AUTO REFRESH PAGE =====
+        function autoRefreshPage() {
+            // Auto refresh setiap 30 detik untuk update data
+            setTimeout(function() {
+                window.location.reload();
+            }, 30000);
+        }
+
         // ===== INITIALIZE =====
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Smart Energy Dashboard - Server-side Mode');
@@ -1798,6 +3165,9 @@
             
             // Initialize AC control
             initializeACControl();
+            
+            // Initialize History section
+            initializeHistory();
             
             // Add manual refresh button
             const navbar = document.querySelector('.navbar');
