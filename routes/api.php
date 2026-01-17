@@ -4,7 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\SensorDataController;
 use App\Http\Controllers\Api\AcControlController;
-use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\SimpleReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -72,17 +72,17 @@ Route::prefix('ac')->group(function () {
 // API untuk laporan PDF
 Route::prefix('reports')->group(function () {
     // Daily report
-    Route::get('/daily', [ReportController::class, 'dailyReport']);
+    Route::get('/daily', [SimpleReportController::class, 'dailyReport']);
     
     // Weekly report
-    Route::get('/weekly', [ReportController::class, 'weeklyReport']);
+    Route::get('/weekly', [SimpleReportController::class, 'weeklyReport']);
     
     // Monthly report
-    Route::get('/monthly', [ReportController::class, 'monthlyReport']);
+    Route::get('/monthly', [SimpleReportController::class, 'monthlyReport']);
     
-    // Efficiency report
-    Route::get('/efficiency', [ReportController::class, 'efficiencyReport']);
+    // Efficiency report (redirect to monthly for now)
+    Route::get('/efficiency', [SimpleReportController::class, 'monthlyReport']);
     
-    // Custom report
-    Route::get('/custom', [ReportController::class, 'customReport']);
+    // Custom report (redirect to daily for now)
+    Route::get('/custom', [SimpleReportController::class, 'dailyReport']);
 });

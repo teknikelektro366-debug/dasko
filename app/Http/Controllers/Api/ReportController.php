@@ -290,9 +290,14 @@ class ReportController extends Controller
 
         $filename = 'laporan_harian_' . $date->format('Y_m_d') . '.pdf';
         
-        return response($html)
-            ->header('Content-Type', 'text/html; charset=utf-8')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        // Generate proper PDF response
+        return response($html, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0'
+        ]);
     }
 
     private function generateWeeklyPDF($sensorData, $summary, $startDate, $endDate)
@@ -306,9 +311,13 @@ class ReportController extends Controller
 
         $filename = 'laporan_mingguan_' . $startDate->format('Y_m_d') . '.pdf';
         
-        return response($html)
-            ->header('Content-Type', 'text/html; charset=utf-8')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        return response($html, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0'
+        ]);
     }
 
     private function generateMonthlyPDF($sensorData, $summary, $startDate, $endDate)
@@ -322,9 +331,13 @@ class ReportController extends Controller
 
         $filename = 'laporan_bulanan_' . $startDate->format('Y_m') . '.pdf';
         
-        return response($html)
-            ->header('Content-Type', 'text/html; charset=utf-8')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        return response($html, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0'
+        ]);
     }
 
     private function generateEfficiencyPDF($sensorData, $summary, $dateFrom, $dateTo)
@@ -338,9 +351,13 @@ class ReportController extends Controller
 
         $filename = 'laporan_efisiensi_' . $dateFrom->format('Y_m_d') . '.pdf';
         
-        return response($html)
-            ->header('Content-Type', 'text/html; charset=utf-8')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        return response($html, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0'
+        ]);
     }
 
     private function generateCustomPDF($sensorData, $summary, $dateFrom, $dateTo, $deviceType)
@@ -355,9 +372,13 @@ class ReportController extends Controller
 
         $filename = 'laporan_kustom_' . $dateFrom->format('Y_m_d') . '.pdf';
         
-        return response($html)
-            ->header('Content-Type', 'text/html; charset=utf-8')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        return response($html, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0'
+        ]);
     }
 
     private function generateReportHTML($type, $data)
