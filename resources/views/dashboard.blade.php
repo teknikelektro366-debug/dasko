@@ -100,6 +100,113 @@
             border: 1px solid #ddd;
         }
 
+        /* Analytics Styles */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+        }
+
+        .chart-card h4 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .insight-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #007bff;
+            display: flex;
+            gap: 15px;
+        }
+
+        .insight-icon {
+            background: #007bff;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .insight-content h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .insight-content p {
+            margin: 0;
+            color: #666;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+
+        .metric-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 15px;
+            color: #666;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 8px;
+        }
+
+        .metric-description {
+            color: #888;
+            font-size: 12px;
+        }
+        }
+
         .ac-units-control {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1200,11 +1307,171 @@
 
         <!-- ===== Analisa Section (dari Analytics) ===== -->
         <section id="analytics" style="display:none;">
-            <header>
-                <h1><i class="fas fa-chart-bar"></i> Analisa</h1>
-            </header>
-            <div class="chart-container">
-                <canvas id="myChart"></canvas>
+            <div class="navbar">
+                <i class="fas fa-chart-bar"></i> Analisa Data Smart Energy
+                <span class="realtime-indicator">
+                    <div class="realtime-dot"></div>
+                    ANALYTICS
+                </span>
+            </div>
+            <div class="subnav">
+                <i class="fas fa-analytics"></i> Analisis mendalam data sensor ESP32, pola penggunaan AC, dan efisiensi energi Lab Teknik Tegangan Tinggi UNJA
+            </div>
+
+            <!-- Summary Analytics Cards -->
+            <div class="sensor-section">
+                <h3><i class="fas fa-chart-pie"></i> Ringkasan Analisis</h3>
+                <div class="sensor-grid">
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="title">Okupansi Saat Ini</div>
+                        <div class="value" id="currentOccupancy">0%</div>
+                        <div class="data-timestamp">Dari 20 kapasitas maksimal</div>
+                    </div>
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-snowflake"></i>
+                        </div>
+                        <div class="title">Status AC</div>
+                        <div class="value" id="acStatusAnalytics">OFF</div>
+                        <div class="data-timestamp">Kontrol otomatis</div>
+                    </div>
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-thermometer-half"></i>
+                        </div>
+                        <div class="title">Suhu Ruangan</div>
+                        <div class="value" id="tempAnalytics">25.0°C</div>
+                        <div class="data-timestamp">DHT22 Sensor</div>
+                    </div>
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-tint"></i>
+                        </div>
+                        <div class="title">Kelembaban</div>
+                        <div class="value" id="humidityAnalytics">60.0%</div>
+                        <div class="data-timestamp">DHT22 Sensor</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="sensor-section">
+                <h3><i class="fas fa-tachometer-alt"></i> Metrik Performa Sistem</h3>
+                <div class="sensor-grid">
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="title">Response Time</div>
+                        <div class="value" id="responseTimeAnalytics">1.2s</div>
+                        <div class="data-timestamp">Waktu update sensor</div>
+                    </div>
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div class="title">Total Records</div>
+                        <div class="value" id="totalRecordsAnalytics">0</div>
+                        <div class="data-timestamp">Data tersimpan</div>
+                    </div>
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-wifi"></i>
+                        </div>
+                        <div class="title">WiFi Signal</div>
+                        <div class="value" id="wifiSignalAnalytics">-45 dBm</div>
+                        <div class="data-timestamp">Kekuatan sinyal ESP32</div>
+                    </div>
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <div class="title">Efisiensi Energi</div>
+                        <div class="value" id="energyEfficiencyAnalytics">85%</div>
+                        <div class="data-timestamp">Skor efisiensi</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analysis Insights -->
+            <div class="sensor-section">
+                <h3><i class="fas fa-brain"></i> Insight & Rekomendasi</h3>
+                <div class="sensor-grid">
+                    <div class="card sensor-card" style="grid-column: span 2;">
+                        <div class="card-icon">
+                            <i class="fas fa-lightbulb"></i>
+                        </div>
+                        <div class="title">Rekomendasi Efisiensi</div>
+                        <div class="value" style="font-size: 14px; line-height: 1.4;" id="efficiencyRecommendation">
+                            Sistem akan menganalisis pola penggunaan AC berdasarkan okupansi ruangan untuk memberikan rekomendasi efisiensi energi yang optimal.
+                        </div>
+                        <div class="data-timestamp">Update berdasarkan data real-time</div>
+                    </div>
+                    <div class="card sensor-card" style="grid-column: span 2;">
+                        <div class="card-icon">
+                            <i class="fas fa-chart-trending-up"></i>
+                        </div>
+                        <div class="title">Analisis Pola Penggunaan</div>
+                        <div class="value" style="font-size: 14px; line-height: 1.4;" id="usagePatternAnalysis">
+                            Monitoring okupansi ruangan secara real-time untuk mengoptimalkan penggunaan AC dan menghemat energi berdasarkan kebutuhan aktual.
+                        </div>
+                        <div class="data-timestamp">Analisis berdasarkan data historis</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart Section -->
+            <div class="sensor-section">
+                <h3><i class="fas fa-chart-line"></i> Visualisasi Data</h3>
+                <div class="sensor-grid">
+                    <div class="card sensor-card" style="grid-column: span 4; height: 400px;">
+                        <div class="title">Grafik Okupansi vs AC Usage</div>
+                        <canvas id="analyticsChart" style="width: 100%; height: 300px;"></canvas>
+                        <div class="data-timestamp">Data 24 jam terakhir</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Status -->
+            <div class="sensor-section">
+                <h3><i class="fas fa-cog"></i> Status Sistem</h3>
+                <div class="sensor-grid">
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-microchip"></i>
+                        </div>
+                        <div class="title">ESP32 Status</div>
+                        <div class="value" id="esp32Status">Online</div>
+                        <div class="data-timestamp">Koneksi aktif</div>
+                    </div>
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <div class="title">Server Status</div>
+                        <div class="value" id="serverStatus">Running</div>
+                        <div class="data-timestamp">Laravel server</div>
+                    </div>
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div class="title">Database Status</div>
+                        <div class="value" id="databaseStatus">Connected</div>
+                        <div class="data-timestamp">MySQL connection</div>
+                    </div>
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="title">System Health</div>
+                        <div class="value" id="systemHealth">Excellent</div>
+                        <div class="data-timestamp">Overall status</div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -3176,6 +3443,148 @@
                 navbar.appendChild(refreshBtn);
             }
         });
+
+        // ===== ANALYTICS FUNCTIONS =====
+        let analyticsChart = null;
+        let analyticsUpdateInterval = null;
+
+        function initAnalytics() {
+            try {
+                // Initialize simple chart
+                const ctx = document.getElementById('analyticsChart');
+                if (ctx) {
+                    analyticsChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['6h ago', '5h ago', '4h ago', '3h ago', '2h ago', '1h ago', 'Now'],
+                            datasets: [{
+                                label: 'Jumlah Orang',
+                                data: [0, 2, 5, 3, 1, 0, 0],
+                                borderColor: '#007bff',
+                                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }, {
+                                label: 'AC Status (0=OFF, 1=ON)',
+                                data: [0, 1, 1, 1, 1, 0, 0],
+                                borderColor: '#dc3545',
+                                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                                tension: 0.4,
+                                fill: false
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 20
+                                }
+                            }
+                        }
+                    });
+                }
+                
+                // Start real-time updates
+                updateAnalyticsData();
+                analyticsUpdateInterval = setInterval(updateAnalyticsData, 5000);
+                
+            } catch (error) {
+                console.error('Error initializing analytics:', error);
+            }
+        }
+
+        function updateAnalyticsData() {
+            // Fetch latest sensor data
+            fetch('/api/sensor/latest')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        const sensorData = data.data;
+                        
+                        // Update analytics cards
+                        updateAnalyticsElement('currentOccupancy', Math.round((sensorData.people_count / 20) * 100) + '%');
+                        updateAnalyticsElement('acStatusAnalytics', sensorData.ac_status || 'OFF');
+                        updateAnalyticsElement('tempAnalytics', (sensorData.room_temperature || 25).toFixed(1) + '°C');
+                        updateAnalyticsElement('humidityAnalytics', (sensorData.humidity || 60).toFixed(1) + '%');
+                        updateAnalyticsElement('wifiSignalAnalytics', (sensorData.wifi_rssi || -45) + ' dBm');
+                        
+                        // Update recommendations
+                        updateRecommendations(sensorData);
+                        
+                        // Update system status
+                        updateAnalyticsElement('esp32Status', sensorData.status === 'active' ? 'Online' : 'Offline');
+                        
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating analytics data:', error);
+                    updateAnalyticsElement('esp32Status', 'Disconnected');
+                });
+        }
+
+        function updateAnalyticsElement(id, value) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            }
+        }
+
+        function updateRecommendations(sensorData) {
+            let recommendation = "Sistem berjalan normal. ";
+            
+            if (sensorData.people_count === 0 && sensorData.ac_status !== 'OFF') {
+                recommendation = "⚠️ AC menyala tanpa okupansi. Pertimbangkan mematikan AC untuk menghemat energi.";
+            } else if (sensorData.people_count > 0 && sensorData.ac_status === 'OFF') {
+                recommendation = "💡 Ruangan berisi " + sensorData.people_count + " orang. Pertimbangkan menyalakan AC untuk kenyamanan.";
+            } else if (sensorData.people_count > 15) {
+                recommendation = "🔥 Okupansi tinggi (" + sensorData.people_count + "/20). Sistem AC bekerja maksimal dengan 2 unit aktif.";
+            } else if (sensorData.people_count > 0) {
+                recommendation = "✅ Penggunaan AC optimal sesuai okupansi " + sensorData.people_count + " orang.";
+            }
+            
+            updateAnalyticsElement('efficiencyRecommendation', recommendation);
+            
+            // Update usage pattern
+            let usagePattern = "Okupansi saat ini: " + sensorData.people_count + "/20 (" + Math.round((sensorData.people_count / 20) * 100) + "%). ";
+            if (sensorData.people_count === 0) {
+                usagePattern += "Ruangan kosong - mode hemat energi aktif.";
+            } else if (sensorData.people_count <= 5) {
+                usagePattern += "Okupansi rendah - 1 AC unit optimal.";
+            } else if (sensorData.people_count <= 10) {
+                usagePattern += "Okupansi sedang - 1 AC unit dengan suhu 22°C.";
+            } else {
+                usagePattern += "Okupansi tinggi - 2 AC unit untuk kenyamanan maksimal.";
+            }
+            
+            updateAnalyticsElement('usagePatternAnalysis', usagePattern);
+        }
+
+        function stopAnalytics() {
+            if (analyticsUpdateInterval) {
+                clearInterval(analyticsUpdateInterval);
+                analyticsUpdateInterval = null;
+            }
+        }
+
+        // Update showSection function to handle analytics
+        const originalShowSection = showSection;
+        showSection = function(sectionId, element) {
+            // Stop analytics updates when leaving analytics section
+            if (analyticsUpdateInterval && sectionId !== 'analytics') {
+                stopAnalytics();
+            }
+            
+            originalShowSection(sectionId, element);
+            
+            // Initialize analytics when entering analytics section
+            if (sectionId === 'analytics') {
+                setTimeout(() => {
+                    initAnalytics();
+                }, 100);
+            }
+        };
     </script>
     <script src="{{ asset('ac-control.js') }}"></script>
     <script src="{{ asset('script.js') }}"></script>

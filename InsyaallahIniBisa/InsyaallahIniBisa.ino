@@ -15,9 +15,9 @@ TFT_eSPI tft;
 // ================= CONFIGURATION =================
 const char* ssid = "LAB TEKNIK TEGANGAN TINGGI";
 const char* password = "LABTTT2026";
-const char* hostingDomain = "dasko.fst.unja.ac.id";
-const char* apiURL = "https://dasko.fst.unja.ac.id/api/sensor/data";
-const char* acControlURL = "https://dasko.fst.unja.ac.id/api/ac/control";
+const char* hostingDomain = "192.168.0.102";
+const char* apiURL = "http://192.168.0.102:8000/api/sensor/data";
+const char* acControlURL = "http://192.168.0.102:8000/api/ac/control";
 
 const char* rootCACertificate = \
 "-----BEGIN CERTIFICATE-----\n" \
@@ -56,23 +56,23 @@ const char* rootCACertificate = \
 #define HUMIDITY_CHANGE_THRESHOLD 2.0 // Optimized humidity threshold
 #define LIGHT_CHANGE_THRESHOLD 50     // Optimized light threshold
 #define MAX_TIME_WITHOUT_UPDATE 300000 // Force update every 5 minutes (more stable)
-#define MIN_UPDATE_INTERVAL 2000        // Minimum 2 seconds between updates (prevent spam)
+#define MIN_UPDATE_INTERVAL 1000        // Minimum 1 seconds between updates (faster response)
 #define AC_CONTROL_CHECK_INTERVAL 10000 // Check AC control every 10 seconds (more stable)
 #define DEVICE_ID "ESP32_Proximity_Production_UNJA"
 #define DEVICE_LOCATION "Lab Teknik Tegangan Tinggi - UNJA"
 
 // ================= PINS - UPDATED CONFIGURATION =================
 #define IR_PIN 15               // IR Transmitter pin (changed from 14 to 15)
-#define PROXIMITY_PIN_IN  32    // Proximity sensor MASUK (changed from 2 to 32)
-#define PROXIMITY_PIN_OUT 33    // Proximity sensor KELUAR (changed from 15 to 33)
+#define PROXIMITY_PIN_IN  2     // Proximity sensor MASUK (changed back to GPIO 2 - more reliable)
+#define PROXIMITY_PIN_OUT 4     // Proximity sensor KELUAR (changed to GPIO 4 - more reliable)
 #define DHTPIN    12            // DHT22 pin (changed from 27 to 12)
 #define DHTPIN2   13            // DHT22 second pin (new pin added)
 #define DHTTYPE   DHT22
 #define LDR_PIN   35            // LDR pin 1 (changed from 34 to 35)
 #define LDR_PIN2  34            // LDR pin 2 (new pin added)
 #define MAX_PEOPLE 20        
-#define PERSON_COOLDOWN 1000       // Optimized: 1 second cooldown for stable detection
-#define DEBOUNCE_DELAY 200         // Optimized: 200ms debounce for reliable detection
+#define PERSON_COOLDOWN 300        // ULTRA FAST: 300ms cooldown untuk deteksi cepat
+#define DEBOUNCE_DELAY 50          // ULTRA FAST: 50ms debounce untuk responsif maksimal
 
 // ================= HARDWARE - UPDATED PINS =================
 IRsend irsend(IR_PIN);  // IR Transmitter on GPIO 15
@@ -89,6 +89,7 @@ unsigned long lastPersonDetected = 0;
 // ULTRA FAST: Interrupt flags untuk deteksi instan
 volatile bool interruptTriggered = false;
 volatile unsigned long lastInterruptTime = 0;
+volatile bool fastDetectionMode = true;  // Mode deteksi cepat
 
 struct SensorData {
   bool proximityIn = false;      
@@ -101,6 +102,9 @@ struct SensorData {
   unsigned long lastOutChange = 0;
   bool stableInState = false;
   bool stableOutState = false;
+  // ULTRA FAST: Tambahan untuk deteksi cepat
+  bool lastObjectInDetected = false;
+  bool lastObjectOutDetected = false;
 } sensorData;
 
 struct ACControlState {
@@ -192,7 +196,7 @@ void manualACTest();
 // Optimized: Interrupt handlers with proper debouncing
 void IRAM_ATTR proximityInInterrupt() {
   unsigned long now = millis();
-  if (now - lastInterruptTime > 200) {  // 200ms debounce for stability
+  if (now - lastInterruptTime > 50) {  // 50ms debounce untuk responsif maksimal
     interruptTriggered = true;
     lastInterruptTime = now;
   }
@@ -200,7 +204,7 @@ void IRAM_ATTR proximityInInterrupt() {
 
 void IRAM_ATTR proximityOutInterrupt() {
   unsigned long now = millis();
-  if (now - lastInterruptTime > 200) {  // 200ms debounce for stability
+  if (now - lastInterruptTime > 50) {  // 50ms debounce untuk responsif maksimal
     interruptTriggered = true;
     lastInterruptTime = now;
   }
@@ -331,9 +335,24 @@ void connectWiFi() {
   
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("✓ WiFi CONNECTED!");
-    Serial.println("✓ IP: " + WiFi.localIP().toString());
+    Serial.println("✓ IP Address: " + WiFi.localIP().toString());
+    Serial.println("✓ Gateway: " + WiFi.gatewayIP().toString());
+    Serial.println("✓ DNS: " + WiFi.dnsIP().toString());
+    Serial.println("✓ RSSI: " + String(WiFi.RSSI()) + " dBm");
+    Serial.println("✓ Target API: " + String(apiURL));
     currentData.wifiStatus = "Connected";
     currentData.wifiRSSI = WiFi.RSSI();
+    
+    // Test ping ke komputer
+    Serial.println("🔍 Testing connection to computer IP...");
+    HTTPClient http;
+    if (http.begin("http://192.168.0.102:8000/api/sensor/data")) {
+      int httpCode = http.GET();
+      Serial.println("📡 Computer IP test response: " + String(httpCode));
+      http.end();
+    } else {
+      Serial.println("❌ Cannot connect to 192.168.0.102:8000");
+    }
   } else {
     Serial.println("✗ WiFi FAILED!");
     currentData.wifiStatus = "Failed";
@@ -341,67 +360,63 @@ void connectWiFi() {
   Serial.println("========================");
 }
 
-// ================= HTTPS REQUEST - ENHANCED STABILITY =================
-bool makeHTTPSRequest(const char* url, const char* method, const char* payload, String& response) {
-  WiFiClientSecure client;
-  HTTPClient https;
+// ================= HTTP REQUEST - LOCALHOST CONFIGURATION =================
+bool makeHTTPRequest(const char* url, const char* method, const char* payload, String& response) {
+  HTTPClient http;
   
-  // Enhanced SSL configuration for stability
-  client.setCACert(rootCACertificate);
-  client.setInsecure(); // Allow insecure connections for testing
-  client.setTimeout(10000);   // 10 seconds timeout for stability
-  https.setTimeout(10000);    // 10 seconds timeout for stability
+  // HTTP configuration for localhost
+  http.setTimeout(10000);    // 10 seconds timeout for stability
   
   // Connection retry logic
   int retryCount = 0;
   const int maxRetries = 3;
   
   while (retryCount < maxRetries) {
-    if (https.begin(client, url)) {
-      Serial.println("✅ HTTPS connection established");
+    if (http.begin(url)) {
+      Serial.println("✅ HTTP connection established to localhost");
       break;
     }
     retryCount++;
-    Serial.println("⚠️ HTTPS connection attempt " + String(retryCount) + "/" + String(maxRetries) + " failed");
+    Serial.println("⚠️ HTTP connection attempt " + String(retryCount) + "/" + String(maxRetries) + " failed");
     if (retryCount < maxRetries) {
       delay(1000);  // Wait before retry
     }
   }
   
   if (retryCount >= maxRetries) {
-    Serial.println("❌ HTTPS connection failed after " + String(maxRetries) + " attempts");
+    Serial.println("❌ HTTP connection failed after " + String(maxRetries) + " attempts");
     return false;
   }
   
   // Enhanced headers
-  https.addHeader("Content-Type", "application/json");
-  https.addHeader("Accept", "application/json");
-  https.addHeader("User-Agent", "ESP32-Proximity-UNJA/2.0");
-  https.addHeader("X-Requested-With", "ESP32");
-  https.addHeader("X-Device-ID", DEVICE_ID);
-  https.addHeader("X-Location", DEVICE_LOCATION);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("Accept", "application/json");
+  http.addHeader("User-Agent", "ESP32-Proximity-UNJA/2.0");
+  http.addHeader("X-Requested-With", "ESP32");
+  http.addHeader("X-Device-ID", DEVICE_ID);
+  http.addHeader("X-Location", DEVICE_LOCATION);
   
   int httpResponseCode;
   if (strcmp(method, "POST") == 0) {
-    httpResponseCode = https.POST(payload);
+    httpResponseCode = http.POST(payload);
   } else {
-    httpResponseCode = https.GET();
+    httpResponseCode = http.GET();
   }
   
   if (httpResponseCode > 0) {
-    response = https.getString();
-    https.end();
+    response = http.getString();
+    http.end();
     
     if (httpResponseCode == 200 || httpResponseCode == 201) {
-      Serial.println("✅ HTTPS " + String(method) + " successful (Code: " + String(httpResponseCode) + ")");
+      Serial.println("✅ HTTP " + String(method) + " successful (Code: " + String(httpResponseCode) + ")");
       return true;
     } else {
-      Serial.println("⚠️ HTTPS " + String(method) + " warning (Code: " + String(httpResponseCode) + ")");
+      Serial.println("⚠️ HTTP " + String(method) + " warning (Code: " + String(httpResponseCode) + ")");
       return httpResponseCode < 500; // Return true for client errors, false for server errors
     }
   } else {
-    Serial.println("❌ HTTPS " + String(method) + " failed with code: " + String(httpResponseCode));
-    https.end();
+    Serial.println("❌ HTTP " + String(method) + " failed with code: " + String(httpResponseCode));
+    http.end();
     return false;
   }
 }
@@ -410,11 +425,20 @@ bool makeHTTPSRequest(const char* url, const char* method, const char* payload, 
 void readSensors() {
   unsigned long now = millis();
   
-  // Optimized: Read sensors with proper debouncing
+  // ULTRA FAST: Read sensors dengan debouncing minimal
   bool currentInState = digitalRead(PROXIMITY_PIN_IN);
   bool currentOutState = digitalRead(PROXIMITY_PIN_OUT);
   
-  // Optimized: Debouncing with 200ms delay for stability
+  // Debug proximity sensor readings setiap 3 detik
+  static unsigned long lastProximityDebug = 0;
+  if (now - lastProximityDebug > 3000) {
+    Serial.println("🔍 PROXIMITY DEBUG (ULTRA FAST MODE):");
+    Serial.println("   GPIO 2 (MASUK): " + String(currentInState ? "HIGH" : "LOW") + " | Detected: " + String(!currentInState ? "YES" : "NO"));
+    Serial.println("   GPIO 4 (KELUAR): " + String(currentOutState ? "HIGH" : "LOW") + " | Detected: " + String(!currentOutState ? "YES" : "NO"));
+    lastProximityDebug = now;
+  }
+  
+  // ULTRA FAST: Debouncing dengan 50ms delay untuk responsif maksimal
   if (currentInState != sensorData.lastProximityIn) {
     sensorData.lastInChange = now;
     sensorData.lastProximityIn = currentInState;
@@ -439,7 +463,7 @@ void readSensors() {
     }
   }
   
-  // Optimized: Object detection with proper logic
+  // ULTRA FAST: Object detection dengan logika yang tepat
   sensorData.objectInDetected = !sensorData.proximityIn;    
   sensorData.objectOutDetected = !sensorData.proximityOut;  
 }
@@ -463,7 +487,43 @@ void detectPeople() {
     Serial.print(sensorData.objectOutDetected ? "DETECTED" : "CLEAR");
     Serial.print(" | WiFi: ");
     Serial.print(WiFi.status() == WL_CONNECTED ? "OK" : "FAIL");
+    
+    // Add DHT22 temperature readings to debug info
+    float temp1 = dht.readTemperature();
+    float temp2 = dht2.readTemperature();
+    float hum1 = dht.readHumidity();
+    float hum2 = dht2.readHumidity();
+    
     Serial.println();
+    Serial.println("🌡️ DHT22 SENSOR READINGS:");
+    Serial.print("   DHT22-1 (GPIO 12): ");
+    if (!isnan(temp1) && !isnan(hum1)) {
+      Serial.print("Suhu: " + String(temp1, 1) + "°C | Kelembaban: " + String(hum1, 1) + "%");
+    } else {
+      Serial.print("ERROR - Sensor tidak terbaca!");
+    }
+    Serial.println();
+    
+    Serial.print("   DHT22-2 (GPIO 13): ");
+    if (!isnan(temp2) && !isnan(hum2)) {
+      Serial.print("Suhu: " + String(temp2, 1) + "°C | Kelembaban: " + String(hum2, 1) + "%");
+    } else {
+      Serial.print("ERROR - Sensor tidak terbaca!");
+    }
+    Serial.println();
+    
+    // Calculate and show average
+    if (!isnan(temp1) && !isnan(temp2)) {
+      float avgTemp = (temp1 + temp2) / 2.0;
+      Serial.println("   RATA-RATA Suhu: " + String(avgTemp, 1) + "°C");
+    } else if (!isnan(temp1)) {
+      Serial.println("   AKTIF: DHT22-1 saja | Suhu: " + String(temp1, 1) + "°C");
+    } else if (!isnan(temp2)) {
+      Serial.println("   AKTIF: DHT22-2 saja | Suhu: " + String(temp2, 1) + "°C");
+    } else {
+      Serial.println("   ❌ KEDUA DHT22 ERROR! Periksa koneksi GPIO 12 & 13");
+    }
+    
     lastDebug = now;
   }
   
@@ -535,7 +595,7 @@ void checkACControlAPI() {
   String url = String(acControlURL) + "?device_id=" + DEVICE_ID + "&location=" + DEVICE_LOCATION;
   String response;
   
-  if (makeHTTPSRequest(url.c_str(), "GET", "", response)) {
+  if (makeHTTPRequest(url.c_str(), "GET", "", response)) {
     StaticJsonDocument<512> doc;
     DeserializationError error = deserializeJson(doc, response);
     
@@ -640,10 +700,12 @@ void sendDataToAPI(String reason) {
     return;
   }
   
-  Serial.println("📤 Sending proximity data to website...");
+  Serial.println("📤 Sending proximity data to computer (192.168.0.102)...");
   Serial.println("   Reason: " + reason);
   Serial.println("   People Count: " + String(currentData.jumlahOrang));
   Serial.println("   AC Status: " + currentData.acStatus);
+  Serial.println("   Room Temperature: " + String(currentData.suhuRuang, 1) + "°C");
+  Serial.println("   Humidity: " + String(currentData.humidity, 1) + "%");
   
   StaticJsonDocument<700> doc;
   doc["device_id"] = DEVICE_ID;
@@ -666,15 +728,19 @@ void sendDataToAPI(String reason) {
   doc["control_mode"] = acControl.controlMode;
   doc["manual_override"] = acControl.manualOverride;
   doc["hosting_domain"] = hostingDomain;
-  doc["ssl_enabled"] = true;
+  doc["ssl_enabled"] = false;
   doc["sensor_type"] = "Proximity_Sensor";
   
   String jsonString;
   serializeJson(doc, jsonString);
   
+  Serial.println("📋 JSON Data to send:");
+  Serial.println(jsonString);
+  
   String response;
-  if (makeHTTPSRequest(apiURL, "POST", jsonString.c_str(), response)) {
-    Serial.println("✅ SUCCESS: Proximity data sent to website!");
+  if (makeHTTPRequest(apiURL, "POST", jsonString.c_str(), response)) {
+    Serial.println("✅ SUCCESS: Proximity data sent to computer!");
+    Serial.println("📥 Server Response: " + response);
     
     updatePreviousData();
     lastAPIUpdate = millis();
@@ -683,10 +749,11 @@ void sendDataToAPI(String reason) {
     StaticJsonDocument<256> responseDoc;
     DeserializationError error = deserializeJson(responseDoc, response);
     if (!error && responseDoc["success"] && responseDoc["data"]["id"]) {
-      Serial.println("✅ Website saved with ID: " + String(responseDoc["data"]["id"].as<int>()));
+      Serial.println("✅ Laravel saved with ID: " + String(responseDoc["data"]["id"].as<int>()));
     }
   } else {
-    Serial.println("❌ FAILED: Could not send proximity data to website");
+    Serial.println("❌ FAILED: Could not send proximity data to computer");
+    Serial.println("📥 Server Response: " + response);
   }
 }
 
@@ -1265,8 +1332,8 @@ void setup() {
   Serial.println("================================");
   
   // Initialize pins - UPDATED PIN CONFIGURATION
-  pinMode(PROXIMITY_PIN_IN, INPUT_PULLUP);   // GPIO 32 - Proximity MASUK
-  pinMode(PROXIMITY_PIN_OUT, INPUT_PULLUP);  // GPIO 33 - Proximity KELUAR
+  pinMode(PROXIMITY_PIN_IN, INPUT_PULLUP);   // GPIO 2 - Proximity MASUK (changed back for reliability)
+  pinMode(PROXIMITY_PIN_OUT, INPUT_PULLUP);  // GPIO 4 - Proximity KELUAR (changed for reliability)
   pinMode(LDR_PIN, INPUT);                   // GPIO 35 - LDR 1 (Analog)
   pinMode(LDR_PIN2, INPUT);                  // GPIO 34 - LDR 2 (Analog)
   pinMode(IR_PIN, OUTPUT);                   // GPIO 15 - IR Transmitter
@@ -1338,8 +1405,8 @@ void setup() {
   // Test proximity sensors - UPDATED PIN INFO
   Serial.println("\n=== PROXIMITY SENSOR TEST ===");
   Serial.println("Pin Configuration (UPDATED ESP32 Smart Energy Production):");
-  Serial.println("- PROXIMITY_IN: GPIO 32 (Sensor MASUK) - UPDATED from GPIO 2");
-  Serial.println("- PROXIMITY_OUT: GPIO 33 (Sensor KELUAR) - UPDATED from GPIO 15");
+  Serial.println("- PROXIMITY_IN: GPIO 2 (Sensor MASUK) - CHANGED BACK for better reliability");
+  Serial.println("- PROXIMITY_OUT: GPIO 4 (Sensor KELUAR) - CHANGED to GPIO 4 for better reliability");
   Serial.println("- DHT22_1: GPIO 12 - UPDATED from GPIO 27");
   Serial.println("- DHT22_2: GPIO 13 - NEW SENSOR ADDED");
   Serial.println("- LDR_1: GPIO 35 - UPDATED from GPIO 34");
@@ -1353,14 +1420,14 @@ void setup() {
     bool detected2 = !prox2;  
     
     Serial.print("Test " + String(i+1) + "/25 - ");
-    Serial.print("MASUK(32): " + String(prox1 ? "HIGH" : "LOW"));
+    Serial.print("MASUK(2): " + String(prox1 ? "HIGH" : "LOW"));
     if (detected1) {
       Serial.print(" ✅ DETECTED");
     } else {
       Serial.print(" ❌ CLEAR");
     }
     
-    Serial.print(" | KELUAR(33): " + String(prox2 ? "HIGH" : "LOW"));
+    Serial.print(" | KELUAR(4): " + String(prox2 ? "HIGH" : "LOW"));
     if (detected2) {
       Serial.print(" ✅ DETECTED");
     } else {
