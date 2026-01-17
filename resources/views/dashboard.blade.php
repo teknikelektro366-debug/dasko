@@ -795,7 +795,7 @@
                 @endif
             </div>
             <div class="subnav" id="waktuRealtime">
-                <i class="fas fa-clock"></i> {{ now()->format('l, d F Y - H:i:s') }} WIB
+                <i class="fas fa-clock"></i> <span id="currentDateTime">{{ now()->format('l, d F Y - H:i:s') }} WIB</span>
             </div>
 
             <!-- Connection Status -->
@@ -2495,7 +2495,9 @@
                     if (data.success && data.data.length > 0) {
                         let html = '';
                         data.data.forEach((item, index) => {
-                            const timestamp = new Date(item.created_at).toLocaleString('id-ID');
+                            const timestamp = new Date(item.created_at).toLocaleString('id-ID', {
+                                timeZone: 'Asia/Jakarta'
+                            });
                             const proximityStatus = `IN: ${item.proximity_in ? 'ON' : 'OFF'} | OUT: ${item.proximity_out ? 'ON' : 'OFF'}`;
                             
                             html += `
@@ -2552,7 +2554,9 @@
                         let tempCount = 0;
                         
                         data.data.forEach((item, index) => {
-                            const timestamp = new Date(item.created_at).toLocaleString('id-ID');
+                            const timestamp = new Date(item.created_at).toLocaleString('id-ID', {
+                                timeZone: 'Asia/Jakarta'
+                            });
                             const mode = item.control_mode === 'manual' ? 'Manual Control' : 'Auto Control';
                             
                             let keterangan = '';
@@ -2625,7 +2629,9 @@
                         data.data.forEach((item, index) => {
                             // Only show records where AC status changed
                             if (item.ac_status !== lastACStatus) {
-                                const timestamp = new Date(item.created_at).toLocaleString('id-ID');
+                                const timestamp = new Date(item.created_at).toLocaleString('id-ID', {
+                                    timeZone: 'Asia/Jakarta'
+                                });
                                 const mode = 'Auto (People Detection)';
                                 let keterangan = '';
                                 
@@ -2698,7 +2704,9 @@
                         data.data.forEach((item, index) => {
                             // Only show records where people count changed
                             if (item.people_count !== lastPeopleCount) {
-                                const timestamp = new Date(item.created_at).toLocaleString('id-ID');
+                                const timestamp = new Date(item.created_at).toLocaleString('id-ID', {
+                                    timeZone: 'Asia/Jakarta'
+                                });
                                 const change = lastPeopleCount === -1 ? 0 : item.people_count - lastPeopleCount;
                                 const changeIcon = change > 0 ? '↑' : change < 0 ? '↓' : '=';
                                 const changeClass = change > 0 ? 'increase' : change < 0 ? 'decrease' : 'same';
@@ -2773,7 +2781,9 @@
                         let tempSum = 0, humSum = 0, lightSum = 0, count = 0;
                         
                         data.data.forEach((item, index) => {
-                            const timestamp = new Date(item.created_at).toLocaleString('id-ID');
+                            const timestamp = new Date(item.created_at).toLocaleString('id-ID', {
+                                timeZone: 'Asia/Jakarta'
+                            });
                             
                             // Determine condition based on environment data
                             let kondisi = 'Normal';
@@ -2918,7 +2928,9 @@
                 
                 // Generate HTML
                 events.slice(0, 50).forEach(event => {
-                    const timestampStr = event.timestamp.toLocaleString('id-ID');
+                    const timestampStr = event.timestamp.toLocaleString('id-ID', {
+                        timeZone: 'Asia/Jakarta'
+                    });
                     const statusClass = event.status === 'success' ? 'status-success' : 
                                       event.status === 'error' ? 'status-error' : 'status-info';
                     
@@ -2969,7 +2981,9 @@
             const lastUpdateEl = document.getElementById('lastUpdate');
             if (lastUpdateEl && data[0]) {
                 const lastUpdate = new Date(data[0].created_at);
-                lastUpdateEl.textContent = lastUpdate.toLocaleString('id-ID');
+                lastUpdateEl.textContent = lastUpdate.toLocaleString('id-ID', {
+                    timeZone: 'Asia/Jakarta'
+                });
             }
             
             // Calculate update frequency
@@ -3413,7 +3427,9 @@
                 
                 if (controlData.expires_at) {
                     const expiryDate = new Date(controlData.expires_at);
-                    statusText += ` | Berakhir: ${expiryDate.toLocaleString('id-ID')}`;
+                    statusText += ` | Berakhir: ${expiryDate.toLocaleString('id-ID', {
+                        timeZone: 'Asia/Jakarta'
+                    })}`;
                 }
             }
             
@@ -3442,6 +3458,60 @@
                 refreshBtn.style.cssText = 'margin-left: auto; padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;';
                 navbar.appendChild(refreshBtn);
             }
+        });
+
+        // ===== REAL-TIME CLOCK UPDATE =====
+        function updateDateTime() {
+            const now = new Date();
+            
+            // Format tanggal dan waktu dalam bahasa Indonesia dengan zona waktu Jakarta
+            const options = {
+                timeZone: 'Asia/Jakarta',
+                weekday: 'long',
+                year: 'numeric', 
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            };
+            
+            const formatter = new Intl.DateTimeFormat('id-ID', options);
+            const formattedDateTime = formatter.format(now);
+            
+            // Update elemen waktu utama
+            const dateTimeElement = document.getElementById('currentDateTime');
+            if (dateTimeElement) {
+                dateTimeElement.textContent = formattedDateTime + ' WIB';
+            }
+            
+            // Update elemen waktu lainnya jika ada
+            const currentTimeDisplayElement = document.getElementById('currentTimeDisplay');
+            if (currentTimeDisplayElement) {
+                const timeOnly = now.toLocaleTimeString('id-ID', {
+                    timeZone: 'Asia/Jakarta',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+                
+                const dayName = now.toLocaleDateString('id-ID', {
+                    timeZone: 'Asia/Jakarta',
+                    weekday: 'short'
+                });
+                
+                currentTimeDisplayElement.textContent = `${timeOnly} (${dayName})`;
+            }
+        }
+
+        // Mulai update waktu setiap detik
+        setInterval(updateDateTime, 1000);
+        
+        // Update waktu segera saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDateTime();
         });
 
         // ===== ANALYTICS FUNCTIONS =====
