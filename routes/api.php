@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\SensorDataController;
 use App\Http\Controllers\Api\AcControlController;
+use App\Http\Controllers\Api\ReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -66,4 +67,22 @@ Route::prefix('ac')->group(function () {
     Route::post('/emergency-stop', [AcControlController::class, 'emergencyStop']);
     Route::post('/auto-mode', [AcControlController::class, 'autoMode']);
     Route::get('/history', [AcControlController::class, 'history']);
+});
+
+// API untuk laporan PDF
+Route::prefix('reports')->group(function () {
+    // Daily report
+    Route::get('/daily', [ReportController::class, 'dailyReport']);
+    
+    // Weekly report
+    Route::get('/weekly', [ReportController::class, 'weeklyReport']);
+    
+    // Monthly report
+    Route::get('/monthly', [ReportController::class, 'monthlyReport']);
+    
+    // Efficiency report
+    Route::get('/efficiency', [ReportController::class, 'efficiencyReport']);
+    
+    // Custom report
+    Route::get('/custom', [ReportController::class, 'customReport']);
 });

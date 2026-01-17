@@ -1863,8 +1863,8 @@
                     <h3>Laporan Harian</h3>
                     <p>Konsumsi energi hari ini</p>
                     <div class="report-actions">
-                        <button onclick="viewDailyReport()"><i class="fas fa-eye"></i> Lihat</button>
-                        <button onclick="downloadDailyReport()"><i class="fas fa-download"></i> PDF</button>
+                        <button type="button" onclick="viewDailyReport()"><i class="fas fa-eye"></i> Lihat</button>
+                        <button type="button" onclick="downloadDailyReport(); return false;"><i class="fas fa-download"></i> PDF</button>
                     </div>
                 </div>
                 
@@ -1875,8 +1875,8 @@
                     <h3>Laporan Mingguan</h3>
                     <p>Ringkasan pemakaian energi 7 hari terakhir</p>
                     <div class="report-actions">
-                        <button onclick="viewWeeklyReport()"><i class="fas fa-eye"></i> Lihat</button>
-                        <button onclick="downloadWeeklyReport()"><i class="fas fa-download"></i> PDF</button>
+                        <button type="button" onclick="viewWeeklyReport()"><i class="fas fa-eye"></i> Lihat</button>
+                        <button type="button" onclick="downloadWeeklyReport(); return false;"><i class="fas fa-download"></i> PDF</button>
                     </div>
                 </div>
                 
@@ -1887,8 +1887,8 @@
                     <h3>Laporan Bulanan</h3>
                     <p>Analisis komprehensif pemakaian bulanan</p>
                     <div class="report-actions">
-                        <button onclick="viewMonthlyReport()"><i class="fas fa-eye"></i> Lihat</button>
-                        <button onclick="downloadMonthlyReport()"><i class="fas fa-download"></i> PDF</button>
+                        <button type="button" onclick="viewMonthlyReport()"><i class="fas fa-eye"></i> Lihat</button>
+                        <button type="button" onclick="downloadMonthlyReport(); return false;"><i class="fas fa-download"></i> PDF</button>
                     </div>
                 </div>
                 
@@ -1899,8 +1899,8 @@
                     <h3>Laporan Efisiensi</h3>
                     <p>Evaluasi tingkat efisiensi energi</p>
                     <div class="report-actions">
-                        <button onclick="viewEfficiencyReport()"><i class="fas fa-eye"></i> Lihat</button>
-                        <button onclick="downloadEfficiencyReport()"><i class="fas fa-download"></i> PDF</button>
+                        <button type="button" onclick="viewEfficiencyReport()"><i class="fas fa-eye"></i> Lihat</button>
+                        <button type="button" onclick="downloadEfficiencyReport(); return false;"><i class="fas fa-download"></i> PDF</button>
                     </div>
                 </div>
             </div>
@@ -1943,7 +1943,7 @@
                         </div>
                     </div>
                     <div class="form-actions">
-                        <button onclick="generateCustomReport()">
+                        <button type="button" onclick="generateCustomReport(); return false;">
                             <i class="fas fa-download"></i> Generate & Download
                         </button>
                     </div>
@@ -1954,21 +1954,21 @@
             <div class="quick-downloads">
                 <h2><i class="fas fa-bolt"></i> Download Cepat</h2>
                 <div class="download-links">
-                    <a href="#" onclick="downloadTodayReport()" class="download-link">
+                    <a href="javascript:void(0)" onclick="downloadTodayReport(); return false;" class="download-link">
                         <i class="fas fa-file-pdf"></i>
                         <div>
                             <h4>Laporan Hari Ini</h4>
                             <p>Download laporan energi hari ini</p>
                         </div>
                     </a>
-                    <a href="#" onclick="downloadWeekReport()" class="download-link">
+                    <a href="javascript:void(0)" onclick="downloadWeekReport(); return false;" class="download-link">
                         <i class="fas fa-file-excel"></i>
                         <div>
                             <h4>Laporan Minggu Ini</h4>
                             <p>Download ringkasan minggu ini</p>
                         </div>
                     </a>
-                    <a href="#" onclick="downloadMonthReport()" class="download-link">
+                    <a href="javascript:void(0)" onclick="downloadMonthReport(); return false;" class="download-link">
                         <i class="fas fa-file-csv"></i>
                         <div>
                             <h4>Laporan Bulan Ini</h4>
@@ -3655,6 +3655,209 @@
                 }, 100);
             }
         };
+
+        // ===== REPORT DOWNLOAD FUNCTIONS =====
+        
+        // Download Daily Report
+        function downloadDailyReport() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const url = `/api/reports/daily?date=${today}&format=pdf`;
+                console.log('Downloading daily report from:', url);
+                
+                // Create a temporary link to trigger download
+                const link = document.createElement('a');
+                link.href = url;
+                link.target = '_blank';
+                link.download = `laporan_harian_${today.replace(/-/g, '_')}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Show success message
+                setTimeout(() => {
+                    alert('Download laporan harian dimulai...');
+                }, 100);
+            } catch (error) {
+                console.error('Error downloading daily report:', error);
+                alert('Gagal mendownload laporan harian. Silakan coba lagi.');
+            }
+            return false;
+        }
+
+        // Download Weekly Report  
+        function downloadWeeklyReport() {
+            try {
+                const today = new Date();
+                const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
+                const weekStart = startOfWeek.toISOString().split('T')[0];
+                const url = `/api/reports/weekly?week_start=${weekStart}&format=pdf`;
+                console.log('Downloading weekly report from:', url);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.target = '_blank';
+                link.download = `laporan_mingguan_${weekStart.replace(/-/g, '_')}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                setTimeout(() => {
+                    alert('Download laporan mingguan dimulai...');
+                }, 100);
+            } catch (error) {
+                console.error('Error downloading weekly report:', error);
+                alert('Gagal mendownload laporan mingguan. Silakan coba lagi.');
+            }
+            return false;
+        }
+
+        // Download Monthly Report
+        function downloadMonthlyReport() {
+            try {
+                const today = new Date();
+                const month = today.toISOString().slice(0, 7); // YYYY-MM format
+                const url = `/api/reports/monthly?month=${month}&format=pdf`;
+                console.log('Downloading monthly report from:', url);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.target = '_blank';
+                link.download = `laporan_bulanan_${month.replace(/-/g, '_')}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                setTimeout(() => {
+                    alert('Download laporan bulanan dimulai...');
+                }, 100);
+            } catch (error) {
+                console.error('Error downloading monthly report:', error);
+                alert('Gagal mendownload laporan bulanan. Silakan coba lagi.');
+            }
+            return false;
+        }
+
+        // Download Efficiency Report
+        function downloadEfficiencyReport() {
+            try {
+                const today = new Date();
+                const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                const dateFrom = lastMonth.toISOString().split('T')[0];
+                const dateTo = today.toISOString().split('T')[0];
+                const url = `/api/reports/efficiency?date_from=${dateFrom}&date_to=${dateTo}&format=pdf`;
+                console.log('Downloading efficiency report from:', url);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.target = '_blank';
+                link.download = `laporan_efisiensi_${dateFrom.replace(/-/g, '_')}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                setTimeout(() => {
+                    alert('Download laporan efisiensi dimulai...');
+                }, 100);
+            } catch (error) {
+                console.error('Error downloading efficiency report:', error);
+                alert('Gagal mendownload laporan efisiensi. Silakan coba lagi.');
+            }
+            return false;
+        }
+
+        // View Report Functions
+        function viewDailyReport() {
+            alert('Menampilkan laporan harian dalam dashboard...');
+            // Implement view functionality here
+            return false;
+        }
+
+        function viewWeeklyReport() {
+            alert('Menampilkan laporan mingguan dalam dashboard...');
+            // Implement view functionality here
+            return false;
+        }
+
+        function viewMonthlyReport() {
+            alert('Menampilkan laporan bulanan dalam dashboard...');
+            // Implement view functionality here
+            return false;
+        }
+
+        function viewEfficiencyReport() {
+            alert('Menampilkan laporan efisiensi dalam dashboard...');
+            // Implement view functionality here
+            return false;
+        }
+
+        // Generate Custom Report
+        function generateCustomReport() {
+            try {
+                const dateFrom = document.getElementById('reportDateFrom').value;
+                const dateTo = document.getElementById('reportDateTo').value;
+                const deviceType = document.getElementById('reportDeviceType').value;
+                const format = document.getElementById('reportFormat').value;
+
+                if (!dateFrom || !dateTo) {
+                    alert('Silakan pilih tanggal mulai dan tanggal akhir');
+                    return false;
+                }
+
+                if (new Date(dateFrom) > new Date(dateTo)) {
+                    alert('Tanggal mulai tidak boleh lebih besar dari tanggal akhir');
+                    return false;
+                }
+
+                let url = `/api/reports/custom?date_from=${dateFrom}&date_to=${dateTo}&format=${format}`;
+                if (deviceType) {
+                    url += `&device_type=${deviceType}`;
+                }
+
+                console.log('Downloading custom report from:', url);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.target = '_blank';
+                link.download = `laporan_kustom_${dateFrom.replace(/-/g, '_')}.${format}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                setTimeout(() => {
+                    alert('Download laporan kustom dimulai...');
+                }, 100);
+            } catch (error) {
+                console.error('Error downloading custom report:', error);
+                alert('Gagal mendownload laporan kustom. Silakan coba lagi.');
+            }
+            return false;
+        }
+
+        // Quick Download Functions
+        function downloadTodayReport() {
+            return downloadDailyReport();
+        }
+
+        function downloadWeekReport() {
+            return downloadWeeklyReport();
+        }
+
+        function downloadMonthReport() {
+            return downloadMonthlyReport();
+        }
+
+        // Set default dates for custom report
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date();
+            const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            
+            const dateFromInput = document.getElementById('reportDateFrom');
+            const dateToInput = document.getElementById('reportDateTo');
+            
+            if (dateFromInput) dateFromInput.value = lastWeek.toISOString().split('T')[0];
+            if (dateToInput) dateToInput.value = today.toISOString().split('T')[0];
+        });
     </script>
     <script src="{{ asset('ac-control.js') }}"></script>
     <script src="{{ asset('script.js') }}"></script>

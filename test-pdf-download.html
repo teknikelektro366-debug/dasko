@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test PDF Download</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { padding: 10px 20px; margin: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin: 20px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Test Download PDF Laporan</h1>
+    
+    <h2>Test API Endpoints:</h2>
+    <button onclick="testDailyReport()">Test Daily Report</button>
+    <button onclick="testWeeklyReport()">Test Weekly Report</button>
+    <button onclick="testMonthlyReport()">Test Monthly Report</button>
+    <button onclick="testEfficiencyReport()">Test Efficiency Report</button>
+    
+    <div id="result" class="result">
+        <h3>Test Results:</h3>
+        <div id="output">Klik tombol di atas untuk test API endpoints...</div>
+    </div>
+
+    <script>
+        const baseUrl = 'http://192.168.0.102:8000';
+        
+        function logResult(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += '<br>' + new Date().toLocaleTimeString() + ': ' + message;
+        }
+        
+        function testDailyReport() {
+            const today = new Date().toISOString().split('T')[0];
+            const url = `${baseUrl}/api/reports/daily?date=${today}&format=pdf`;
+            logResult(`Testing Daily Report: ${url}`);
+            
+            fetch(url)
+                .then(response => {
+                    logResult(`Daily Report Response: ${response.status} ${response.statusText}`);
+                    if (response.ok) {
+                        // Try to download
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `test_daily_${today}.pdf`;
+                        link.click();
+                        logResult('Daily Report download started!');
+                    } else {
+                        logResult('Daily Report failed: ' + response.statusText);
+                    }
+                })
+                .catch(error => {
+                    logResult('Daily Report error: ' + error.message);
+                });
+        }
+        
+        function testWeeklyReport() {
+            const today = new Date();
+            const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
+            const weekStart = startOfWeek.toISOString().split('T')[0];
+            const url = `${baseUrl}/api/reports/weekly?week_start=${weekStart}&format=pdf`;
+            logResult(`Testing Weekly Report: ${url}`);
+            
+            fetch(url)
+                .then(response => {
+                    logResult(`Weekly Report Response: ${response.status} ${response.statusText}`);
+                    if (response.ok) {
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `test_weekly_${weekStart}.pdf`;
+                        link.click();
+                        logResult('Weekly Report download started!');
+                    } else {
+                        logResult('Weekly Report failed: ' + response.statusText);
+                    }
+                })
+                .catch(error => {
+                    logResult('Weekly Report error: ' + error.message);
+                });
+        }
+        
+        function testMonthlyReport() {
+            const today = new Date();
+            const month = today.toISOString().slice(0, 7);
+            const url = `${baseUrl}/api/reports/monthly?month=${month}&format=pdf`;
+            logResult(`Testing Monthly Report: ${url}`);
+            
+            fetch(url)
+                .then(response => {
+                    logResult(`Monthly Report Response: ${response.status} ${response.statusText}`);
+                    if (response.ok) {
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `test_monthly_${month}.pdf`;
+                        link.click();
+                        logResult('Monthly Report download started!');
+                    } else {
+                        logResult('Monthly Report failed: ' + response.statusText);
+                    }
+                })
+                .catch(error => {
+                    logResult('Monthly Report error: ' + error.message);
+                });
+        }
+        
+        function testEfficiencyReport() {
+            const today = new Date();
+            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const dateFrom = lastMonth.toISOString().split('T')[0];
+            const dateTo = today.toISOString().split('T')[0];
+            const url = `${baseUrl}/api/reports/efficiency?date_from=${dateFrom}&date_to=${dateTo}&format=pdf`;
+            logResult(`Testing Efficiency Report: ${url}`);
+            
+            fetch(url)
+                .then(response => {
+                    logResult(`Efficiency Report Response: ${response.status} ${response.statusText}`);
+                    if (response.ok) {
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `test_efficiency_${dateFrom}.pdf`;
+                        link.click();
+                        logResult('Efficiency Report download started!');
+                    } else {
+                        logResult('Efficiency Report failed: ' + response.statusText);
+                    }
+                })
+                .catch(error => {
+                    logResult('Efficiency Report error: ' + error.message);
+                });
+        }
+    </script>
+</body>
+</html>
