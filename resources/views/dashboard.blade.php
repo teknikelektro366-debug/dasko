@@ -1541,7 +1541,14 @@
 
             <!-- Tab Navigation -->
             <div class="sensor-section">
-                <h3><i class="fas fa-table"></i> Data History</h3>
+                <h3><i class="fas fa-table"></i> Data History 
+                    <button onclick="loadHistoryData()" class="btn-refresh" style="margin-left: 10px; padding: 5px 10px; font-size: 12px;">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button onclick="testHistoryAPI()" class="btn-export" style="margin-left: 5px; padding: 5px 10px; font-size: 12px;">
+                        <i class="fas fa-bug"></i> Test API
+                    </button>
+                </h3>
                 <div class="history-tabs">
                     <button class="tab-button active" onclick="showHistoryTab('sensor-data')">
                         <i class="fas fa-chart-line"></i> Data Sensor
@@ -2451,6 +2458,45 @@
             }
         }
 
+        function testHistoryAPI() {
+            console.log('Testing History API...');
+            
+            // Test multiple endpoints
+            const endpoints = [
+                '/api/sensor/history?per_page=10',
+                '/api/sensor/data?per_page=10',
+                '/api/sensor/latest'
+            ];
+            
+            endpoints.forEach(endpoint => {
+                console.log(`Testing endpoint: ${endpoint}`);
+                fetch(endpoint)
+                    .then(response => {
+                        console.log(`${endpoint} - Status:`, response.status);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log(`${endpoint} - Response:`, data);
+                        if (data.success && data.data) {
+                            console.log(`${endpoint} - Data count:`, Array.isArray(data.data) ? data.data.length : 'Single record');
+                        }
+                    })
+                    .catch(error => {
+                        console.error(`${endpoint} - Error:`, error);
+                    });
+            });
+            
+            // Also test database count
+            fetch('/api/sensor/data')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Total records in database:', data.pagination ? data.pagination.total : 'Unknown');
+                })
+                .catch(error => {
+                    console.error('Error getting total count:', error);
+                });
+        }
+
         function loadHistoryData() {
             // Load data based on current active tab
             const activeTab = document.querySelector('.tab-button.active');
@@ -2489,10 +2535,20 @@
                 url += `&device_id=${deviceFilter}`;
             }
             
+            console.log('Loading sensor data from:', url);
+            
             fetch(url)
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.success && data.data.length > 0) {
+                    console.log('API Response:', data);
+                    
+                    if (data.success && data.data && data.data.length > 0) {
                         let html = '';
                         data.data.forEach((item, index) => {
                             const timestamp = new Date(item.created_at).toLocaleString('id-ID', {
@@ -2506,13 +2562,13 @@
                                     <td>${timestamp}</td>
                                     <td><span class="device-badge">${item.device_id || 'ESP32'}</span></td>
                                     <td><span class="people-count">${item.people_count || 0}</span></td>
-                                    <td>${item.room_temperature ? item.room_temperature.toFixed(1) : '--'}</td>
-                                    <td>${item.humidity ? item.humidity.toFixed(1) : '--'}</td>
-                                    <td>${item.light_level || '--'}</td>
+                                    <td>${item.room_temperature ? item.room_temperature.toFixed(1) + '°C' : '--'}</td>
+                                    <td>${item.humidity ? item.humidity.toFixed(1) + '%' : '--'}</td>
+                                    <td>${item.light_level || '--'} lux</td>
                                     <td><span class="ac-status ${item.ac_status === 'OFF' ? 'status-off' : 'status-on'}">${item.ac_status || 'OFF'}</span></td>
                                     <td>${item.set_temperature || '--'}°C</td>
                                     <td><small>${proximityStatus}</small></td>
-                                    <td>${item.wifi_rssi || '--'}</td>
+                                    <td>${item.wifi_rssi || '--'} dBm</td>
                                 </tr>
                             `;
                         });
@@ -2521,18 +2577,28 @@
                         // Update pagination info
                         const pageInfo = document.getElementById('sensorPageInfo');
                         if (data.pagination && pageInfo) {
-                            pageInfo.textContent = `Page ${data.pagination.current_page} of ${data.pagination.last_page}`;
+                            pageInfo.textContent = `Page ${data.pagination.current_page} of ${data.pagination.last_page} (Total: ${data.pagination.total} records)`;
                         }
                         
                         // Update summary stats
                         updateSummaryStats(data.data);
+                        
+                        console.log(`Loaded ${data.data.length} sensor records`);
                     } else {
-                        tbody.innerHTML = '<tr><td colspan="11" class="no-data">Tidak ada data sensor ditemukan</td></tr>';
+                        let message = 'Tidak ada data sensor ditemukan';
+                        if (data.debug_info) {
+                            message += `<br><small>Total records in database: ${data.debug_info.total_in_db || 0}</small>`;
+                            if (data.debug_info.latest_record) {
+                                message += `<br><small>Latest record: ${data.debug_info.latest_record}</small>`;
+                            }
+                        }
+                        tbody.innerHTML = `<tr><td colspan="11" class="no-data">${message}</td></tr>`;
+                        console.log('No sensor data found:', data);
                     }
                 })
                 .catch(error => {
                     console.error('Error loading sensor data:', error);
-                    tbody.innerHTML = '<tr><td colspan="11" class="error-row">Error loading data. Please try again.</td></tr>';
+                    tbody.innerHTML = `<tr><td colspan="11" class="error-row">Error loading data: ${error.message}<br><small>Check console for details</small></td></tr>`;
                 });
         }
 

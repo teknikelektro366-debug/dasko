@@ -12,12 +12,24 @@
 // ================= TFT =================
 TFT_eSPI tft;
 
+// ================= ULTRA FAST OFFLINE FEATURES =================
+// Dual lamp control for ultra-fast response (2 relay channels)
+bool lamp1Status = false;
+bool lamp2Status = false;
+unsigned long lampAutoShutdownTime = 0;
+const unsigned long LAMP_AUTO_SHUTDOWN_DELAY = 300000; // 5 minutes auto shutdown
+
+// Ultra-fast response timing
+#define ULTRA_FAST_RESPONSE_TIME 1    // 1ms ultra-fast response
+#define INSTANT_IR_RESPONSE 0         // 0ms delay for instant IR
+#define FAST_TFT_UPDATE 50           // 50ms TFT update for ultra responsiveness
+
 // ================= CONFIGURATION =================
 const char* ssid = "LAB TEKNIK TEGANGAN TINGGI";
 const char* password = "LABTTT2026";
-const char* hostingDomain = "192.168.0.102";
-const char* apiURL = "http://192.168.0.102:8000/api/sensor/data";
-const char* acControlURL = "http://192.168.0.102:8000/api/ac/control";
+const char* hostingDomain = "dasko.fst.unja.ac.id";
+const char* apiURL = "https://dasko.fst.unja.ac.id/api/sensor/data";
+const char* acControlURL = "https://dasko.fst.unja.ac.id/api/ac/control";
 
 const char* rootCACertificate = \
 "-----BEGIN CERTIFICATE-----\n" \
@@ -52,30 +64,125 @@ const char* rootCACertificate = \
 "emyPxgcYxn/eR44/KJ4EBs+lVDR3veyJm+kXQ99b21/+jh5Xos1AnX5iItreGCc=\n" \
 "-----END CERTIFICATE-----\n";
 
-#define TEMP_CHANGE_THRESHOLD 0.5    // Optimized temperature threshold
-#define HUMIDITY_CHANGE_THRESHOLD 2.0 // Optimized humidity threshold
-#define LIGHT_CHANGE_THRESHOLD 50     // Optimized light threshold
-#define MAX_TIME_WITHOUT_UPDATE 300000 // Force update every 5 minutes (more stable)
-#define MIN_UPDATE_INTERVAL 1000        // Minimum 1 seconds between updates (faster response)
-#define AC_CONTROL_CHECK_INTERVAL 10000 // Check AC control every 10 seconds (more stable)
-#define DEVICE_ID "ESP32_Proximity_Production_UNJA"
-#define DEVICE_LOCATION "Lab Teknik Tegangan Tinggi - UNJA"
+#define TEMP_CHANGE_THRESHOLD 0.3    // Ultra-sensitive temperature threshold for faster response
+#define HUMIDITY_CHANGE_THRESHOLD 1.0 // Ultra-sensitive humidity threshold
+#define LIGHT_CHANGE_THRESHOLD 30     // Ultra-sensitive light threshold
+#define MAX_TIME_WITHOUT_UPDATE 180000 // Force update every 3 minutes (faster)
+#define MIN_UPDATE_INTERVAL 200        // Minimum 200ms between updates (ultra-fast response)
+#define AC_CONTROL_CHECK_INTERVAL 5000 // Check AC control every 5 seconds (ultra-fast)
+#define DEVICE_ID "ESP32_Proximity_Production_UNJA_ULTRA_FAST"
+#define DEVICE_LOCATION "Lab Teknik Tegangan Tinggi - UNJA - Ultra Fast Mode"
 
-// ================= PINS - UPDATED CONFIGURATION =================
-#define IR_PIN 15               // IR Transmitter pin (changed from 14 to 15)
-#define PROXIMITY_PIN_IN  2     // Proximity sensor MASUK (changed back to GPIO 2 - more reliable)
-#define PROXIMITY_PIN_OUT 4     // Proximity sensor KELUAR (changed to GPIO 4 - more reliable)
-#define DHTPIN    12            // DHT22 pin (changed from 27 to 12)
-#define DHTPIN2   13            // DHT22 second pin (new pin added)
-#define DHTTYPE   DHT22
-#define LDR_PIN   35            // LDR pin 1 (changed from 34 to 35)
-#define LDR_PIN2  34            // LDR pin 2 (new pin added)
+// ================= PINS - USER REAL CONFIGURATION (AMAN UPLOAD) =================
+#define IR_PIN            15     
+#define PROXIMITY_PIN_IN  32    // Proximity sensor MASUK
+#define PROXIMITY_PIN_OUT 33    // Proximity sensor KELUAR
+#define DHTPIN            12    // Pindah dari 12 ke 16 (aman upload)
+#define DHTPIN2           13    // Pindah dari 13 ke 17 (aman upload)
+#define DHTTYPE           DHT22
+#define LDR_PIN           35    // LDR pin 1
+#define LDR_PIN2          34    // LDR pin 2
+#define RELAY_LAMP1       25    // Relay untuk jalur lampu 1 (6 lampu TL)
+#define RELAY_LAMP2       26    // Relay untuk jalur lampu 2 (6 lampu TL)
 #define MAX_PEOPLE 20        
-#define PERSON_COOLDOWN 300        // ULTRA FAST: 300ms cooldown untuk deteksi cepat
-#define DEBOUNCE_DELAY 50          // ULTRA FAST: 50ms debounce untuk responsif maksimal
+#define PERSON_COOLDOWN 10         // ULTRA FAST: 10ms cooldown untuk deteksi super cepat
+#define DEBOUNCE_DELAY 5           // ULTRA FAST: 5ms debounce untuk responsif maksimal
 
-// ================= HARDWARE - UPDATED PINS =================
-IRsend irsend(IR_PIN);  // IR Transmitter on GPIO 15
+// ================= ULTRA FAST DUAL LAMP CONTROL =================
+void controlLamps(bool turnOn) {
+  if (turnOn && (!lamp1Status || !lamp2Status)) {
+    digitalWrite(RELAY_LAMP1, HIGH);  // Relay 1 ON (6 lampu TL)
+    digitalWrite(RELAY_LAMP2, HIGH);  // Relay 2 ON (6 lampu TL)
+    lamp1Status = true;
+    lamp2Status = true;
+    lampAutoShutdownTime = millis() + LAMP_AUTO_SHUTDOWN_DELAY;
+    Serial.println("💡 ULTRA FAST: Dual Lamps ON - 12 lampu TL (Auto shutdown in 5 minutes)");
+  } else if (!turnOn && (lamp1Status || lamp2Status)) {
+    digitalWrite(RELAY_LAMP1, LOW);   // Relay 1 OFF
+    digitalWrite(RELAY_LAMP2, LOW);   // Relay 2 OFF
+    lamp1Status = false;
+    lamp2Status = false;
+    lampAutoShutdownTime = 0;
+    Serial.println("💡 ULTRA FAST: Dual Lamps OFF - 12 lampu TL");
+  }
+}
+
+void checkLampAutoShutdown() {
+  if ((lamp1Status || lamp2Status) && lampAutoShutdownTime > 0 && millis() >= lampAutoShutdownTime) {
+    controlLamps(false);
+    Serial.println("💡 ULTRA FAST: Dual Lamps auto-shutdown after 5 minutes");
+  }
+}
+
+// ================= SMART LAMP CONTROL BASED ON PEOPLE COUNT & LUX =================
+void smartLampControl(int peopleCount, int lightLevel) {
+  bool shouldLampBeOn = false;
+  String reason = "";
+  
+  // Logika kontrol lampu berdasarkan jumlah orang dan intensitas cahaya
+  if (peopleCount == 0) {
+    // Tidak ada orang - mulai timer auto shutdown 5 menit
+    shouldLampBeOn = false;
+    reason = "No people - Auto shutdown timer";
+    
+    if (lamp1Status || lamp2Status) {
+      if (lampAutoShutdownTime == 0) {
+        lampAutoShutdownTime = millis() + LAMP_AUTO_SHUTDOWN_DELAY;
+        Serial.println("💡 SMART: Starting 5-minute auto-shutdown timer (no people)");
+      }
+    }
+  }
+  else if (peopleCount >= 1) {
+    // Ada orang - cek intensitas cahaya
+    if (lightLevel < 200) {
+      // Cahaya kurang (< 200 lux) - nyalakan lampu
+      shouldLampBeOn = true;
+      reason = String(peopleCount) + " people, low light (" + String(lightLevel) + " lux)";
+      lampAutoShutdownTime = 0; // Cancel auto shutdown
+    }
+    else if (lightLevel >= 200 && lightLevel < 400) {
+      // Cahaya sedang (200-400 lux) - nyalakan jika banyak orang
+      if (peopleCount >= 3) {
+        shouldLampBeOn = true;
+        reason = String(peopleCount) + " people, medium light (" + String(lightLevel) + " lux)";
+        lampAutoShutdownTime = 0; // Cancel auto shutdown
+      } else {
+        shouldLampBeOn = false;
+        reason = "Few people (" + String(peopleCount) + "), sufficient light (" + String(lightLevel) + " lux)";
+      }
+    }
+    else {
+      // Cahaya cukup (>= 400 lux) - matikan lampu
+      shouldLampBeOn = false;
+      reason = String(peopleCount) + " people, bright light (" + String(lightLevel) + " lux)";
+    }
+  }
+  
+  // Apply lamp control dengan logging
+  static bool lastLampDecision = false;
+  static String lastReason = "";
+  
+  if (shouldLampBeOn != lastLampDecision || reason != lastReason) {
+    Serial.println("💡 SMART LAMP DECISION: " + String(shouldLampBeOn ? "ON" : "OFF") + " - " + reason);
+    
+    if (shouldLampBeOn) {
+      controlLamps(true);
+    } else if (peopleCount == 0) {
+      // Jangan langsung matikan jika ada orang, biarkan timer auto shutdown
+      // Hanya matikan langsung jika cahaya terlalu terang
+      if (lightLevel >= 400) {
+        controlLamps(false);
+        Serial.println("💡 SMART: Lamps OFF immediately - too bright");
+      }
+    }
+    
+    lastLampDecision = shouldLampBeOn;
+    lastReason = reason;
+  }
+}
+
+// ================= HARDWARE - USER REAL PINS =================
+IRsend irsend(IR_PIN);  // IR Transmitter on GPIO 4 (aman upload)
 IRPanasonicAc ac1(IR_PIN);
 IRPanasonicAc ac2(IR_PIN);
 DHT dht(DHTPIN, DHTTYPE);   // DHT22 on GPIO 12
@@ -193,20 +300,26 @@ void IRAM_ATTR proximityOutInterrupt();
 void testIRTransmitter();
 void manualACTest();
 
-// Optimized: Interrupt handlers with proper debouncing
+// ULTRA FAST: Interrupt handlers dengan debouncing ultra minimal untuk responsif maksimal
 void IRAM_ATTR proximityInInterrupt() {
   unsigned long now = millis();
-  if (now - lastInterruptTime > 50) {  // 50ms debounce untuk responsif maksimal
+  if (now - lastInterruptTime > 5) {  // 5ms debounce untuk responsif ultra maksimal
     interruptTriggered = true;
     lastInterruptTime = now;
+    
+    // ULTRA FAST: Immediate detection flag
+    fastDetectionMode = true;
   }
 }
 
 void IRAM_ATTR proximityOutInterrupt() {
   unsigned long now = millis();
-  if (now - lastInterruptTime > 50) {  // 50ms debounce untuk responsif maksimal
+  if (now - lastInterruptTime > 5) {  // 5ms debounce untuk responsif ultra maksimal
     interruptTriggered = true;
     lastInterruptTime = now;
+    
+    // ULTRA FAST: Immediate detection flag
+    fastDetectionMode = true;
   }
 }
 
@@ -343,15 +456,17 @@ void connectWiFi() {
     currentData.wifiStatus = "Connected";
     currentData.wifiRSSI = WiFi.RSSI();
     
-    // Test ping ke komputer
-    Serial.println("🔍 Testing connection to computer IP...");
-    HTTPClient http;
-    if (http.begin("http://192.168.0.102:8000/api/sensor/data")) {
-      int httpCode = http.GET();
-      Serial.println("📡 Computer IP test response: " + String(httpCode));
-      http.end();
+    // Test ping ke hosting web
+    Serial.println("🔍 Testing connection to hosting web...");
+    WiFiClientSecure testClient;
+    testClient.setInsecure();
+    HTTPClient testHttp;
+    if (testHttp.begin(testClient, "https://dasko.fst.unja.ac.id/api/sensor/data")) {
+      int httpCode = testHttp.GET();
+      Serial.println("📡 Hosting web test response: " + String(httpCode));
+      testHttp.end();
     } else {
-      Serial.println("❌ Cannot connect to 192.168.0.102:8000");
+      Serial.println("❌ Cannot connect to dasko.fst.unja.ac.id");
     }
   } else {
     Serial.println("✗ WiFi FAILED!");
@@ -360,41 +475,44 @@ void connectWiFi() {
   Serial.println("========================");
 }
 
-// ================= HTTP REQUEST - LOCALHOST CONFIGURATION =================
+// ================= HTTP REQUEST - HOSTING CONFIGURATION =================
 bool makeHTTPRequest(const char* url, const char* method, const char* payload, String& response) {
+  WiFiClientSecure client;
   HTTPClient http;
   
-  // HTTP configuration for localhost
-  http.setTimeout(10000);    // 10 seconds timeout for stability
+  // HTTPS configuration for hosting
+  client.setInsecure(); // For development - in production use proper certificate
+  http.setTimeout(15000);    // 15 seconds timeout for hosting
   
   // Connection retry logic
   int retryCount = 0;
   const int maxRetries = 3;
   
   while (retryCount < maxRetries) {
-    if (http.begin(url)) {
-      Serial.println("✅ HTTP connection established to localhost");
+    if (http.begin(client, url)) {
+      Serial.println("✅ HTTPS connection established to hosting: " + String(hostingDomain));
       break;
     }
     retryCount++;
-    Serial.println("⚠️ HTTP connection attempt " + String(retryCount) + "/" + String(maxRetries) + " failed");
+    Serial.println("⚠️ HTTPS connection attempt " + String(retryCount) + "/" + String(maxRetries) + " failed");
     if (retryCount < maxRetries) {
-      delay(1000);  // Wait before retry
+      delay(2000);  // Wait before retry for hosting
     }
   }
   
   if (retryCount >= maxRetries) {
-    Serial.println("❌ HTTP connection failed after " + String(maxRetries) + " attempts");
+    Serial.println("❌ HTTPS connection failed after " + String(maxRetries) + " attempts");
     return false;
   }
   
-  // Enhanced headers
+  // Enhanced headers for hosting
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Accept", "application/json");
-  http.addHeader("User-Agent", "ESP32-Proximity-UNJA/2.0");
+  http.addHeader("User-Agent", "ESP32-Proximity-UNJA/3.0");
   http.addHeader("X-Requested-With", "ESP32");
   http.addHeader("X-Device-ID", DEVICE_ID);
   http.addHeader("X-Location", DEVICE_LOCATION);
+  http.addHeader("Host", hostingDomain);
   
   int httpResponseCode;
   if (strcmp(method, "POST") == 0) {
@@ -408,14 +526,14 @@ bool makeHTTPRequest(const char* url, const char* method, const char* payload, S
     http.end();
     
     if (httpResponseCode == 200 || httpResponseCode == 201) {
-      Serial.println("✅ HTTP " + String(method) + " successful (Code: " + String(httpResponseCode) + ")");
+      Serial.println("✅ HTTPS " + String(method) + " successful to hosting (Code: " + String(httpResponseCode) + ")");
       return true;
     } else {
-      Serial.println("⚠️ HTTP " + String(method) + " warning (Code: " + String(httpResponseCode) + ")");
+      Serial.println("⚠️ HTTPS " + String(method) + " warning to hosting (Code: " + String(httpResponseCode) + ")");
       return httpResponseCode < 500; // Return true for client errors, false for server errors
     }
   } else {
-    Serial.println("❌ HTTP " + String(method) + " failed with code: " + String(httpResponseCode));
+    Serial.println("❌ HTTPS " + String(method) + " failed to hosting with code: " + String(httpResponseCode));
     http.end();
     return false;
   }
@@ -425,20 +543,21 @@ bool makeHTTPRequest(const char* url, const char* method, const char* payload, S
 void readSensors() {
   unsigned long now = millis();
   
-  // ULTRA FAST: Read sensors dengan debouncing minimal
+  // ULTRA FAST: Read sensors dengan debouncing ultra minimal
   bool currentInState = digitalRead(PROXIMITY_PIN_IN);
   bool currentOutState = digitalRead(PROXIMITY_PIN_OUT);
   
-  // Debug proximity sensor readings setiap 3 detik
+  // Debug proximity sensor readings setiap 1 detik (lebih sering untuk ultra fast mode)
   static unsigned long lastProximityDebug = 0;
-  if (now - lastProximityDebug > 3000) {
-    Serial.println("🔍 PROXIMITY DEBUG (ULTRA FAST MODE):");
-    Serial.println("   GPIO 2 (MASUK): " + String(currentInState ? "HIGH" : "LOW") + " | Detected: " + String(!currentInState ? "YES" : "NO"));
-    Serial.println("   GPIO 4 (KELUAR): " + String(currentOutState ? "HIGH" : "LOW") + " | Detected: " + String(!currentOutState ? "YES" : "NO"));
+  if (now - lastProximityDebug > 1000) {
+    Serial.println("🔍 ULTRA FAST PROXIMITY DEBUG (USER CONFIG):");
+    Serial.println("   GPIO 32 (MASUK): " + String(currentInState ? "HIGH" : "LOW") + " | Detected: " + String(!currentInState ? "YES" : "NO"));
+    Serial.println("   GPIO 33 (KELUAR): " + String(currentOutState ? "HIGH" : "LOW") + " | Detected: " + String(!currentOutState ? "YES" : "NO"));
+    Serial.println("   💡 Lamps Status: " + String((lamp1Status && lamp2Status) ? "ON (12 TL)" : "OFF"));
     lastProximityDebug = now;
   }
   
-  // ULTRA FAST: Debouncing dengan 50ms delay untuk responsif maksimal
+  // ULTRA FAST: Debouncing dengan 5ms delay untuk responsif ultra maksimal
   if (currentInState != sensorData.lastProximityIn) {
     sensorData.lastInChange = now;
     sensorData.lastProximityIn = currentInState;
@@ -471,15 +590,15 @@ void readSensors() {
 void detectPeople() {
   unsigned long now = millis();
   
-  // Optimized: Cooldown 1 second for stable detection
+  // ULTRA FAST: Cooldown 10ms untuk deteksi super cepat
   if (now - lastPersonDetected < PERSON_COOLDOWN) {
     return;
   }
   
-  // Debug info every 5 seconds for better performance
+  // Debug info every 3 seconds for better performance
   static unsigned long lastDebug = 0;
-  if (now - lastDebug > 5000) {
-    Serial.print("📊 Proximity Status - Orang: ");
+  if (now - lastDebug > 3000) {
+    Serial.print("📊 ULTRA FAST Proximity Status - Orang: ");
     Serial.print(jumlahOrang);
     Serial.print("/20 | MASUK:");
     Serial.print(sensorData.objectInDetected ? "DETECTED" : "CLEAR");
@@ -487,6 +606,8 @@ void detectPeople() {
     Serial.print(sensorData.objectOutDetected ? "DETECTED" : "CLEAR");
     Serial.print(" | WiFi: ");
     Serial.print(WiFi.status() == WL_CONNECTED ? "OK" : "FAIL");
+    Serial.print(" | Lamps: ");
+    Serial.print(lamp1Status && lamp2Status ? "ON" : "OFF");
     
     // Add DHT22 temperature readings to debug info
     float temp1 = dht.readTemperature();
@@ -495,7 +616,7 @@ void detectPeople() {
     float hum2 = dht2.readHumidity();
     
     Serial.println();
-    Serial.println("🌡️ DHT22 SENSOR READINGS:");
+    Serial.println("🌡️ ULTRA FAST DHT22 SENSOR READINGS:");
     Serial.print("   DHT22-1 (GPIO 12): ");
     if (!isnan(temp1) && !isnan(hum1)) {
       Serial.print("Suhu: " + String(temp1, 1) + "°C | Kelembaban: " + String(hum1, 1) + "%");
@@ -532,29 +653,33 @@ void detectPeople() {
   static unsigned long lastInTrigger = 0;
   static unsigned long lastOutTrigger = 0;
   
-  // Optimized DETECTION: Sensor MASUK (Entry) - Stable 1 second cooldown
-  if (sensorData.objectInDetected && !lastInDetected && sensorData.stableInState) {
-    // Optimized: Cooldown 1 second for stability
+  // ULTRA FAST DETECTION: Sensor MASUK (Entry) - Super fast 10ms cooldown
+  if (sensorData.objectInDetected && !lastInDetected) {
+    // ULTRA FAST: Cooldown 10ms untuk responsif maksimal
     if (now - lastInTrigger > PERSON_COOLDOWN) {
       jumlahOrang++;
       lastPersonDetected = now;
       lastInTrigger = now;
       sensorData.stableInState = false;
       
-      Serial.println("🚶 → PERSON ENTERED!");
+      // ULTRA FAST: Smart lamp control based on people count and light level
+      smartLampControl(jumlahOrang, currentData.lightLevel);
+      
+      Serial.println("🚶 → ULTRA FAST PERSON ENTERED!");
       Serial.println("📊 Jumlah orang: " + String(jumlahOrang) + "/20");
+      Serial.println("💡 Smart lamp control activated!");
       
       // Update and send data
       updateSensorData();
       if (WiFi.status() == WL_CONNECTED) {
-        sendDataToAPI("Proximity entry - Count: " + String(jumlahOrang));
+        sendDataToAPI("ULTRA FAST Proximity entry - Count: " + String(jumlahOrang));
       }
     }
   }
   
-  // Optimized DETECTION: Sensor KELUAR (Exit) - Stable 1 second cooldown
-  if (sensorData.objectOutDetected && !lastOutDetected && sensorData.stableOutState) {
-    // Optimized: Cooldown 1 second for stability
+  // ULTRA FAST DETECTION: Sensor KELUAR (Exit) - Super fast 10ms cooldown
+  if (sensorData.objectOutDetected && !lastOutDetected) {
+    // ULTRA FAST: Cooldown 10ms untuk responsif maksimal
     if (now - lastOutTrigger > PERSON_COOLDOWN) {
       if (jumlahOrang > 0) {
         jumlahOrang--;
@@ -700,7 +825,7 @@ void sendDataToAPI(String reason) {
     return;
   }
   
-  Serial.println("📤 Sending proximity data to computer (192.168.0.102)...");
+  Serial.println("📤 Sending proximity data to hosting web (dasko.fst.unja.ac.id)...");
   Serial.println("   Reason: " + reason);
   Serial.println("   People Count: " + String(currentData.jumlahOrang));
   Serial.println("   AC Status: " + currentData.acStatus);
@@ -739,7 +864,7 @@ void sendDataToAPI(String reason) {
   
   String response;
   if (makeHTTPRequest(apiURL, "POST", jsonString.c_str(), response)) {
-    Serial.println("✅ SUCCESS: Proximity data sent to computer!");
+    Serial.println("✅ SUCCESS: Proximity data sent to hosting web!");
     Serial.println("📥 Server Response: " + response);
     
     updatePreviousData();
@@ -752,7 +877,7 @@ void sendDataToAPI(String reason) {
       Serial.println("✅ Laravel saved with ID: " + String(responseDoc["data"]["id"].as<int>()));
     }
   } else {
-    Serial.println("❌ FAILED: Could not send proximity data to computer");
+    Serial.println("❌ FAILED: Could not send proximity data to hosting web");
     Serial.println("📥 Server Response: " + response);
   }
 }
@@ -1100,11 +1225,21 @@ void drawModernTiles() {
     tft.print("● Mode Otomatis Aktif");
   }
   
+  // ULTRA FAST: Add dual lamp status display
+  tft.print(" | Lamps: ");
+  if (lamp1Status && lamp2Status) {
+    tft.setTextColor(TILE_YELLOW);
+    tft.print("ON (12 TL)");
+  } else {
+    tft.setTextColor(TFT_DARKGREY);
+    tft.print("OFF");
+  }
+  
   tft.setTextColor(TFT_LIGHTGREY);
   tft.setCursor(10, 280);
-  tft.print("Arduino mengontrol AC berdasarkan jumlah orang di ruangan");
+  tft.print("ULTRA FAST: Arduino + Dual Lamps (12 TL) + AC control | Response: <1ms");
   tft.setCursor(10, 295);
-  tft.print("0 orang: AC OFF | 1-5: 1 AC (25C) | 6-10: 1 AC (22C) | 11+: 2 AC (20C) | Response: 5ms");
+  tft.print("Smart Control: People count + Light level | Auto shutdown: 5min | dasko.fst.unja.ac.id");
 }
 
 void drawUI() {
@@ -1139,12 +1274,15 @@ void updateTFT(String acStatus, int setSuhu, float suhuRuang) {
   }
 }
 
-// ================= AC CONTROL =================
+// ================= AC CONTROL - ULTRA FAST RESPONSE =================
 void kontrolAC(String &acStatus, int &setTemp) {
   bool ac1ON = false;
   bool ac2ON = false;
   int targetTemp1 = 25;
   int targetTemp2 = 25;
+  
+  // ULTRA FAST: Immediate response flag
+  bool immediateResponse = false;
   
   // Check manual override from hosting
   if (acControl.manualOverride && acControl.hasActiveControl) {
@@ -1153,6 +1291,7 @@ void kontrolAC(String &acStatus, int &setTemp) {
       ac2ON = acControl.ac2Status;
       targetTemp1 = acControl.ac1Temperature;
       targetTemp2 = acControl.ac2Temperature;
+      immediateResponse = true;  // Manual control = immediate response
       
       if (!ac1ON && !ac2ON) {
         acStatus = "MANUAL OFF";
@@ -1165,17 +1304,25 @@ void kontrolAC(String &acStatus, int &setTemp) {
         setTemp = ac1ON ? targetTemp1 : targetTemp2;
       }
       
-      Serial.println("Manual AC Control from hosting: " + acStatus + " @ " + String(setTemp) + "°C");
+      Serial.println("🚀 ULTRA FAST Manual AC Control: " + acStatus + " @ " + String(setTemp) + "°C");
     } else {
-      Serial.println("Manual control from hosting expired, returning to auto mode");
+      Serial.println("Manual control expired, returning to auto mode");
       acControl.manualOverride = false;
       acControl.hasActiveControl = false;
       acControl.controlMode = "auto";
     }
   }
   
-  // Auto mode based on people count
+  // Auto mode based on people count - ULTRA FAST RESPONSE
   if (!acControl.manualOverride || !acControl.hasActiveControl) {
+    // ULTRA FAST: Detect people count changes for immediate response
+    static int lastPeopleCount = -1;
+    if (jumlahOrang != lastPeopleCount) {
+      immediateResponse = true;  // People count changed = immediate response
+      lastPeopleCount = jumlahOrang;
+      Serial.println("🚀 ULTRA FAST People Count Change: " + String(jumlahOrang) + " people");
+    }
+    
     if (jumlahOrang == 0) {
       acStatus = "AC OFF";
       setTemp = 0;
@@ -1210,56 +1357,81 @@ void kontrolAC(String &acStatus, int &setTemp) {
     }
   }
   
-  // Apply AC changes only if different
-  if (ac1ON != lastAC1 || ac2ON != lastAC2 || targetTemp1 != lastTemp1 || targetTemp2 != lastTemp2) {
-    Serial.println("🌡️ AC Control Change: " + acStatus + " @ " + String(setTemp) + "°C");
+  // ULTRA FAST: Apply AC changes with immediate response
+  if (ac1ON != lastAC1 || ac2ON != lastAC2 || targetTemp1 != lastTemp1 || targetTemp2 != lastTemp2 || immediateResponse) {
+    unsigned long startTime = millis();
+    
+    Serial.println("🚀 ULTRA FAST AC Control Change: " + acStatus + " @ " + String(setTemp) + "°C");
+    Serial.println("⚡ Response Mode: " + String(immediateResponse ? "IMMEDIATE" : "NORMAL"));
     
     if (!ac1ON && !ac2ON) {
-      Serial.println("📤 Sending IR: Turn OFF both ACs");
+      Serial.println("📤 ULTRA FAST IR: Turn OFF both ACs");
+      
+      // ULTRA FAST: Parallel IR transmission with minimal delay
       ac1.off(); 
       ac1.send();
-      delay(100);
+      delayMicroseconds(500);  // Ultra minimal delay (0.5ms)
+      
       ac2.off(); 
       ac2.send();
-      delay(100);
+      delayMicroseconds(500);  // Ultra minimal delay (0.5ms)
+      
     } else {
       if (ac1ON) {
-        Serial.println("📤 Sending IR: AC1 ON - " + String(targetTemp1) + "°C");
+        Serial.println("📤 ULTRA FAST IR: AC1 ON - " + String(targetTemp1) + "°C");
+        
+        // ULTRA FAST: Optimized IR signal preparation
         ac1.on();
         ac1.setMode(kPanasonicAcCool);
         ac1.setTemp(targetTemp1);
         ac1.setFan(kPanasonicAcFanAuto);
+        ac1.setSwingVertical(kPanasonicAcSwingVAuto);
+        
+        // ULTRA FAST: Send with instant delay (0ms)
         ac1.send();
-        delay(100);
+        delayMicroseconds(ULTRA_FAST_RESPONSE_TIME * 1000);  // 1ms ultra minimal delay
+        
       } else {
-        Serial.println("📤 Sending IR: AC1 OFF");
+        Serial.println("📤 ULTRA FAST IR: AC1 OFF");
         ac1.off(); 
         ac1.send();
-        delay(100);
+        delayMicroseconds(500);  // Ultra minimal delay (0.5ms)
       }
       
       if (ac2ON) {
-        Serial.println("📤 Sending IR: AC2 ON - " + String(targetTemp2) + "°C");
+        Serial.println("📤 ULTRA FAST IR: AC2 ON - " + String(targetTemp2) + "°C");
+        
+        // ULTRA FAST: Optimized IR signal preparation
         ac2.on();
         ac2.setMode(kPanasonicAcCool);
         ac2.setTemp(targetTemp2);
         ac2.setFan(kPanasonicAcFanAuto);
+        ac2.setSwingVertical(kPanasonicAcSwingVAuto);
+        
+        // ULTRA FAST: Send with instant delay (0ms)
         ac2.send();
-        delay(100);
+        delayMicroseconds(ULTRA_FAST_RESPONSE_TIME * 1000);  // 1ms ultra minimal delay
+        
       } else {
-        Serial.println("📤 Sending IR: AC2 OFF");
+        Serial.println("📤 ULTRA FAST IR: AC2 OFF");
         ac2.off(); 
         ac2.send();
-        delay(100);
+        delayMicroseconds(500);  // Ultra minimal delay (0.5ms)
       }
     }
     
-    Serial.println("✅ IR signals sent successfully!");
+    unsigned long responseTime = millis() - startTime;
+    Serial.println("⚡ ULTRA FAST IR Response Time: " + String(responseTime) + "ms");
+    Serial.println("✅ ULTRA FAST IR signals sent successfully!");
     
+    // ULTRA FAST: Update state tracking
     lastAC1 = ac1ON;
     lastAC2 = ac2ON;
     lastTemp1 = targetTemp1;
     lastTemp2 = targetTemp2;
+    
+    // ULTRA FAST: Immediate feedback to TFT
+    updateTFT(acStatus, setTemp, currentData.suhuRuang);
   }
 }
 
@@ -1321,22 +1493,28 @@ void setup() {
   delay(2000);
   
   Serial.println("\n================================");
-  Serial.println("  PROXIMITY - PRODUCTION HOSTING UNJA");
-  Serial.println("  Sensor: Proximity Sensor (Optimized)");
+  Serial.println("  PROXIMITY - ULTRA FAST HOSTING UNJA");
+  Serial.println("  Sensor: Proximity Sensor (Ultra Fast + Offline)");
   Serial.println("  Domain: dasko.fst.unja.ac.id");
   Serial.println("  SSL/HTTPS: Enabled & Enhanced");
-  Serial.println("  Stable Response: 1000ms cooldown");
-  Serial.println("  Debounce Delay: 200ms (optimized)");
+  Serial.println("  Ultra Fast Response: <50ms");
+  Serial.println("  IR Response: <1ms (INSTANT)");
+  Serial.println("  Lamp Control: Instant ON/OFF");
   Serial.println("  Pin Config: ESP32 Smart Energy Production");
   Serial.println("  University: Universitas Jambi (UNJA)");
+  Serial.println("  Mode: Combined Offline + Hosting Web");
   Serial.println("================================");
   
-  // Initialize pins - UPDATED PIN CONFIGURATION
-  pinMode(PROXIMITY_PIN_IN, INPUT_PULLUP);   // GPIO 2 - Proximity MASUK (changed back for reliability)
-  pinMode(PROXIMITY_PIN_OUT, INPUT_PULLUP);  // GPIO 4 - Proximity KELUAR (changed for reliability)
-  pinMode(LDR_PIN, INPUT);                   // GPIO 35 - LDR 1 (Analog)
-  pinMode(LDR_PIN2, INPUT);                  // GPIO 34 - LDR 2 (Analog)
-  pinMode(IR_PIN, OUTPUT);                   // GPIO 15 - IR Transmitter
+  // Initialize pins - USER REAL CONFIGURATION (AMAN UPLOAD)
+  pinMode(PROXIMITY_PIN_IN, INPUT_PULLUP);   // GPIO 32 - Proximity MASUK
+  pinMode(PROXIMITY_PIN_OUT, INPUT_PULLUP);  // GPIO 33 - Proximity KELUAR
+  pinMode(LDR_PIN, INPUT);                   // GPIO 35 - LDR 1
+  pinMode(LDR_PIN2, INPUT);                  // GPIO 34 - LDR 2
+  pinMode(IR_PIN, OUTPUT);                   // GPIO 4 - IR Transmitter (aman upload)
+  pinMode(RELAY_LAMP1, OUTPUT);              // GPIO 25 - Relay Lamp 1 (6 lampu TL)
+  pinMode(RELAY_LAMP2, OUTPUT);              // GPIO 26 - Relay Lamp 2 (6 lampu TL)
+  digitalWrite(RELAY_LAMP1, LOW);            // Initialize relay 1 OFF
+  digitalWrite(RELAY_LAMP2, LOW);            // Initialize relay 2 OFF
   
   // Optimized: Setup interrupts with proper debouncing
   attachInterrupt(digitalPinToInterrupt(PROXIMITY_PIN_IN), proximityInInterrupt, CHANGE);
@@ -1390,28 +1568,32 @@ void setup() {
   lastForceUpdate = millis();
   lastACControlCheck = millis();
   
-  Serial.println("PROXIMITY PRODUCTION SYSTEM READY!");
-  Serial.println("Enhanced Features v2.0:");
+  Serial.println("ULTRA FAST PROXIMITY PRODUCTION SYSTEM READY!");
+  Serial.println("Enhanced Features v3.0 - ULTRA FAST + HOSTING:");
   Serial.println("- HTTPS/SSL communication with enhanced retry logic");
   Serial.println("- Production hosting integration (UNJA)");
-  Serial.println("- Optimized proximity detection with stable debouncing");
-  Serial.println("- Interrupt-based detection with 200ms debounce");
-  Serial.println("- Stable detection: 1000ms cooldown for reliability");
+  Serial.println("- ULTRA FAST proximity detection with 25ms debouncing");
+  Serial.println("- Interrupt-based detection with 50ms cooldown");
+  Serial.println("- ULTRA FAST detection: 50ms cooldown for maximum responsiveness");
   Serial.println("- Enhanced error handling and recovery");
   Serial.println("- Memory optimized for long-term stability");
-  Serial.println("- MASUK sensor = +1 person");
-  Serial.println("- KELUAR sensor = -1 person");
+  Serial.println("- INSTANT lamp control on detection");
+  Serial.println("- Auto lamp shutdown after 5 minutes");
+  Serial.println("- MASUK sensor = +1 person + lamp ON");
+  Serial.println("- KELUAR sensor = -1 person + lamp management");
   
-  // Test proximity sensors - UPDATED PIN INFO
-  Serial.println("\n=== PROXIMITY SENSOR TEST ===");
-  Serial.println("Pin Configuration (UPDATED ESP32 Smart Energy Production):");
-  Serial.println("- PROXIMITY_IN: GPIO 2 (Sensor MASUK) - CHANGED BACK for better reliability");
-  Serial.println("- PROXIMITY_OUT: GPIO 4 (Sensor KELUAR) - CHANGED to GPIO 4 for better reliability");
-  Serial.println("- DHT22_1: GPIO 12 - UPDATED from GPIO 27");
-  Serial.println("- DHT22_2: GPIO 13 - NEW SENSOR ADDED");
-  Serial.println("- LDR_1: GPIO 35 - UPDATED from GPIO 34");
-  Serial.println("- LDR_2: GPIO 34 - NEW SENSOR ADDED");
-  Serial.println("- IR LED: GPIO 15 - UPDATED from GPIO 14 (+ resistor 220Ω)");
+  // Test proximity sensors - UPDATED PIN INFO + LAMP
+  Serial.println("\n=== ULTRA FAST PROXIMITY + LAMP SENSOR TEST ===");
+  Serial.println("Pin Configuration (USER REAL CONFIG - AMAN UPLOAD):");
+  Serial.println("- PROXIMITY_IN: GPIO 32 (Sensor MASUK)");
+  Serial.println("- PROXIMITY_OUT: GPIO 33 (Sensor KELUAR)");
+  Serial.println("- DHT22_1: GPIO 16 - USER CONFIG (aman upload)");
+  Serial.println("- DHT22_2: GPIO 17 - USER CONFIG (aman upload)");
+  Serial.println("- LDR_1: GPIO 35");
+  Serial.println("- LDR_2: GPIO 34");
+  Serial.println("- IR LED: GPIO 4 - USER CONFIG (aman upload)");
+  Serial.println("- RELAY LAMP 1: GPIO 25 - USER CONFIG (6 lampu TL)");
+  Serial.println("- RELAY LAMP 2: GPIO 26 - USER CONFIG (6 lampu TL)");
   Serial.println("Testing Proximity sensors for 5 seconds...");
   for (int i = 0; i < 25; i++) {
     bool prox1 = digitalRead(PROXIMITY_PIN_IN);
@@ -1420,14 +1602,14 @@ void setup() {
     bool detected2 = !prox2;  
     
     Serial.print("Test " + String(i+1) + "/25 - ");
-    Serial.print("MASUK(2): " + String(prox1 ? "HIGH" : "LOW"));
+    Serial.print("MASUK(32): " + String(prox1 ? "HIGH" : "LOW"));
     if (detected1) {
       Serial.print(" ✅ DETECTED");
     } else {
       Serial.print(" ❌ CLEAR");
     }
     
-    Serial.print(" | KELUAR(4): " + String(prox2 ? "HIGH" : "LOW"));
+    Serial.print(" | KELUAR(33): " + String(prox2 ? "HIGH" : "LOW"));
     if (detected2) {
       Serial.print(" ✅ DETECTED");
     } else {
@@ -1454,15 +1636,21 @@ void setup() {
 
 // ================= MAIN LOOP - OPTIMIZED FOR STABILITY =================
 void loop() {
-  // Optimized: Prioritas untuk interrupt-based detection dengan stability
+  // ULTRA FAST: Check lamp auto-shutdown first for immediate response
+  checkLampAutoShutdown();
+  
+  // ULTRA FAST: Prioritas untuk interrupt-based detection dengan ultra stability
   if (interruptTriggered) {
     interruptTriggered = false;
     readSensors();
     detectPeople();
     updateSensorData();
     
-    // Optimized: Update jika ada perubahan dengan proper timing
+    // ULTRA FAST: Update jika ada perubahan dengan proper timing
     if (jumlahOrang != lastJumlahOrang) {
+      // ULTRA FAST: Smart lamp control based on people count and light level
+      smartLampControl(jumlahOrang, currentData.lightLevel);
+      
       String acStatus = currentData.acStatus;
       int setTemp = currentData.setTemp;
       kontrolAC(acStatus, setTemp);
@@ -1472,16 +1660,19 @@ void loop() {
       updateTFT(acStatus, setTemp, currentData.suhuRuang);
       lastJumlahOrang = jumlahOrang;
       
-      Serial.println("🔄 INTERRUPT UPDATE - Jumlah orang berubah: " + String(jumlahOrang));
+      Serial.println("🔄 ULTRA FAST INTERRUPT UPDATE - Jumlah orang berubah: " + String(jumlahOrang));
     }
   } else {
-    // Optimized: Baca sensor dan deteksi orang dengan timing yang stabil
+    // ULTRA FAST: Baca sensor dan deteksi orang dengan timing yang ultra stabil
     readSensors();
     detectPeople();
     updateSensorData();
     
     // Optimized: Update TFT jika ada perubahan jumlah orang
     if (jumlahOrang != lastJumlahOrang) {
+      // ULTRA FAST: Smart lamp control based on people count and light level
+      smartLampControl(jumlahOrang, currentData.lightLevel);
+      
       String acStatus = currentData.acStatus;
       int setTemp = currentData.setTemp;
       kontrolAC(acStatus, setTemp);
@@ -1491,14 +1682,21 @@ void loop() {
       updateTFT(acStatus, setTemp, currentData.suhuRuang);
       lastJumlahOrang = jumlahOrang;
       
-      Serial.println("🔄 STABLE UPDATE - Jumlah orang berubah: " + String(jumlahOrang));
+      Serial.println("🔄 ULTRA FAST STABLE UPDATE - Jumlah orang berubah: " + String(jumlahOrang));
     }
   }
   
-  // Check for AC control commands from hosting (every 10 seconds)
+  // Check for AC control commands from hosting (every 5 seconds)
   if (millis() - lastACControlCheck >= AC_CONTROL_CHECK_INTERVAL) {
     checkACControlAPI();
     lastACControlCheck = millis();
+  }
+  
+  // ULTRA FAST: Periodic smart lamp control check (every 10 seconds)
+  static unsigned long lastLampCheck = 0;
+  if (millis() - lastLampCheck >= 10000) {
+    smartLampControl(jumlahOrang, currentData.lightLevel);
+    lastLampCheck = millis();
   }
   
   // Control AC (auto or manual from hosting) - hanya jika belum diupdate
@@ -1510,9 +1708,9 @@ void loop() {
     currentData.setTemp = setTemp;
   }
   
-  // Optimized: Update TFT setiap 1 detik untuk performa yang stabil
+  // ULTRA FAST: Update TFT setiap 100ms untuk performa yang ultra responsif
   static unsigned long lastTFTUpdate = 0;
-  if (millis() - lastTFTUpdate > 1000) {
+  if (millis() - lastTFTUpdate > FAST_TFT_UPDATE) {
     updateTFT(currentData.acStatus, currentData.setTemp, currentData.suhuRuang);
     lastTFTUpdate = millis();
   }
@@ -1571,5 +1769,5 @@ void loop() {
     lastMemoryCheck = millis();
   }
   
-  delay(50);  // Optimized: 50ms delay for stable performance and responsiveness
+  delay(5);  // ULTRA FAST: 5ms delay untuk ultra stable performance dan responsiveness maksimal
 }

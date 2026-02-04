@@ -346,8 +346,28 @@ class SensorDataController extends Controller
             $perPage = $request->input('per_page', 50);
             $perPage = min(max($perPage, 10), 100); // Batasi 10-100
 
-            $data = SensorData::latest()
-                             ->paginate($perPage);
+            // Debug: Log request untuk troubleshooting
+            Log::info('History API called:', [
+                'per_page' => $perPage,
+                'request_params' => $request->all()
+            ]);
+
+            $query = SensorData::latest();
+            
+            // Add device filter if provided
+            if ($request->has('device_id') && $request->device_id) {
+                $query->where('device_id', $request->device_id);
+            }
+            
+            $data = $query->paginate($perPage);
+            
+            // Debug: Log hasil query
+            Log::info('History query result:', [
+                'total_records' => $data->total(),
+                'current_page' => $data->currentPage(),
+                'per_page' => $data->perPage(),
+                'data_count' => $data->items() ? count($data->items()) : 0
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -356,7 +376,14 @@ class SensorDataController extends Controller
                     'current_page' => $data->currentPage(),
                     'last_page' => $data->lastPage(),
                     'per_page' => $data->perPage(),
-                    'total' => $data->total()
+                    'total' => $data->total(),
+                    'from' => $data->firstItem(),
+                    'to' => $data->lastItem()
+                ],
+                'debug_info' => [
+                    'query_executed' => true,
+                    'total_in_db' => SensorData::count(),
+                    'latest_record' => SensorData::latest()->first() ? SensorData::latest()->first()->created_at : null
                 ]
             ]);
 
@@ -369,7 +396,11 @@ class SensorDataController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Terjadi kesalahan saat mengambil history',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
+                'debug_info' => [
+                    'total_records_in_db' => SensorData::count(),
+                    'error_occurred' => true
+                ]
             ], 500);
         }
     }
