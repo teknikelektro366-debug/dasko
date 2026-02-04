@@ -97,43 +97,41 @@ class SensorDataController extends Controller
             $deviceId = $request->input('device_id', 'ESP32_Smart_Energy');
             $location = $request->input('location', 'Lab Teknik Tegangan Tinggi');
 
-            // Update or Create data berdasarkan device_id dan location
-            $sensorData = SensorData::updateOrCreate(
-                [
-                    'device_id' => $deviceId,
-                    'location' => $location
-                ],
-                [
-                    'people_count' => $request->input('people_count'),
-                    'ac_status' => $request->input('ac_status'),
-                    'set_temperature' => $request->input('set_temperature'),
-                    'room_temperature' => $request->input('room_temperature'),
-                    'humidity' => $request->input('humidity'),
-                    'light_level' => $request->input('light_level', 0),
-                    'proximity_in' => $request->input('proximity_in', false),
-                    'proximity_out' => $request->input('proximity_out', false),
-                    'wifi_rssi' => $request->input('wifi_rssi'),
-                    'status' => $request->input('status', 'active'),
-                    'device_timestamp' => $request->input('timestamp'),
-                    'updated_at' => now()
-                ]
-            );
+            // ALWAYS CREATE NEW RECORD - Setiap data dari ESP32 disimpan sebagai record baru
+            $sensorData = SensorData::create([
+                'device_id' => $deviceId,
+                'location' => $location,
+                'people_count' => $request->input('people_count'),
+                'ac_status' => $request->input('ac_status'),
+                'set_temperature' => $request->input('set_temperature'),
+                'room_temperature' => $request->input('room_temperature'),
+                'humidity' => $request->input('humidity'),
+                'light_level' => $request->input('light_level', 0),
+                'proximity_in' => $request->input('proximity_in', false),
+                'proximity_out' => $request->input('proximity_out', false),
+                'wifi_rssi' => $request->input('wifi_rssi'),
+                'status' => $request->input('status', 'active'),
+                'device_timestamp' => $request->input('timestamp'),
+            ]);
 
-            // Determine if this was an update or create
-            $wasRecentlyCreated = $sensorData->wasRecentlyCreated;
-            $action = $wasRecentlyCreated ? 'created' : 'updated';
+            $action = 'created';
+            $wasRecentlyCreated = true;
+            $changeReason = 'New data from ESP32';
 
             // Log berhasil
-            Log::info("Sensor data {$action} successfully:", [
+            Log::info("New sensor record created:", [
                 'id' => $sensorData->id,
                 'device_id' => $sensorData->device_id,
-                'action' => $action
+                'people_count' => $sensorData->people_count,
+                'action' => $action,
+                'reason' => $changeReason
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => "Data berhasil {$action}",
                 'action' => $action,
+                'change_reason' => $changeReason ?? 'Minor update',
                 'data' => [
                     'id' => $sensorData->id,
                     'device_id' => $sensorData->device_id,
@@ -145,7 +143,8 @@ class SensorDataController extends Controller
                     'humidity' => $sensorData->humidity,
                     'light_level' => $sensorData->light_level,
                     'timestamp' => $sensorData->updated_at->toISOString(),
-                    'was_recently_created' => $wasRecentlyCreated
+                    'was_recently_created' => $wasRecentlyCreated,
+                    'record_type' => $wasRecentlyCreated ? 'new_record' : 'updated_record'
                 ]
             ], $wasRecentlyCreated ? 201 : 200);
 

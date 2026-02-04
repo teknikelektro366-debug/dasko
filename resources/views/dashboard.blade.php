@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta http-equiv="refresh" content="30">
     <title>Smart Energy Dashboard - Server Side</title>
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -2374,14 +2373,6 @@
             element.classList.add('active');
         }
 
-        // ===== AUTO REFRESH PAGE =====
-        function autoRefreshPage() {
-            // Auto refresh setiap 30 detik untuk update data
-            setTimeout(function() {
-                window.location.reload();
-            }, 30000);
-        }
-
         // ===== HISTORY FUNCTIONS =====
         let historyChart = null;
         let currentHistoryPage = 1;
@@ -2518,13 +2509,16 @@
 
         function loadSensorData() {
             const tbody = document.getElementById('sensor-data-body');
-            if (!tbody) return;
+            if (!tbody) {
+                console.error('sensor-data-body element not found');
+                return;
+            }
             
             const limitSelect = document.getElementById('sensorDataLimit');
             const periodSelect = document.getElementById('historyPeriod');
             const deviceFilterSelect = document.getElementById('deviceFilter');
             
-            const limit = limitSelect ? limitSelect.value : '100';
+            const limit = limitSelect ? limitSelect.value : '50';
             const period = periodSelect ? periodSelect.value : 'week';
             const deviceFilter = deviceFilterSelect ? deviceFilterSelect.value : '';
             
@@ -2532,73 +2526,108 @@
             
             let url = `/api/sensor/history?per_page=${limit}`;
             if (deviceFilter) {
-                url += `&device_id=${deviceFilter}`;
+                url += `&device_id=${encodeURIComponent(deviceFilter)}`;
             }
             
             console.log('Loading sensor data from:', url);
             
-            fetch(url)
+            // Set timeout for fetch request
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+            
+            fetch(url, { 
+                signal: controller.signal,
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
                 .then(response => {
+                    clearTimeout(timeoutId);
                     console.log('Response status:', response.status);
+                    console.log('Response headers:', response.headers);
+                    
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
                     }
                     return response.json();
                 })
                 .then(data => {
                     console.log('API Response:', data);
                     
-                    if (data.success && data.data && data.data.length > 0) {
-                        let html = '';
-                        data.data.forEach((item, index) => {
-                            const timestamp = new Date(item.created_at).toLocaleString('id-ID', {
-                                timeZone: 'Asia/Jakarta'
+                    if (data.success) {
+                        if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+                            let html = '';
+                            data.data.forEach((item, index) => {
+                                try {
+                                    const timestamp = item.created_at ? 
+                                        new Date(item.created_at).toLocaleString('id-ID', {
+                                            timeZone: 'Asia/Jakarta'
+                                        }) : '--';
+                                    
+                                    const proximityStatus = `IN: ${item.proximity_in ? 'ON' : 'OFF'} | OUT: ${item.proximity_out ? 'ON' : 'OFF'}`;
+                                    
+                                    html += `
+                                        <tr>
+                                            <td>${item.id || '--'}</td>
+                                            <td>${timestamp}</td>
+                                            <td><span class="device-badge">${item.device_id || 'ESP32'}</span></td>
+                                            <td><span class="people-count">${item.people_count || 0}</span></td>
+                                            <td>${item.room_temperature ? item.room_temperature.toFixed(1) + '°C' : '--'}</td>
+                                            <td>${item.humidity ? item.humidity.toFixed(1) + '%' : '--'}</td>
+                                            <td>${item.light_level || '--'} lux</td>
+                                            <td><span class="ac-status ${item.ac_status === 'OFF' ? 'status-off' : 'status-on'}">${item.ac_status || 'OFF'}</span></td>
+                                            <td>${item.set_temperature || '--'}°C</td>
+                                            <td><small>${proximityStatus}</small></td>
+                                            <td>${item.wifi_rssi || '--'} dBm</td>
+                                        </tr>
+                                    `;
+                                } catch (itemError) {
+                                    console.error('Error processing item:', itemError, item);
+                                }
                             });
-                            const proximityStatus = `IN: ${item.proximity_in ? 'ON' : 'OFF'} | OUT: ${item.proximity_out ? 'ON' : 'OFF'}`;
                             
-                            html += `
-                                <tr>
-                                    <td>${item.id}</td>
-                                    <td>${timestamp}</td>
-                                    <td><span class="device-badge">${item.device_id || 'ESP32'}</span></td>
-                                    <td><span class="people-count">${item.people_count || 0}</span></td>
-                                    <td>${item.room_temperature ? item.room_temperature.toFixed(1) + '°C' : '--'}</td>
-                                    <td>${item.humidity ? item.humidity.toFixed(1) + '%' : '--'}</td>
-                                    <td>${item.light_level || '--'} lux</td>
-                                    <td><span class="ac-status ${item.ac_status === 'OFF' ? 'status-off' : 'status-on'}">${item.ac_status || 'OFF'}</span></td>
-                                    <td>${item.set_temperature || '--'}°C</td>
-                                    <td><small>${proximityStatus}</small></td>
-                                    <td>${item.wifi_rssi || '--'} dBm</td>
-                                </tr>
-                            `;
-                        });
-                        tbody.innerHTML = html;
-                        
-                        // Update pagination info
-                        const pageInfo = document.getElementById('sensorPageInfo');
-                        if (data.pagination && pageInfo) {
-                            pageInfo.textContent = `Page ${data.pagination.current_page} of ${data.pagination.last_page} (Total: ${data.pagination.total} records)`;
-                        }
-                        
-                        // Update summary stats
-                        updateSummaryStats(data.data);
-                        
-                        console.log(`Loaded ${data.data.length} sensor records`);
-                    } else {
-                        let message = 'Tidak ada data sensor ditemukan';
-                        if (data.debug_info) {
-                            message += `<br><small>Total records in database: ${data.debug_info.total_in_db || 0}</small>`;
-                            if (data.debug_info.latest_record) {
-                                message += `<br><small>Latest record: ${data.debug_info.latest_record}</small>`;
+                            tbody.innerHTML = html;
+                            
+                            // Update pagination info
+                            const pageInfo = document.getElementById('sensorPageInfo');
+                            if (data.pagination && pageInfo) {
+                                pageInfo.textContent = `Page ${data.pagination.current_page} of ${data.pagination.last_page} (Total: ${data.pagination.total} records)`;
                             }
+                            
+                            // Update summary stats
+                            updateSummaryStats(data.data);
+                            
+                            console.log(`Successfully loaded ${data.data.length} sensor records`);
+                        } else {
+                            let message = 'Tidak ada data sensor ditemukan';
+                            if (data.debug_info) {
+                                message += `<br><small>Total records in database: ${data.debug_info.total_in_db || 0}</small>`;
+                                if (data.debug_info.latest_record) {
+                                    message += `<br><small>Latest record: ${data.debug_info.latest_record}</small>`;
+                                }
+                            }
+                            tbody.innerHTML = `<tr><td colspan="11" class="no-data">${message}</td></tr>`;
+                            console.log('No sensor data found:', data);
                         }
-                        tbody.innerHTML = `<tr><td colspan="11" class="no-data">${message}</td></tr>`;
-                        console.log('No sensor data found:', data);
+                    } else {
+                        tbody.innerHTML = `<tr><td colspan="11" class="error-row">API Error: ${data.message || 'Unknown error'}</td></tr>`;
+                        console.error('API returned error:', data);
                     }
                 })
                 .catch(error => {
+                    clearTimeout(timeoutId);
                     console.error('Error loading sensor data:', error);
-                    tbody.innerHTML = `<tr><td colspan="11" class="error-row">Error loading data: ${error.message}<br><small>Check console for details</small></td></tr>`;
+                    
+                    let errorMessage = 'Error loading data';
+                    if (error.name === 'AbortError') {
+                        errorMessage = 'Request timeout - please try again';
+                    } else if (error.message) {
+                        errorMessage = error.message;
+                    }
+                    
+                    tbody.innerHTML = `<tr><td colspan="11" class="error-row">${errorMessage}<br><small>Check console for details</small></td></tr>`;
                 });
         }
 
@@ -3037,32 +3066,40 @@
         function updateSummaryStats(data) {
             if (!data || data.length === 0) return;
             
-            // Update total records
-            const totalRecordsEl = document.getElementById('totalRecords');
-            if (totalRecordsEl) {
-                totalRecordsEl.textContent = data.length.toLocaleString();
-            }
-            
-            // Update last update time
-            const lastUpdateEl = document.getElementById('lastUpdate');
-            if (lastUpdateEl && data[0]) {
-                const lastUpdate = new Date(data[0].created_at);
-                lastUpdateEl.textContent = lastUpdate.toLocaleString('id-ID', {
-                    timeZone: 'Asia/Jakarta'
-                });
-            }
-            
-            // Calculate update frequency
-            if (data.length > 1) {
-                const firstTime = new Date(data[0].created_at);
-                const lastTime = new Date(data[data.length - 1].created_at);
-                const diffMinutes = (firstTime - lastTime) / (1000 * 60);
-                const avgInterval = diffMinutes / data.length;
-                
-                const updateFreqEl = document.getElementById('updateFreq');
-                if (updateFreqEl) {
-                    updateFreqEl.textContent = Math.round(avgInterval * 60) + 's';
+            try {
+                // Update total records
+                const totalRecordsEl = document.getElementById('totalRecords');
+                if (totalRecordsEl) {
+                    totalRecordsEl.textContent = data.length.toLocaleString();
                 }
+                
+                // Update last update time
+                const lastUpdateEl = document.getElementById('lastUpdate');
+                if (lastUpdateEl && data[0] && data[0].created_at) {
+                    const lastUpdate = new Date(data[0].created_at);
+                    if (!isNaN(lastUpdate.getTime())) {
+                        lastUpdateEl.textContent = lastUpdate.toLocaleString('id-ID', {
+                            timeZone: 'Asia/Jakarta'
+                        });
+                    }
+                }
+                
+                // Calculate update frequency
+                if (data.length > 1) {
+                    const firstTime = new Date(data[0].created_at);
+                    const lastTime = new Date(data[data.length - 1].created_at);
+                    if (!isNaN(firstTime.getTime()) && !isNaN(lastTime.getTime())) {
+                        const diffMinutes = (firstTime - lastTime) / (1000 * 60);
+                        const avgInterval = diffMinutes / data.length;
+                        
+                        const updateFreqEl = document.getElementById('updateFreq');
+                        if (updateFreqEl) {
+                            updateFreqEl.textContent = Math.round(Math.abs(avgInterval) * 60) + 's';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating summary stats:', error);
             }
         }
 
@@ -3248,20 +3285,9 @@
             element.classList.add('active');
         }
 
-        // ===== AUTO REFRESH PAGE =====
-        function autoRefreshPage() {
-            // Auto refresh setiap 30 detik untuk update data
-            setTimeout(function() {
-                window.location.reload();
-            }, 30000);
-        }
-
         // ===== INITIALIZE =====
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Smart Energy Dashboard - Server-side Mode');
-            
-            // Start auto refresh
-            autoRefreshPage();
             
             // Initialize AC control
             initializeACControl();
@@ -3505,9 +3531,6 @@
         // ===== INITIALIZE =====
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Smart Energy Dashboard - Server-side Mode');
-            
-            // Start auto refresh
-            autoRefreshPage();
             
             // Initialize AC control
             initializeACControl();
