@@ -2574,8 +2574,8 @@
                                             <td>${timestamp}</td>
                                             <td><span class="device-badge">${item.device_id || 'ESP32'}</span></td>
                                             <td><span class="people-count">${item.people_count || 0}</span></td>
-                                            <td>${item.room_temperature ? item.room_temperature.toFixed(1) + '°C' : '--'}</td>
-                                            <td>${item.humidity ? item.humidity.toFixed(1) + '%' : '--'}</td>
+                                            <td>${item.room_temperature ? item.room_temperature : '--'}</td>
+                                            <td>${item.humidity ? item.humidity : '--'}</td>
                                             <td>${item.light_level || '--'} lux</td>
                                             <td><span class="ac-status ${item.ac_status === 'OFF' ? 'status-off' : 'status-on'}">${item.ac_status || 'OFF'}</span></td>
                                             <td>${item.set_temperature || '--'}°C</td>
