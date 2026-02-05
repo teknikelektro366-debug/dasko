@@ -15,8 +15,8 @@
 TFT_eSPI tft;
 
 // ================= OPTIMIZED HOSTING CONFIGURATION WITH PROGMEM =================
-const char WIFI_SSID[] PROGMEM = "Teknik Elektro";
-const char WIFI_PASS[] PROGMEM = "tanyapakmanab";
+const char WIFI_SSID[] PROGMEM = "LAB TEKNIK TEGANGAN TINGGI";
+const char WIFI_PASS[] PROGMEM = "LABTTT2026";
 const char HOST_DOMAIN[] PROGMEM = "dasko.fst.unja.ac.id";
 const char API_URL[] PROGMEM = "https://dasko.fst.unja.ac.id/api/sensor/data";
 const char AC_URL[] PROGMEM = "https://dasko.fst.unja.ac.id/api/ac/control";

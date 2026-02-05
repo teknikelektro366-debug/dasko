@@ -1483,9 +1483,7 @@
                     HISTORY
                 </span>
             </div>
-            <div class="subnav">
-                <i class="fas fa-database"></i> Riwayat lengkap data sensor ESP32, aktivitas AC, dan perubahan sistem Smart Energy UNJA
-            </div>
+           
 
            
 
@@ -1552,9 +1550,7 @@
                     <button class="tab-button active" onclick="showHistoryTab('sensor-data')">
                         <i class="fas fa-chart-line"></i> Data Sensor
                     </button>
-                    <button class="tab-button" onclick="showHistoryTab('ac-activity')">
-                        <i class="fas fa-snowflake"></i> Aktivitas AC
-                    </button>
+                    
                     <button class="tab-button" onclick="showHistoryTab('people-count')">
                         <i class="fas fa-users"></i> Jumlah Orang
                     </button>

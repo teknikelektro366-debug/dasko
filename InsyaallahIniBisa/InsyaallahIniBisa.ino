@@ -13,9 +13,8 @@
 TFT_eSPI tft;
 
 // ================= ULTRA FAST OFFLINE FEATURES =================
-// Dual lamp control for ultra-fast response (2 relay channels)
-bool lamp1Status = false;
-bool lamp2Status = false;
+// Single lamp control for ultra-fast response (1 relay channel)
+bool lampStatus = false;
 unsigned long lampAutoShutdownTime = 0;
 const unsigned long LAMP_AUTO_SHUTDOWN_DELAY = 300000; // 5 minutes auto shutdown
 
@@ -82,8 +81,7 @@ const char* rootCACertificate = \
 #define DHTTYPE           DHT22
 #define LDR_PIN           35    // LDR pin 1
 #define LDR_PIN2          34    // LDR pin 2
-#define RELAY_LAMP1       25    // Relay untuk jalur lampu 1 (6 lampu TL)
-#define RELAY_LAMP2       26    // Relay untuk jalur lampu 2 (6 lampu TL)
+#define RELAY_LAMP1       25    // Relay untuk lampu (12 lampu TL)
 #define MAX_PEOPLE 20        
 #define PERSON_COOLDOWN 10         // ULTRA FAST: 10ms cooldown untuk deteksi super cepat
 #define DEBOUNCE_DELAY 5           // ULTRA FAST: 5ms debounce untuk responsif maksimal
