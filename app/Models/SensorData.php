@@ -19,6 +19,7 @@ class SensorData extends Model
         'room_temperature',
         'humidity',
         'light_level',
+        'lamp_status',
         'proximity_in',
         'proximity_out',
         'wifi_rssi',

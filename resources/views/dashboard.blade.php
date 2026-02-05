@@ -908,6 +908,21 @@
                         </div>
                         <div class="data-timestamp">{{ $sensorData['last_update_time'] ?? 'Belum ada data' }}</div>
                     </div>
+
+                    <div class="card sensor-card">
+                        <div class="card-icon">
+                            <i class="fas fa-lightbulb"></i>
+                        </div>
+                        <div class="title">Status Lampu</div>
+                        <div class="value">
+                            @if(isset($sensorData['lamp_status']) && $sensorData['lamp_status'] === 'ON')
+                                <span style="color: #ffc107;">ON</span>
+                            @else
+                                <span style="color: #6c757d;">OFF</span>
+                            @endif
+                        </div>
+                        <div class="data-timestamp">{{ $sensorData['last_update_time'] ?? 'Belum ada data' }}</div>
+                    </div>
                 </div>
             </div>
 
@@ -1575,6 +1590,7 @@
                                     <th><i class="fas fa-thermometer-half"></i> Suhu</th>
                                     <th><i class="fas fa-tint"></i> Kelembaban</th>
                                     <th><i class="fas fa-sun"></i> Cahaya</th>
+                                    <th><i class="fas fa-lightbulb"></i> Lampu</th>
                                     <th><i class="fas fa-snowflake"></i> AC Status</th>
                                     <th><i class="fas fa-temperature-low"></i> Set Temp</th>
                                     <th><i class="fas fa-walking"></i> Proximity</th>
@@ -1583,7 +1599,7 @@
                             </thead>
                             <tbody id="sensor-data-body">
                                 <tr>
-                                    <td colspan="11" class="loading-row">
+                                    <td colspan="12" class="loading-row">
                                         <i class="fas fa-spinner fa-spin"></i> Loading data sensor...
                                     </td>
                                 </tr>
@@ -2518,7 +2534,7 @@
             const period = periodSelect ? periodSelect.value : 'week';
             const deviceFilter = deviceFilterSelect ? deviceFilterSelect.value : '';
             
-            tbody.innerHTML = '<tr><td colspan="11" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading data sensor...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading data sensor...</td></tr>';
             
             let url = `/api/sensor/history?per_page=${limit}`;
             if (deviceFilter) {
@@ -2573,6 +2589,7 @@
                                             <td>${item.room_temperature ? item.room_temperature : '--'}</td>
                                             <td>${item.humidity ? item.humidity : '--'}</td>
                                             <td>${item.light_level || '--'} lux</td>
+                                            <td><span class="lamp-status ${item.lamp_status === 'ON' ? 'status-on' : 'status-off'}">${item.lamp_status || 'OFF'}</span></td>
                                             <td><span class="ac-status ${item.ac_status === 'OFF' ? 'status-off' : 'status-on'}">${item.ac_status || 'OFF'}</span></td>
                                             <td>${item.set_temperature || '--'}°C</td>
                                             <td><small>${proximityStatus}</small></td>
@@ -2604,11 +2621,11 @@
                                     message += `<br><small>Latest record: ${data.debug_info.latest_record}</small>`;
                                 }
                             }
-                            tbody.innerHTML = `<tr><td colspan="11" class="no-data">${message}</td></tr>`;
+                            tbody.innerHTML = `<tr><td colspan="12" class="no-data">${message}</td></tr>`;
                             console.log('No sensor data found:', data);
                         }
                     } else {
-                        tbody.innerHTML = `<tr><td colspan="11" class="error-row">API Error: ${data.message || 'Unknown error'}</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="12" class="error-row">API Error: ${data.message || 'Unknown error'}</td></tr>`;
                         console.error('API returned error:', data);
                     }
                 })
@@ -2623,7 +2640,7 @@
                         errorMessage = error.message;
                     }
                     
-                    tbody.innerHTML = `<tr><td colspan="11" class="error-row">${errorMessage}<br><small>Check console for details</small></td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="12" class="error-row">${errorMessage}<br><small>Check console for details</small></td></tr>`;
                 });
         }
 

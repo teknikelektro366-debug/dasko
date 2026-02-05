@@ -78,6 +78,7 @@ class SensorDataController extends Controller
                 'room_temperature' => 'nullable|numeric|min:-10|max:60',
                 'humidity' => 'nullable|numeric|min:0|max:100',
                 'light_level' => 'nullable|integer|min:0|max:1000',
+                'lamp_status' => 'nullable|string|max:10',
                 'proximity_in' => 'nullable|boolean',
                 'proximity_out' => 'nullable|boolean',
                 'wifi_rssi' => 'nullable|integer|min:-100|max:0',
@@ -107,6 +108,7 @@ class SensorDataController extends Controller
                 'room_temperature' => $request->input('room_temperature'),
                 'humidity' => $request->input('humidity'),
                 'light_level' => $request->input('light_level', 0),
+                'lamp_status' => $request->input('lamp_status', 'OFF'),
                 'proximity_in' => $request->input('proximity_in', false),
                 'proximity_out' => $request->input('proximity_out', false),
                 'wifi_rssi' => $request->input('wifi_rssi'),
@@ -142,6 +144,7 @@ class SensorDataController extends Controller
                     'room_temperature' => $sensorData->room_temperature,
                     'humidity' => $sensorData->humidity,
                     'light_level' => $sensorData->light_level,
+                    'lamp_status' => $sensorData->lamp_status,
                     'timestamp' => $sensorData->updated_at->toISOString(),
                     'was_recently_created' => $wasRecentlyCreated,
                     'record_type' => $wasRecentlyCreated ? 'new_record' : 'updated_record'
