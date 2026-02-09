@@ -24,7 +24,9 @@ class SensorData extends Model
         'proximity_out',
         'wifi_rssi',
         'status',
-        'device_timestamp'
+        'device_timestamp',
+        'created_at',
+        'updated_at'
     ];
 
     protected $casts = [

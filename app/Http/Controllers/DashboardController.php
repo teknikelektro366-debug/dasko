@@ -8,6 +8,7 @@ use App\Models\SensorData;
 use App\Models\EnergyLog;
 use App\Models\ACAutomationRule;
 use App\Services\ArduinoService;
+use App\Services\EnergyCalculationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
@@ -15,10 +16,12 @@ use Carbon\Carbon;
 class DashboardController extends Controller
 {
     protected $arduinoService;
+    protected $energyService;
 
-    public function __construct(ArduinoService $arduinoService)
+    public function __construct(ArduinoService $arduinoService, EnergyCalculationService $energyService)
     {
         $this->arduinoService = $arduinoService;
+        $this->energyService = $energyService;
         // Remove auth middleware for now
         // $this->middleware('auth');
     }
@@ -59,6 +62,9 @@ class DashboardController extends Controller
         
         $updateFrequency = $this->calculateUpdateFrequency($recentData);
 
+        // Get energy savings data
+        $energySavings = $this->energyService->calculateEnergySavings(now()->format('Y-m-d'));
+
         return view('dashboard', compact(
             'sensorData',
             'devices',
@@ -68,7 +74,8 @@ class DashboardController extends Controller
             'energySavingStatus',
             'dailyStats',
             'totalRecords',
-            'updateFrequency'
+            'updateFrequency',
+            'energySavings'
         ));
     }
 
@@ -190,7 +197,7 @@ class DashboardController extends Controller
                     'wifi_rssi' => null,
                     'last_updated' => now(),
                     'device_id' => 'ESP32_Smart_Energy',
-                    'location' => 'Lab Teknik Tegangan Tinggi',
+                    'location' => 'Ruang Dosen Prodi Teknik Elektro',
                     'status' => 'offline',
                     'data_age_minutes' => 0,
                     'connection_status' => 'offline'
@@ -208,6 +215,7 @@ class DashboardController extends Controller
                 'people_count' => $latestData->people_count ?? 0,
                 'ac_status' => $latestData->ac_status ?? 'OFF',
                 'set_temperature' => $latestData->set_temperature,
+                'lamp_status' => $latestData->lamp_status ?? 'OFF',
                 'proximity_in' => $latestData->proximity_in ?? false,
                 'proximity_out' => $latestData->proximity_out ?? false,
                 'wifi_rssi' => $latestData->wifi_rssi,

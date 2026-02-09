@@ -1,0 +1,80 @@
+═══════════════════════════════════════════════════════════
+  CARA TEST KONTROL LAMPU - STEP BY STEP
+═══════════════════════════════════════════════════════════
+
+LANGKAH 1: UPLOAD KODE ARDUINO
+-------------------------------
+1. Buka Arduino IDE
+2. Buka file: HOSTING (1)/HOSTING/HOSTING.ino
+3. Pilih Board: ESP32 Dev Module
+4. Pilih Port: COM yang sesuai
+5. Klik Upload (Ctrl+U)
+6. Tunggu sampai "Done uploading"
+
+LANGKAH 2: BUKA SERIAL MONITOR
+-------------------------------
+1. Klik Tools → Serial Monitor (Ctrl+Shift+M)
+2. Set baud rate: 115200
+3. Tunggu ESP32 restart
+
+LANGKAH 3: TEST RELAY MANUAL
+-------------------------------
+Ketik di Serial Monitor:
+
+  lampon      → Force lampu ON
+  lampoff     → Force lampu OFF
+  lamptest    → Test relay ON/OFF cycle
+
+Cek apakah lampu fisik menyala/mati!
+
+LANGKAH 4: TEST DETEKSI ORANG
+-------------------------------
+Ketik di Serial Monitor:
+
+  add         → Tambah 1 orang (lampu harus ON)
+  sub         → Kurangi 1 orang (lampu harus OFF)
+  status      → Lihat jumlah orang saat ini
+
+LANGKAH 5: CEK OUTPUT
+-------------------------------
+Setelah ketik "add", harus muncul:
+
+  🔍 kontrolLampu() called:
+     jumlahOrang = 1
+     → Decision: LAMP ON (ada 1 orang)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  💡 LAMP CONTROL CHANGE DETECTED!
+     Jumlah orang: 1
+     Status baru: ON
+     Relay GPIO 25: LOW (ON)
+  ✅ Relay updated successfully!
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LANGKAH 6: CEK DASHBOARD
+-------------------------------
+1. Buka browser: http://localhost:8000
+2. Lihat "Status Lampu"
+3. Harus berubah jadi "ON" (warna hijau/kuning)
+
+═══════════════════════════════════════════════════════════
+
+JIKA LAMPU TIDAK MENYALA:
+-------------------------
+1. Cek wiring relay (GPIO 25 → Relay IN)
+2. Cek power supply relay (5V atau 3.3V)
+3. Test dengan multimeter
+4. Kirim screenshot Serial Monitor
+
+COMMAND LENGKAP:
+----------------
+help        → Lihat semua command
+status      → Status sistem
+sensors     → Baca semua sensor
+lampon      → Force lamp ON
+lampoff     → Force lamp OFF
+lamptest    → Test relay cycle
+add         → Tambah orang
+sub         → Kurangi orang
+reset       → Reset counter
+
+═══════════════════════════════════════════════════════════

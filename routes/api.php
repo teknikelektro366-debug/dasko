@@ -85,4 +85,23 @@ Route::prefix('reports')->group(function () {
     
     // Custom report (redirect to daily for now)
     Route::get('/custom', [SimpleReportController::class, 'dailyReport']);
+    
+    // PDF Download Routes
+    Route::get('/pdf/daily', [\App\Http\Controllers\PdfReportController::class, 'dailyReport']);
+    Route::get('/pdf/weekly', [\App\Http\Controllers\PdfReportController::class, 'weeklyReport']);
+    Route::get('/pdf/monthly', [\App\Http\Controllers\PdfReportController::class, 'monthlyReport']);
+    Route::get('/pdf/efficiency', [\App\Http\Controllers\PdfReportController::class, 'efficiencyReport']);
+    
+    // Custom Report Route
+    Route::get('/custom', [\App\Http\Controllers\PdfReportController::class, 'customReport']);
+});
+
+// Energy Management Routes
+Route::prefix('energy')->group(function () {
+    Route::get('/daily', [\App\Http\Controllers\EnergyController::class, 'getDailyEnergy']);
+    Route::get('/monthly', [\App\Http\Controllers\EnergyController::class, 'getMonthlyEnergy']);
+    Route::get('/efficiency', [\App\Http\Controllers\EnergyController::class, 'getEfficiency']);
+    Route::get('/devices', [\App\Http\Controllers\EnergyController::class, 'getDevicePowerData']);
+    Route::get('/savings/daily', [\App\Http\Controllers\EnergyController::class, 'getDailySavings']);
+    Route::get('/savings/monthly', [\App\Http\Controllers\EnergyController::class, 'getMonthlySavings']);
 });

@@ -1321,68 +1321,64 @@ void kontrolAC(String &acStatus, int &setTemp) {
   }
 }
 
-// ================= LAMP CONTROL (DUAL FUNCTION) =================
+// ================= LAMP CONTROL - SIMPLE & RELIABLE =================
 void kontrolLampu(String &lampStatus) {
   bool lampON = false;
   
-  // ALGORITMA BERDASARKAN JUMLAH ORANG DI RUANGAN (SAMA SEPERTI AC):
-  // 1. Jika ada orang di ruangan (jumlahOrang > 0) → Lampu SELALU NYALA
-  // 2. Jika tidak ada orang (jumlahOrang = 0) → Lampu mati
-  // 3. Auto shutdown setelah 5 menit kosong
+  // Debug: Print current state
+  Serial.println("🔍 kontrolLampu() called:");
+  Serial.println("   jumlahOrang = " + String(jumlahOrang));
+  Serial.println("   lastLamp1 = " + String(lastLamp1 ? "true" : "false"));
   
-  if (autoMode && !manualOverride) {
-    // Mode otomatis berdasarkan occupancy (jumlah orang di ruangan)
-    if (jumlahOrang > 0) {
-      // Ada orang di ruangan → Lampu SELALU NYALA
-      lampON = true;
-      lampStatus = "AUTO ON (" + String(jumlahOrang) + " orang)";
-      Serial.println("💡 Auto ON: Ada " + String(jumlahOrang) + " orang di ruangan - Lampu nyala");
-    } else {
-      // Tidak ada orang di ruangan → Lampu mati
-      lampON = false;
-      lampStatus = "AUTO OFF (KOSONG)";
-    }
-    
-    // Auto shutdown setelah 5 menit kosong
-    if (jumlahOrang == 0 && roomEmptyTimerActive) {
-      unsigned long emptyDuration = millis() - emptyRoomStartTime;
-      if (emptyDuration >= EMPTY_ROOM_TIMEOUT) {
-        lampON = false;
-        lampStatus = "AUTO OFF (5 MIN KOSONG)";
-        Serial.println("⏰ AUTO SHUTDOWN: Ruangan kosong > 5 menit - Lampu dimatikan otomatis");
-      }
-    }
-  }
-  else {
-    // Mode manual - relay tidak aktif, kontrol sepenuhnya dari saklar fisik
-    lampStatus = "MANUAL MODE";
+  // LOGIKA SEDERHANA DAN PASTI:
+  // 1. Ada orang (jumlahOrang > 0) → Lampu ON
+  // 2. Tidak ada orang (jumlahOrang = 0) → Lampu OFF
+  
+  if (jumlahOrang > 0) {
+    // Ada orang di ruangan → Lampu NYALA
+    lampON = true;
+    lampStatus = "ON";
+    Serial.println("   → Decision: LAMP ON (ada " + String(jumlahOrang) + " orang)");
+  } else {
+    // Tidak ada orang di ruangan → Lampu MATI
+    lampON = false;
+    lampStatus = "OFF";
+    Serial.println("   → Decision: LAMP OFF (tidak ada orang)");
   }
   
-  // Update relay hanya jika ada perubahan
-  if (lampON != lastLamp1 || lampStatus != lastLampStatus) {
-    Serial.println("💡 Lamp Control Change: " + lampStatus);
+  // Update relay jika ada perubahan ATAU jika ini adalah panggilan pertama
+  static bool firstCall = true;
+  if (lampON != lastLamp1 || firstCall) {
+    Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    Serial.println("💡 LAMP CONTROL CHANGE DETECTED!");
     Serial.println("   Jumlah orang: " + String(jumlahOrang));
-    Serial.println("   Light level: " + String(currentData.lightLevel) + " lux");
-    Serial.println("   Threshold: 800 lux");
+    Serial.println("   Status baru: " + String(lampON ? "ON" : "OFF"));
+    Serial.println("   Relay GPIO 25: " + String(lampON ? "LOW (ON)" : "HIGH (OFF)"));
+    Serial.println("   First call: " + String(firstCall ? "YES" : "NO"));
     
-    // LOGIKA NC RELAY:
-    // LOW = NC tersambung = Lampu bisa nyala (otomatis atau manual)
-    // HIGH = NC terputus = Lampu padam paksa (override manual)
+    // Set relay - LOW = ON, HIGH = OFF
     digitalWrite(RELAY_LAMP1, lampON ? LOW : HIGH);
     
-    Serial.println("   Relay GPIO 25: " + String(lampON ? "LOW (NC ON)" : "HIGH (NC OFF)"));
-    Serial.println("   Status: " + String(lampON ? "LAMPU NYALA" : "LAMPU MATI"));
-    Serial.println("   Mode: " + String(autoMode ? "OTOMATIS" : "MANUAL"));
+    // Verify relay state
+    int relayState = digitalRead(RELAY_LAMP1);
+    Serial.println("   Relay state verified: " + String(relayState == LOW ? "LOW (ON)" : "HIGH (OFF)"));
     
-    Serial.println("✅ Lamp control updated!");
+    Serial.println("✅ Relay updated successfully!");
+    Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     
     lastLamp1 = lampON;
     lastLampStatus = lampStatus;
+    firstCall = false;
+  } else {
+    Serial.println("   → No change needed (lampON=" + String(lampON) + ", lastLamp1=" + String(lastLamp1) + ")");
   }
   
+  // Update current data
   currentData.lamp1 = lampON;
   currentData.lamp2 = false;  // Tidak digunakan
   currentData.lampStatus = lampStatus;
+  
+  Serial.println("   Final lampStatus: " + lampStatus);
 }
 
 // ================= UPDATE SENSOR DATA =================
@@ -2242,6 +2238,12 @@ void setup() {
   lastJumlahOrang = -1;
   Serial.println("✓ People counter reset to 0");
   
+  // Initialize lamp control based on current people count
+  String lampStatus = "OFF";
+  kontrolLampu(lampStatus);
+  currentData.lampStatus = lampStatus;
+  Serial.println("✓ Lamp control initialized: " + lampStatus);
+  
   // DISABLE WATCHDOG RESET - Mencegah restart
   // esp_task_wdt_reset();
 }
@@ -2666,11 +2668,50 @@ void loop() {
       Serial.println("   sendtest - Test data transmission to database");
       Serial.println("   add      - Manually add 1 person");
       Serial.println("   sub      - Manually subtract 1 person");
+      Serial.println("   lampon   - Force lamp ON (test relay)");
+      Serial.println("   lampoff  - Force lamp OFF (test relay)");
+      Serial.println("   lamptest - Test lamp relay (ON/OFF cycle)");
       Serial.println("   ssl      - Show SSL status and test connection");
       Serial.println("   proxy    - Show proxy detection status");
       Serial.println("   hosting  - Show hosting connection status");
       Serial.println("   status   - Show complete system status");
       Serial.println("   help     - Show this enhanced help");
+    }
+    else if (command == "lampon") {
+      Serial.println("💡 FORCE LAMP ON");
+      digitalWrite(RELAY_LAMP1, LOW);
+      Serial.println("   Relay GPIO 25 set to LOW (ON)");
+      int state = digitalRead(RELAY_LAMP1);
+      Serial.println("   Verified state: " + String(state == LOW ? "LOW (ON)" : "HIGH (OFF)"));
+      currentData.lampStatus = "ON";
+      lastLamp1 = true;
+    }
+    else if (command == "lampoff") {
+      Serial.println("💡 FORCE LAMP OFF");
+      digitalWrite(RELAY_LAMP1, HIGH);
+      Serial.println("   Relay GPIO 25 set to HIGH (OFF)");
+      int state = digitalRead(RELAY_LAMP1);
+      Serial.println("   Verified state: " + String(state == LOW ? "LOW (ON)" : "HIGH (OFF)"));
+      currentData.lampStatus = "OFF";
+      lastLamp1 = false;
+    }
+    else if (command == "lamptest") {
+      Serial.println("💡 LAMP RELAY TEST");
+      Serial.println("   Testing relay ON/OFF cycle...");
+      
+      Serial.println("   → Setting relay ON (LOW)");
+      digitalWrite(RELAY_LAMP1, LOW);
+      delay(2000);
+      int state1 = digitalRead(RELAY_LAMP1);
+      Serial.println("   → State: " + String(state1 == LOW ? "LOW (ON) ✅" : "HIGH (OFF) ❌"));
+      
+      Serial.println("   → Setting relay OFF (HIGH)");
+      digitalWrite(RELAY_LAMP1, HIGH);
+      delay(2000);
+      int state2 = digitalRead(RELAY_LAMP1);
+      Serial.println("   → State: " + String(state2 == HIGH ? "HIGH (OFF) ✅" : "LOW (ON) ❌"));
+      
+      Serial.println("   Test complete!");
     }
     else if (command == "ssl") {
       Serial.println("🔒 Enhanced SSL Status:");

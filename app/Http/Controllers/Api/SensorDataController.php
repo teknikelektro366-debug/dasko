@@ -99,7 +99,7 @@ class SensorDataController extends Controller
             $location = $request->input('location', 'Lab Teknik Tegangan Tinggi');
 
             // ALWAYS CREATE NEW RECORD - Setiap data dari ESP32 disimpan sebagai record baru
-            $sensorData = SensorData::create([
+            $dataToCreate = [
                 'device_id' => $deviceId,
                 'location' => $location,
                 'people_count' => $request->input('people_count'),
@@ -114,7 +114,15 @@ class SensorDataController extends Controller
                 'wifi_rssi' => $request->input('wifi_rssi'),
                 'status' => $request->input('status', 'active'),
                 'device_timestamp' => $request->input('timestamp'),
-            ]);
+            ];
+            
+            // Handle custom created_at if provided
+            if ($request->has('created_at')) {
+                $dataToCreate['created_at'] = $request->input('created_at');
+                $dataToCreate['updated_at'] = $request->input('created_at');
+            }
+            
+            $sensorData = SensorData::create($dataToCreate);
 
             $action = 'created';
             $wasRecentlyCreated = true;

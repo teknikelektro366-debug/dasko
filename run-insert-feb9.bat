@@ -1,0 +1,13 @@
+@echo off
+echo Starting Laravel server...
+start /B php artisan serve
+
+echo Waiting for server to start...
+timeout /t 3 /nobreak > nul
+
+echo Inserting data...
+php insert-data-feb9-natural.php
+
+echo.
+echo Done! Press any key to exit...
+pause > nul

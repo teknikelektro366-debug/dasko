@@ -37,6 +37,15 @@ Route::get('/dashboard.html', function () {
 // Public routes (no authentication required for now)
 // Route::middleware(['auth'])->group(function () {
     
+    // Manual Input Pages
+    Route::get('/manual-input', function () {
+        return view('manual-input');
+    })->name('manual-input');
+    
+    Route::get('/manual-input-bulk', function () {
+        return view('manual-input-bulk');
+    })->name('manual-input-bulk');
+    
     // Main Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/analytics', [DashboardController::class, 'analytics'])->name('dashboard.analytics');

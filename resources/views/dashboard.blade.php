@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <title>Smart Energy Dashboard - Server Side</title>
-    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+    <link rel="stylesheet" href="<?php echo e(asset('css/style.css')); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -520,6 +520,26 @@
             color: #495057;
         }
 
+        .badge-manual {
+            background: #ffc107;
+            color: #000;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .badge-esp32 {
+            background: #28a745;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
         .people-count {
             background: #007bff;
             color: white;
@@ -785,16 +805,17 @@
         <!-- ===== Monitoring Section ===== -->
         <section id="Kontrol">
             <div class="navbar">
-                <i class="fas fa-building"></i> {{ $sensorData['location'] ?? 'Ruang Dosen Prodi Teknik Elektro' }}
-                @if($sensorData['connection_status'] === 'online')
+                <i class="fas fa-building"></i> <?php echo e($sensorData['location'] ?? 'Ruang Dosen Prodi Teknik Elektro'); ?>
+
+                <?php if($sensorData['connection_status'] === 'online'): ?>
                     <span class="realtime-indicator">
                         <div class="realtime-dot"></div>
                         ONLINE
                     </span>
-                @endif
+                <?php endif; ?>
             </div>
             <div class="subnav" id="waktuRealtime">
-                <i class="fas fa-clock"></i> <span id="currentDateTime">{{ now()->format('l, d F Y - H:i:s') }} WIB</span>
+                <i class="fas fa-clock"></i> <span id="currentDateTime"><?php echo e(now()->format('l, d F Y - H:i:s')); ?> WIB</span>
             </div>
 
             <!-- Connection Status -->
@@ -806,16 +827,19 @@
                         </div>
                         <div class="title">Status Koneksi ESP32</div>
                         <div class="value">
-                            <span class="connection-status {{ $sensorData['connection_status'] }}">
-                                {{ $sensorData['status'] === 'active' ? 'Online' : 'Offline' }}
+                            <span class="connection-status <?php echo e($sensorData['connection_status']); ?>">
+                                <?php echo e($sensorData['status'] === 'active' ? 'Online' : 'Offline'); ?>
+
                             </span>
                         </div>
                         <div class="data-timestamp">
-                            @if($sensorData['connection_status'] === 'online')
-                                Terakhir update: {{ $sensorData['last_update_time'] }}
-                            @else
-                                Data terakhir: {{ $sensorData['time_ago'] ?? '' }}
-                            @endif
+                            <?php if($sensorData['connection_status'] === 'online'): ?>
+                                Terakhir update: <?php echo e($sensorData['last_update_time']); ?>
+
+                            <?php else: ?>
+                                Data terakhir: <?php echo e($sensorData['time_ago'] ?? ''); ?>
+
+                            <?php endif; ?>
                         </div>
                     </div>
                     <div class="card sensor-card">
@@ -823,8 +847,8 @@
                             <i class="fas fa-microchip"></i>
                         </div>
                         <div class="title">Device Info</div>
-                        <div class="value">{{ $sensorData['device_id'] ?? 'ESP32_Smart_Energy' }}</div>
-                        <div class="data-timestamp">{{ $sensorData['location'] ?? 'Lab Teknik Tegangan Tinggi' }}</div>
+                        <div class="value"><?php echo e($sensorData['device_id'] ?? 'ESP32_Smart_Energy'); ?></div>
+                        <div class="data-timestamp"><?php echo e($sensorData['location'] ?? 'Ruang Dosen Prodi Teknik Elektro'); ?></div>
                     </div>
                     <div class="card sensor-card">
                         <div class="card-icon">
@@ -832,20 +856,20 @@
                         </div>
                         <div class="title">WiFi Signal</div>
                         <div class="value">
-                            @if($sensorData['wifi_rssi'])
-                                {{ $sensorData['wifi_rssi'] }} dBm
-                            @else
+                            <?php if($sensorData['wifi_rssi']): ?>
+                                <?php echo e($sensorData['wifi_rssi']); ?> dBm
+                            <?php else: ?>
                                 -- dBm
-                            @endif
+                            <?php endif; ?>
                         </div>
-                        <div class="data-timestamp">{{ $sensorData['wifi_quality'] ?? '--' }}</div>
+                        <div class="data-timestamp"><?php echo e($sensorData['wifi_quality'] ?? '--'); ?></div>
                     </div>
                     <div class="card sensor-card">
                         <div class="card-icon">
                             <i class="fas fa-database"></i>
                         </div>
                         <div class="title">Total Data Records</div>
-                        <div class="value">{{ number_format($totalRecords) }}</div>
+                        <div class="value"><?php echo e(number_format($totalRecords)); ?></div>
                         <div class="data-timestamp">Data tersimpan di database</div>
                     </div>
                 </div>
@@ -861,13 +885,13 @@
                         </div>
                         <div class="title">Suhu Ruangan</div>
                         <div class="value">
-                            @if($sensorData['temperature'])
-                                {{ number_format($sensorData['temperature'], 1) }}°C
-                            @else
+                            <?php if($sensorData['temperature']): ?>
+                                <?php echo e(number_format($sensorData['temperature'], 1)); ?>°C
+                            <?php else: ?>
                                 --°C
-                            @endif
+                            <?php endif; ?>
                         </div>
-                        <div class="data-timestamp">{{ $sensorData['last_update_time'] ?? 'Belum ada data' }}</div>
+                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
                     </div>
 
                     <div class="card sensor-card">
@@ -876,13 +900,13 @@
                         </div>
                         <div class="title">Kelembaban Ruangan</div>
                         <div class="value">
-                            @if($sensorData['humidity'])
-                                {{ number_format($sensorData['humidity'], 1) }}%
-                            @else
+                            <?php if($sensorData['humidity']): ?>
+                                <?php echo e(number_format($sensorData['humidity'], 1)); ?>%
+                            <?php else: ?>
                                 --%
-                            @endif
+                            <?php endif; ?>
                         </div>
-                        <div class="data-timestamp">{{ $sensorData['last_update_time'] ?? 'Belum ada data' }}</div>
+                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
                     </div>
 
                     <div class="card sensor-card">
@@ -890,8 +914,8 @@
                             <i class="fas fa-users"></i>
                         </div>
                         <div class="title">Jumlah Orang di Ruangan</div>
-                        <div class="value">{{ $sensorData['people_count'] ?? 0 }}</div>
-                        <div class="data-timestamp">{{ $sensorData['last_update_time'] ?? 'Belum ada data' }}</div>
+                        <div class="value"><?php echo e($sensorData['people_count'] ?? 0); ?></div>
+                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
                     </div>
 
                     <div class="card sensor-card">
@@ -900,13 +924,13 @@
                         </div>
                         <div class="title">Intensitas Cahaya</div>
                         <div class="value">
-                            @if($sensorData['light_intensity'])
-                                {{ number_format($sensorData['light_intensity']) }} lux
-                            @else
+                            <?php if($sensorData['light_intensity']): ?>
+                                <?php echo e(number_format($sensorData['light_intensity'])); ?> lux
+                            <?php else: ?>
                                 -- lux
-                            @endif
+                            <?php endif; ?>
                         </div>
-                        <div class="data-timestamp">{{ $sensorData['last_update_time'] ?? 'Belum ada data' }}</div>
+                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
                     </div>
 
                     <div class="card sensor-card">
@@ -915,13 +939,13 @@
                         </div>
                         <div class="title">Status Lampu</div>
                         <div class="value">
-                            @if(isset($sensorData['lamp_status']) && $sensorData['lamp_status'] === 'ON')
+                            <?php if(isset($sensorData['lamp_status']) && $sensorData['lamp_status'] === 'ON'): ?>
                                 <span style="color: #ffc107;">ON</span>
-                            @else
+                            <?php else: ?>
                                 <span style="color: #6c757d;">OFF</span>
-                            @endif
+                            <?php endif; ?>
                         </div>
-                        <div class="data-timestamp">{{ $sensorData['last_update_time'] ?? 'Belum ada data' }}</div>
+                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
                     </div>
                 </div>
             </div>
@@ -935,8 +959,8 @@
                             <i class="fas fa-snowflake"></i>
                         </div>
                         <div class="title">Status AC</div>
-                        <div class="value">{{ $sensorData['ac_status'] ?? 'OFF' }}</div>
-                        <div class="data-timestamp">{{ $sensorData['last_update_time'] ?? 'Belum ada data' }}</div>
+                        <div class="value"><?php echo e($sensorData['ac_status'] ?? 'OFF'); ?></div>
+                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
                     </div>
 
                     <div class="card sensor-card">
@@ -945,13 +969,13 @@
                         </div>
                         <div class="title">Set Temperature AC</div>
                         <div class="value">
-                            @if($sensorData['set_temperature'])
-                                {{ $sensorData['set_temperature'] }}°C
-                            @else
+                            <?php if($sensorData['set_temperature']): ?>
+                                <?php echo e($sensorData['set_temperature']); ?>°C
+                            <?php else: ?>
                                 --°C
-                            @endif
+                            <?php endif; ?>
                         </div>
-                        <div class="data-timestamp">{{ $sensorData['last_update_time'] ?? 'Belum ada data' }}</div>
+                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
                     </div>
 
                     <div class="card sensor-card">
@@ -960,10 +984,11 @@
                         </div>
                         <div class="title">Sensor Deteksi Orang</div>
                         <div class="value">
-                            IN: {{ $sensorData['proximity_in'] ? 'AKTIF' : 'OFF' }} | 
-                            OUT: {{ $sensorData['proximity_out'] ? 'AKTIF' : 'OFF' }}
+                            IN: <?php echo e($sensorData['proximity_in'] ? 'AKTIF' : 'OFF'); ?> | 
+                            OUT: <?php echo e($sensorData['proximity_out'] ? 'AKTIF' : 'OFF'); ?>
+
                         </div>
-                        <div class="data-timestamp">{{ $sensorData['last_update_time'] ?? 'Belum ada data' }}</div>
+                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
                     </div>
 
                     <div class="card sensor-card">
@@ -972,11 +997,11 @@
                         </div>
                         <div class="title">Update Frequency</div>
                         <div class="value">
-                            @if($updateFrequency)
-                                {{ $updateFrequency }} detik
-                            @else
+                            <?php if($updateFrequency): ?>
+                                <?php echo e($updateFrequency); ?> detik
+                            <?php else: ?>
                                 -- detik
-                            @endif
+                            <?php endif; ?>
                         </div>
                         <div class="data-timestamp">Interval update data</div>
                     </div>
@@ -1101,11 +1126,12 @@
                         </div>
                         <div class="title">Data Hari Ini</div>
                         <div class="value">
-                            @if(isset($dailyStats['today_count']))
-                                {{ number_format($dailyStats['today_count']) }}
-                            @else
+                            <?php if(isset($dailyStats['today_count'])): ?>
+                                <?php echo e(number_format($dailyStats['today_count'])); ?>
+
+                            <?php else: ?>
                                 0
-                            @endif
+                            <?php endif; ?>
                         </div>
                         <div class="data-timestamp">Record data sensor</div>
                     </div>
@@ -1116,11 +1142,11 @@
                         </div>
                         <div class="title">Rata-rata Suhu Hari Ini</div>
                         <div class="value">
-                            @if(isset($dailyStats['avg_temperature']))
-                                {{ number_format($dailyStats['avg_temperature'], 1) }}°C
-                            @else
+                            <?php if(isset($dailyStats['avg_temperature'])): ?>
+                                <?php echo e(number_format($dailyStats['avg_temperature'], 1)); ?>°C
+                            <?php else: ?>
                                 --°C
-                            @endif
+                            <?php endif; ?>
                         </div>
                         <div class="data-timestamp">Suhu rata-rata</div>
                     </div>
@@ -1131,11 +1157,12 @@
                         </div>
                         <div class="title">Max Orang Hari Ini</div>
                         <div class="value">
-                            @if(isset($dailyStats['max_people']))
-                                {{ $dailyStats['max_people'] }}
-                            @else
+                            <?php if(isset($dailyStats['max_people'])): ?>
+                                <?php echo e($dailyStats['max_people']); ?>
+
+                            <?php else: ?>
                                 0
-                            @endif
+                            <?php endif; ?>
                         </div>
                         <div class="data-timestamp">Jumlah maksimum</div>
                     </div>
@@ -1146,15 +1173,15 @@
                         </div>
                         <div class="title">Data Age</div>
                         <div class="value">
-                            @if($sensorData['data_age_minutes'] <= 2)
+                            <?php if($sensorData['data_age_minutes'] <= 2): ?>
                                 <span style="color: #28a745;">Fresh</span>
-                            @elseif($sensorData['data_age_minutes'] <= 10)
-                                <span style="color: #ffc107;">{{ $sensorData['data_age_minutes'] }} min</span>
-                            @else
-                                <span style="color: #dc3545;">{{ $sensorData['data_age_minutes'] }} min</span>
-                            @endif
+                            <?php elseif($sensorData['data_age_minutes'] <= 10): ?>
+                                <span style="color: #ffc107;"><?php echo e($sensorData['data_age_minutes']); ?> min</span>
+                            <?php else: ?>
+                                <span style="color: #dc3545;"><?php echo e($sensorData['data_age_minutes']); ?> min</span>
+                            <?php endif; ?>
                         </div>
-                        <div class="data-timestamp">{{ $sensorData['time_ago'] ?? '' }}</div>
+                        <div class="data-timestamp"><?php echo e($sensorData['time_ago'] ?? ''); ?></div>
                     </div>
                 </div>
             </div>
@@ -1181,7 +1208,14 @@
                             <i class="fas fa-leaf"></i>
                         </div>
                         <div class="title">Energi yang Di Hemat</div>
-                        <div class="value" id="energySave">0%</div>
+                        <div class="value" id="energySave">
+                            <?php echo e(isset($energySavings) ? $energySavings['savings_percentage'] : 0); ?>%
+                        </div>
+                        <div class="work-hours-info">
+                            <div style="font-size: 0.85rem; margin-top: 5px;">
+                                Hemat: <?php echo e(isset($energySavings) ? $energySavings['saved_kwh'] : 0); ?> kWh
+                            </div>
+                        </div>
                     </div>
 
                     <div class="card status-card">
@@ -1329,7 +1363,7 @@
                 </span>
             </div>
             <div class="subnav">
-                <i class="fas fa-analytics"></i> Analisis mendalam data sensor ESP32, pola penggunaan AC, dan efisiensi energi Lab Teknik Tegangan Tinggi UNJA
+                <i class="fas fa-analytics"></i> Analisis mendalam data sensor ESP32, pola penggunaan AC, dan efisiensi energi Ruang Dosen Prodi Teknik Elektro UNJA
             </div>
 
             <!-- Summary Analytics Cards -->
@@ -1511,7 +1545,7 @@
                             <i class="fas fa-database"></i>
                         </div>
                         <div class="title">Total Records</div>
-                        <div class="value" id="totalRecords">{{ number_format($totalRecords) }}</div>
+                        <div class="value" id="totalRecords"><?php echo e(number_format($totalRecords)); ?></div>
                         <div class="data-timestamp">Data tersimpan</div>
                     </div>
                     <div class="card sensor-card">
@@ -1519,8 +1553,8 @@
                             <i class="fas fa-clock"></i>
                         </div>
                         <div class="title">Data Terakhir</div>
-                        <div class="value" id="lastUpdate">{{ $sensorData['last_update_time'] ?? '--' }}</div>
-                        <div class="data-timestamp">{{ $sensorData['time_ago'] ?? 'Belum ada data' }}</div>
+                        <div class="value" id="lastUpdate"><?php echo e($sensorData['last_update_time'] ?? '--'); ?></div>
+                        <div class="data-timestamp"><?php echo e($sensorData['time_ago'] ?? 'Belum ada data'); ?></div>
                     </div>
                     <div class="card sensor-card">
                         <div class="card-icon">
@@ -1528,8 +1562,9 @@
                         </div>
                         <div class="title">Status Koneksi</div>
                         <div class="value">
-                            <span class="connection-status {{ $sensorData['connection_status'] ?? 'offline' }}">
-                                {{ $sensorData['status'] === 'active' ? 'Online' : 'Offline' }}
+                            <span class="connection-status <?php echo e($sensorData['connection_status'] ?? 'offline'); ?>">
+                                <?php echo e($sensorData['status'] === 'active' ? 'Online' : 'Offline'); ?>
+
                             </span>
                         </div>
                         <div class="data-timestamp">ESP32 Connection</div>
@@ -1540,11 +1575,11 @@
                         </div>
                         <div class="title">Update Frequency</div>
                         <div class="value" id="updateFreq">
-                            @if($updateFrequency)
-                                {{ $updateFrequency }}s
-                            @else
+                            <?php if($updateFrequency): ?>
+                                <?php echo e($updateFrequency); ?>s
+                            <?php else: ?>
                                 --s
-                            @endif
+                            <?php endif; ?>
                         </div>
                         <div class="data-timestamp">Interval rata-rata</div>
                     </div>
@@ -1587,6 +1622,8 @@
                                     <th><i class="fas fa-clock"></i> Timestamp</th>
                                     <th><i class="fas fa-microchip"></i> Device</th>
                                     <th><i class="fas fa-users"></i> Orang</th>
+                                    <th><i class="fas fa-sign-in-alt"></i> Masuk</th>
+                                    <th><i class="fas fa-sign-out-alt"></i> Keluar</th>
                                     <th><i class="fas fa-thermometer-half"></i> Suhu</th>
                                     <th><i class="fas fa-tint"></i> Kelembaban</th>
                                     <th><i class="fas fa-sun"></i> Cahaya</th>
@@ -1599,7 +1636,7 @@
                             </thead>
                             <tbody id="sensor-data-body">
                                 <tr>
-                                    <td colspan="12" class="loading-row">
+                                    <td colspan="14" class="loading-row">
                                         <i class="fas fa-spinner fa-spin"></i> Loading data sensor...
                                     </td>
                                 </tr>
@@ -1685,7 +1722,7 @@
                                 <i class="fas fa-users"></i>
                             </div>
                             <div class="title">Max Hari Ini</div>
-                            <div class="value" id="maxPeopleToday">{{ $dailyStats['max_people'] ?? 0 }}</div>
+                            <div class="value" id="maxPeopleToday"><?php echo e($dailyStats['max_people'] ?? 0); ?></div>
                             <div class="data-timestamp">Jumlah maksimum</div>
                         </div>
                         <div class="card sensor-card">
@@ -1693,7 +1730,7 @@
                                 <i class="fas fa-chart-line"></i>
                             </div>
                             <div class="title">Rata-rata</div>
-                            <div class="value" id="avgPeopleToday">{{ isset($dailyStats['avg_people']) ? number_format($dailyStats['avg_people'], 1) : '0.0' }}</div>
+                            <div class="value" id="avgPeopleToday"><?php echo e(isset($dailyStats['avg_people']) ? number_format($dailyStats['avg_people'], 1) : '0.0'); ?></div>
                             <div class="data-timestamp">Rata-rata harian</div>
                         </div>
                         <div class="card sensor-card">
@@ -1701,7 +1738,7 @@
                                 <i class="fas fa-clock"></i>
                             </div>
                             <div class="title">Waktu Puncak</div>
-                            <div class="value" id="peakTimeToday">{{ $dailyStats['peak_time'] ?? '--:--' }}</div>
+                            <div class="value" id="peakTimeToday"><?php echo e($dailyStats['peak_time'] ?? '--:--'); ?></div>
                             <div class="data-timestamp">Jam tersibuk</div>
                         </div>
                         <div class="card sensor-card">
@@ -1745,7 +1782,7 @@
                                 <i class="fas fa-thermometer-half"></i>
                             </div>
                             <div class="title">Suhu Rata-rata</div>
-                            <div class="value" id="avgTempToday">{{ isset($dailyStats['avg_temperature']) ? number_format($dailyStats['avg_temperature'], 1) : '--' }}°C</div>
+                            <div class="value" id="avgTempToday"><?php echo e(isset($dailyStats['avg_temperature']) ? number_format($dailyStats['avg_temperature'], 1) : '--'); ?>°C</div>
                             <div class="data-timestamp">Hari ini</div>
                         </div>
                         <div class="card sensor-card">
@@ -1753,7 +1790,7 @@
                                 <i class="fas fa-tint"></i>
                             </div>
                             <div class="title">Kelembaban Rata-rata</div>
-                            <div class="value" id="avgHumidityToday">{{ isset($dailyStats['avg_humidity']) ? number_format($dailyStats['avg_humidity'], 1) : '--' }}%</div>
+                            <div class="value" id="avgHumidityToday"><?php echo e(isset($dailyStats['avg_humidity']) ? number_format($dailyStats['avg_humidity'], 1) : '--'); ?>%</div>
                             <div class="data-timestamp">Hari ini</div>
                         </div>
                         <div class="card sensor-card">
@@ -1761,7 +1798,7 @@
                                 <i class="fas fa-sun"></i>
                             </div>
                             <div class="title">Cahaya Rata-rata</div>
-                            <div class="value" id="avgLightToday">{{ isset($dailyStats['avg_light']) ? number_format($dailyStats['avg_light']) : '--' }} lux</div>
+                            <div class="value" id="avgLightToday"><?php echo e(isset($dailyStats['avg_light']) ? number_format($dailyStats['avg_light']) : '--'); ?> lux</div>
                             <div class="data-timestamp">Hari ini</div>
                         </div>
                         <div class="card sensor-card">
@@ -2534,7 +2571,7 @@
             const period = periodSelect ? periodSelect.value : 'week';
             const deviceFilter = deviceFilterSelect ? deviceFilterSelect.value : '';
             
-            tbody.innerHTML = '<tr><td colspan="12" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading data sensor...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="14" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading data sensor...</td></tr>';
             
             let url = `/api/sensor/history?per_page=${limit}`;
             if (deviceFilter) {
@@ -2571,6 +2608,8 @@
                     if (data.success) {
                         if (data.data && Array.isArray(data.data) && data.data.length > 0) {
                             let html = '';
+                            let previousPeopleCount = null;
+                            
                             data.data.forEach((item, index) => {
                                 try {
                                     const timestamp = item.created_at ? 
@@ -2580,12 +2619,34 @@
                                     
                                     const proximityStatus = `IN: ${item.proximity_in ? 'ON' : 'OFF'} | OUT: ${item.proximity_out ? 'ON' : 'OFF'}`;
                                     
+                                    // Hitung orang masuk dan keluar
+                                    let masuk = '--';
+                                    let keluar = '--';
+                                    
+                                    if (previousPeopleCount !== null) {
+                                        const diff = item.people_count - previousPeopleCount;
+                                        if (diff > 0) {
+                                            masuk = `<span style="color: #28a745; font-weight: bold;">+${diff}</span>`;
+                                            keluar = '0';
+                                        } else if (diff < 0) {
+                                            masuk = '0';
+                                            keluar = `<span style="color: #dc3545; font-weight: bold;">${Math.abs(diff)}</span>`;
+                                        } else {
+                                            masuk = '0';
+                                            keluar = '0';
+                                        }
+                                    }
+                                    
+                                    previousPeopleCount = item.people_count;
+                                    
                                     html += `
                                         <tr>
                                             <td>${item.id || '--'}</td>
                                             <td>${timestamp}</td>
                                             <td><span class="device-badge">${item.device_id || 'ESP32'}</span></td>
                                             <td><span class="people-count">${item.people_count || 0}</span></td>
+                                            <td>${masuk}</td>
+                                            <td>${keluar}</td>
                                             <td>${item.room_temperature ? item.room_temperature : '--'}</td>
                                             <td>${item.humidity ? item.humidity : '--'}</td>
                                             <td>${item.light_level || '--'} lux</td>
@@ -3426,7 +3487,7 @@
             
             const controlData = {
                 device_id: 'ESP32_Smart_Energy_ChangeDetection',
-                location: 'Lab Teknik Tegangan Tinggi',
+                location: 'Ruang Dosen Prodi Teknik Elektro',
                 ac1_status: currentACState.ac1_status,
                 ac2_status: currentACState.ac2_status,
                 ac1_temperature: currentACState.ac1_temperature,
@@ -3469,7 +3530,7 @@
                     },
                     body: JSON.stringify({
                         device_id: 'ESP32_Smart_Energy_ChangeDetection',
-                        location: 'Lab Teknik Tegangan Tinggi'
+                        location: 'Ruang Dosen Prodi Teknik Elektro'
                     })
                 })
                 .then(response => response.json())
@@ -3501,7 +3562,7 @@
                 },
                 body: JSON.stringify({
                     device_id: 'ESP32_Smart_Energy_ChangeDetection',
-                    location: 'Lab Teknik Tegangan Tinggi'
+                    location: 'Ruang Dosen Prodi Teknik Elektro'
                 })
             })
             .then(response => response.json())
@@ -3764,7 +3825,7 @@
         function downloadDailyReport() {
             try {
                 const today = new Date().toISOString().split('T')[0];
-                const url = `/api/reports/daily?date=${today}&format=pdf`;
+                const url = `/api/reports/pdf/daily?date=${today}`;
                 console.log('Downloading daily report from:', url);
                 
                 // Create a temporary link to trigger download
@@ -3793,7 +3854,7 @@
                 const today = new Date();
                 const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
                 const weekStart = startOfWeek.toISOString().split('T')[0];
-                const url = `/api/reports/weekly?week_start=${weekStart}&format=pdf`;
+                const url = `/api/reports/pdf/weekly?week_start=${weekStart}`;
                 console.log('Downloading weekly report from:', url);
                 
                 const link = document.createElement('a');
@@ -3819,7 +3880,7 @@
             try {
                 const today = new Date();
                 const month = today.toISOString().slice(0, 7); // YYYY-MM format
-                const url = `/api/reports/monthly?month=${month}&format=pdf`;
+                const url = `/api/reports/pdf/monthly?month=${month}`;
                 console.log('Downloading monthly report from:', url);
                 
                 const link = document.createElement('a');
@@ -3847,7 +3908,7 @@
                 const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
                 const dateFrom = lastMonth.toISOString().split('T')[0];
                 const dateTo = today.toISOString().split('T')[0];
-                const url = `/api/reports/efficiency?date_from=${dateFrom}&date_to=${dateTo}&format=pdf`;
+                const url = `/api/reports/pdf/efficiency?date_from=${dateFrom}&date_to=${dateTo}`;
                 console.log('Downloading efficiency report from:', url);
                 
                 const link = document.createElement('a');
@@ -3961,7 +4022,7 @@
             if (dateToInput) dateToInput.value = today.toISOString().split('T')[0];
         });
     </script>
-    <script src="{{ asset('ac-control.js') }}"></script>
-    <script src="{{ asset('script.js') }}"></script>
+    <script src="<?php echo e(asset('ac-control.js')); ?>"></script>
+    <script src="<?php echo e(asset('script.js')); ?>"></script>
 </body>
-</html>
+</html><?php /**PATH C:\Users\MyPC PRO\Documents\1. PUNYA UMAIIII\dasko\dasko-app\resources\views/dashboard.blade.php ENDPATH**/ ?>

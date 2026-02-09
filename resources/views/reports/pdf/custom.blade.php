@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Laporan Harian - {{ $date->format('d F Y') }}</title>
+    <title>Laporan Kustom - {{ $summary['period'] }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,11 +13,11 @@
         .header {
             text-align: center;
             margin-bottom: 30px;
-            border-bottom: 3px solid #4F46E5;
+            border-bottom: 3px solid #3b82f6;
             padding-bottom: 20px;
         }
         .header h1 {
-            color: #4F46E5;
+            color: #3b82f6;
             margin: 0;
             font-size: 24px;
         }
@@ -52,7 +52,7 @@
         .summary-value {
             font-size: 18px;
             font-weight: bold;
-            color: #4F46E5;
+            color: #3b82f6;
             margin-top: 5px;
         }
         table {
@@ -61,7 +61,7 @@
             margin-top: 20px;
         }
         th {
-            background: #4F46E5;
+            background: #3b82f6;
             color: white;
             padding: 10px;
             text-align: left;
@@ -101,10 +101,11 @@
 </head>
 <body>
     <div class="header">
-        <h1>LAPORAN HARIAN</h1>
+        <h1>LAPORAN KUSTOM</h1>
         <p>Smart Energy Monitoring System</p>
         <p>Ruang Dosen Prodi Teknik Elektro - UNJA</p>
-        <p><strong>{{ $date->format('d F Y') }}</strong></p>
+        <p><strong>{{ $summary['period'] }}</strong></p>
+        <p>{{ $summary['device_type'] }}</p>
     </div>
 
     <div class="summary">
@@ -127,12 +128,31 @@
                 <div class="summary-value">{{ $summary['avg_temperature'] }}°C</div>
             </div>
         </div>
+        <div class="summary-grid" style="margin-top: 10px;">
+            <div class="summary-item">
+                <div class="summary-label">Rata-rata Kelembaban</div>
+                <div class="summary-value">{{ $summary['avg_humidity'] }}%</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Rata-rata Cahaya</div>
+                <div class="summary-value">{{ $summary['avg_light'] }} lux</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">AC ON</div>
+                <div class="summary-value">{{ $summary['ac_on_count'] }}x</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Lampu ON</div>
+                <div class="summary-value">{{ $summary['lamp_on_count'] }}x</div>
+            </div>
+        </div>
     </div>
 
     <h3>Detail Data Sensor</h3>
     <table>
         <thead>
             <tr>
+                <th>Tanggal</th>
                 <th>Waktu</th>
                 <th>Orang</th>
                 <th>Suhu</th>
@@ -145,6 +165,7 @@
         <tbody>
             @forelse($data as $item)
             <tr>
+                <td>{{ $item->created_at->format('d/m/Y') }}</td>
                 <td>{{ $item->created_at->format('H:i:s') }}</td>
                 <td>{{ $item->people_count }}</td>
                 <td>{{ number_format($item->room_temperature, 1) }}°C</td>
@@ -167,7 +188,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="7" style="text-align: center; padding: 20px;">Tidak ada data</td>
+                <td colspan="8" style="text-align: center; padding: 20px;">Tidak ada data untuk periode yang dipilih</td>
             </tr>
             @endforelse
         </tbody>
