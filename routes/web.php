@@ -75,7 +75,7 @@ Route::get('/dashboard.html', function () {
         Route::resource('users', UserController::class);
         Route::post('/users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
         
-        // Device Management
+        
         Route::resource('devices', DeviceController::class);
         Route::post('/devices/{device}/toggle', [DeviceController::class, 'toggle'])->name('devices.toggle');
         Route::post('/devices/bulk-action', [DeviceController::class, 'bulkAction'])->name('devices.bulk-action');

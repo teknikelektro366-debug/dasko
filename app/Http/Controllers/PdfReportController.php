@@ -33,8 +33,8 @@ class PdfReportController extends Controller
             
             $filename = 'laporan_harian_' . $startDate->format('Y_m_d') . '.pdf';
             
-            // Use stream() instead of download() to open in browser
-            return $pdf->stream($filename);
+            // Use download() for force download
+            return $pdf->download($filename);
         } catch (\Exception $e) {
             \Log::error('PDF Generation Error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to generate PDF: ' . $e->getMessage()], 500);
@@ -65,7 +65,7 @@ class PdfReportController extends Controller
             ]);
             
             $filename = 'laporan_mingguan_' . $startDate->format('Y_m_d') . '.pdf';
-            return $pdf->stream($filename);
+            return $pdf->download($filename);
         } catch (\Exception $e) {
             \Log::error('PDF Generation Error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to generate PDF: ' . $e->getMessage()], 500);
@@ -96,7 +96,7 @@ class PdfReportController extends Controller
             ]);
             
             $filename = 'laporan_bulanan_' . $startDate->format('Y_m') . '.pdf';
-            return $pdf->stream($filename);
+            return $pdf->download($filename);
         } catch (\Exception $e) {
             \Log::error('PDF Generation Error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to generate PDF: ' . $e->getMessage()], 500);
@@ -128,7 +128,7 @@ class PdfReportController extends Controller
             ]);
             
             $filename = 'laporan_efisiensi_' . $startDate->format('Y_m_d') . '.pdf';
-            return $pdf->stream($filename);
+            return $pdf->download($filename);
         } catch (\Exception $e) {
             \Log::error('PDF Generation Error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to generate PDF: ' . $e->getMessage()], 500);
@@ -291,7 +291,7 @@ class PdfReportController extends Controller
                 ]);
                 
                 $filename = 'laporan_kustom_' . $startDate->format('Y_m_d') . '_' . $endDate->format('Y_m_d') . '.pdf';
-                return $pdf->stream($filename);
+                return $pdf->download($filename);
             } else {
                 // Return JSON for other formats
                 return response()->json([

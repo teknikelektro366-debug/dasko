@@ -83,9 +83,6 @@ Route::prefix('reports')->group(function () {
     // Efficiency report (redirect to monthly for now)
     Route::get('/efficiency', [SimpleReportController::class, 'monthlyReport']);
     
-    // Custom report (redirect to daily for now)
-    Route::get('/custom', [SimpleReportController::class, 'dailyReport']);
-    
     // PDF Download Routes
     Route::get('/pdf/daily', [\App\Http\Controllers\PdfReportController::class, 'dailyReport']);
     Route::get('/pdf/weekly', [\App\Http\Controllers\PdfReportController::class, 'weeklyReport']);

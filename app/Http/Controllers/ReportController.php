@@ -418,63 +418,51 @@ class ReportController extends Controller
 
     private function generatePDFReport($energyLogs, $summary, $dateFrom, $dateTo, $deviceType = null)
     {
-        $html = view('reports.pdf.energy', compact('energyLogs', 'summary', 'dateFrom', 'dateTo', 'deviceType'))->render();
-        
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf.energy', compact('energyLogs', 'summary', 'dateFrom', 'dateTo', 'deviceType'));
         $filename = 'energy_report_' . $dateFrom->format('Y_m_d') . '_to_' . $dateTo->format('Y_m_d') . '.pdf';
         
-        // Simple HTML to PDF conversion (can be enhanced with DomPDF or similar)
-        return response($html)
-            ->header('Content-Type', 'text/html')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        return $pdf->download($filename);
     }
 
     private function generateDailyPDFReport($energyLogs, $summary, $date)
     {
-        $html = view('reports.pdf.daily', compact('energyLogs', 'summary', 'date'))->render();
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf.daily', compact('energyLogs', 'summary', 'date'));
         $filename = 'daily_report_' . $date->format('Y_m_d') . '.pdf';
         
-        return response($html)
-            ->header('Content-Type', 'text/html')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        return $pdf->download($filename);
     }
 
     private function generateWeeklyPDFReport($energyLogs, $summary, $startDate, $endDate)
     {
-        $html = view('reports.pdf.weekly', compact('energyLogs', 'summary', 'startDate', 'endDate'))->render();
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf.weekly', compact('energyLogs', 'summary', 'startDate', 'endDate'));
         $filename = 'weekly_report_' . $startDate->format('Y_m_d') . '.pdf';
         
-        return response($html)
-            ->header('Content-Type', 'text/html')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        return $pdf->download($filename);
     }
 
     private function generateMonthlyPDFReport($energyLogs, $summary, $startDate, $endDate)
     {
-        $html = view('reports.pdf.monthly', compact('energyLogs', 'summary', 'startDate', 'endDate'))->render();
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf.monthly', compact('energyLogs', 'summary', 'startDate', 'endDate'));
         $filename = 'monthly_report_' . $startDate->format('Y_m') . '.pdf';
         
-        return response($html)
-            ->header('Content-Type', 'text/html')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        return $pdf->download($filename);
     }
 
     private function generateDevicePDFReport($energyLogs, $summary, $device, $dateFrom, $dateTo)
     {
-        $html = view('reports.pdf.device', compact('energyLogs', 'summary', 'device', 'dateFrom', 'dateTo'))->render();
+        // Try to load device report view, fallback to energy if it doesn't exist
+        $viewName = view()->exists('reports.pdf.device') ? 'reports.pdf.device' : 'reports.pdf.energy';
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($viewName, compact('energyLogs', 'summary', 'device', 'dateFrom', 'dateTo'));
         $filename = 'device_report_' . $device->type . '_' . $dateFrom->format('Y_m_d') . '.pdf';
         
-        return response($html)
-            ->header('Content-Type', 'text/html')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        return $pdf->download($filename);
     }
 
     private function generateEfficiencyPDFReport($efficiencyData, $dateFrom, $dateTo)
     {
-        $html = view('reports.pdf.efficiency', compact('efficiencyData', 'dateFrom', 'dateTo'))->render();
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf.efficiency', compact('efficiencyData', 'dateFrom', 'dateTo'));
         $filename = 'efficiency_report_' . $dateFrom->format('Y_m_d') . '.pdf';
         
-        return response($html)
-            ->header('Content-Type', 'text/html')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        return $pdf->download($filename);
     }
 }
