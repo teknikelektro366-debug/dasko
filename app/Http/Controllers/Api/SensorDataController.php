@@ -121,12 +121,33 @@ class SensorDataController extends Controller
                 $dataToCreate['created_at'] = $request->input('created_at');
                 $dataToCreate['updated_at'] = $request->input('created_at');
             }
-            
-            $sensorData = SensorData::create($dataToCreate);
 
             $action = 'created';
             $wasRecentlyCreated = true;
             $changeReason = 'New data from ESP32';
+            
+            try {
+                $sensorData = SensorData::create($dataToCreate);
+            } catch (\Illuminate\Database\QueryException $qe) {
+                // Handle UNIQUE constraint violation (error 1062)
+                // Fallback: update existing record jika ada unique constraint
+                if ($qe->errorInfo[1] == 1062) {
+                    Log::warning('Unique constraint detected on sensor_data - using updateOrCreate fallback', [
+                        'device_id' => $deviceId,
+                        'hint' => 'Jalankan: php artisan migrate (migration 2026_04_12_163000)'
+                    ]);
+                    
+                    $sensorData = SensorData::updateOrCreate(
+                        ['device_id' => $deviceId, 'location' => $location],
+                        $dataToCreate
+                    );
+                    $action = $sensorData->wasRecentlyCreated ? 'created' : 'updated';
+                    $wasRecentlyCreated = $sensorData->wasRecentlyCreated;
+                    $changeReason = 'Data updated (unique constraint fallback)';
+                } else {
+                    throw $qe; // Re-throw jika bukan error unique constraint
+                }
+            }
 
             // Log berhasil
             Log::info("New sensor record created:", [
