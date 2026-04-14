@@ -95,7 +95,7 @@ const char* rootCACertificate =
 #define DHTPIN            13  // Hanya menggunakan DHT di pin 13
 #define DHTTYPE           DHT22
 #define LDR_PIN           34  // Hanya menggunakan LDR di pin 35
-#define LDR_ENABLED       false // Set true jika sensor LDR terpasang, false = selalu 0 lux
+#define LDR_ENABLED       true // Set true jika sensor LDR terpasang, false = selalu 0 lux
 #define RELAY_LAMP1       25  // Relay untuk lampu (menggunakan NC untuk dual fungsi)
 // #define RELAY_LAMP2       26  // Tidak digunakan - hanya 1 jalur lampure
 #define MAX_PEOPLE 20
@@ -870,9 +870,9 @@ void detectPeople() {
     Serial.print(" | Proxy: ");
     Serial.println(proxyState.isProxyDetected ? "YES" : "NO");
 
-    float temp = dht.readTemperature();
-    if (!isnan(temp)) {
-      Serial.println("🌡️ Temp: " + String(temp, 1) + "°C");
+    // JANGAN memanggil dht.readTemperature() di sini, karena menyalahi interval 2.5 detik DHT22 (membuat sensor blank/NaN)!
+    if (!isnan(currentData.suhuRuang)) {
+      Serial.println("🌡️ Temp: " + String(currentData.suhuRuang, 1) + "°C");
     }
     lastDebug = now;
   }
@@ -1424,12 +1424,29 @@ void kontrolLampu(String &lampStatus) {
   // 3. Auto shutdown setelah 5 menit kosong
   
   if (autoMode && !manualOverride) {
-    // Mode otomatis berdasarkan occupancy (jumlah orang di ruangan)
+    // Mode otomatis berdasarkan occupancy dan LDR (Lux)
     if (jumlahOrang > 0) {
-      // Ada orang di ruangan → Lampu SELALU NYALA
-      lampON = true;
-      lampStatus = "AUTO ON (" + String(jumlahOrang) + " orang)";
-      Serial.println("💡 Auto ON: Ada " + String(jumlahOrang) + " orang di ruangan - Lampu nyala");
+      // Ada orang, implementasi Hysteresis dengan LDR agar lampu tidak berkedip
+      if (lastLamp1) {
+        // Lampu sedang nyala, matikan jika jauh lebih terang dari threshold (misal siang hari sangat cerah)
+        if (currentData.lightLevel > LUX_THRESHOLD + 200) {
+          lampON = false;
+          lampStatus = "AUTO OFF (SANGAT TERANG)";
+        } else {
+          lampON = true;
+          lampStatus = "AUTO ON (" + String(jumlahOrang) + " orang)";
+        }
+      } else {
+        // Lampu sedang mati, hidupkan HANYA jika ruangan lebih gelap dari threshold
+        if (currentData.lightLevel < LUX_THRESHOLD) {
+          lampON = true;
+          lampStatus = "AUTO ON (GELAP)";
+          Serial.println("💡 Auto ON: " + String(jumlahOrang) + " orang, Cahaya " + String(currentData.lightLevel) + " lux");
+        } else {
+          lampON = false;
+          lampStatus = "AUTO OFF (TERANG)";
+        }
+      }
     } else {
       // Tidak ada orang di ruangan → Lampu mati
       lampON = false;
@@ -1772,8 +1789,8 @@ void updatePreviousData() {
 
 // ================= DHT REAL-TIME DENGAN CACHE (min 2s antar baca) =================
 // DHT22 membutuhkan minimal 2 detik antar pembacaan — jika dibaca lebih cepat hasilnya NaN
-static float dhtCacheTemp = NAN;
-static float dhtCacheHum  = NAN;
+static float dhtCacheTemp = 0.0;
+static float dhtCacheHum  = 0.0;
 static unsigned long lastDHTRead = 0;
 
 void readDHTRealtime() {
@@ -1790,6 +1807,10 @@ void readDHTRealtime() {
     currentData.suhuRuang = t;
   } else {
     Serial.println("⚠️ DHT22: Pembacaan suhu gagal, pakai nilai cache: " + String(dhtCacheTemp, 1) + "°C");
+    Serial.println("   -> ALASAN ERROR KEMUNGKINAN DARI HARDWARE ATAU WIRING: ");
+    Serial.println("      1. Kabel DATA (GPIO" + String(DHTPIN) + "), VCC (3.3V), atau GND kendor/copot.");
+    Serial.println("      2. DHT22 perlu Resistor Pull-up (4.7k-10k Ohm) antara VCC dan DATA (Jika bukan modul DHT siap pakai).");
+    Serial.println("      3. Sensor mengalami 'Lockup/Hang' (Solusi: cabut-pasang kabel VCC DHT22 dari ESP32).");
   }
 
   if (!isnan(h) && h >= 0.0 && h <= 100.0) {
@@ -2427,11 +2448,10 @@ void loop() {
       Serial.println("     IN_PIN=" + String(inState) + " (Object=" + String(!inState ? "DETECTED" : "CLEAR") + ")");
       Serial.println("     OUT_PIN=" + String(outState) + " (Object=" + String(!outState ? "DETECTED" : "CLEAR") + ")");
       
-      float temp = dht.readTemperature();
-      float hum = dht.readHumidity();
-      Serial.println("   DHT22 (GPIO13):");
-      Serial.println("     Temperature=" + String(temp) + "°C");
-      Serial.println("     Humidity=" + String(hum) + "%");
+      // Mengambil dari cache. Pemanggilan DHT langsung akan memicu error NaN karena melanggar ritme 2 detik.
+      Serial.println("   DHT22 (GPIO" + String(DHTPIN) + "):");
+      Serial.println("     Temperature=" + String(currentData.suhuRuang) + "°C");
+      Serial.println("     Humidity=" + String(currentData.humidity) + "%");
       
       int ldrRaw = analogRead(LDR_PIN);
       int ldrMapped = map(ldrRaw, 0, 4095, 0, 1000);
@@ -2536,9 +2556,8 @@ void loop() {
       Serial.println("🔍 Enhanced Current Sensor Readings:");
       Serial.println("   People in room: " + String(jumlahOrang));
       
-      float temp = dht.readTemperature();
-      float hum = dht.readHumidity();
-      Serial.println("   DHT22 (GPIO13): T=" + String(temp, 1) + "°C H=" + String(hum, 1) + "%");
+      // Mengambil dari cache.
+      Serial.println("   DHT22 (GPIO" + String(DHTPIN) + "): T=" + String(currentData.suhuRuang, 1) + "°C H=" + String(currentData.humidity, 1) + "%");
       
       int ldrRaw = analogRead(LDR_PIN);
       int ldrMapped = map(ldrRaw, 0, 4095, 0, 1000);
