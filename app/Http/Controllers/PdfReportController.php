@@ -38,8 +38,10 @@ class PdfReportController extends Controller
             $filename = 'laporan_harian_' . $date->format('Y_m_d') . '.pdf';
             return $this->downloadPdfWithFallback('reports.pdf.daily', $pdfData, $filename);
             
-        } catch (\Exception $e) {
-            Log::error('PDF Daily Error: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('PDF Daily Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json(['error' => 'Gagal generate PDF Harian: ' . $e->getMessage()], 500);
         }
     }
@@ -69,8 +71,10 @@ class PdfReportController extends Controller
             
             $filename = 'laporan_mingguan_' . $startDate->format('Y_m_d') . '.pdf';
             return $this->downloadPdfWithFallback('reports.pdf.weekly', $pdfData, $filename);
-        } catch (\Exception $e) {
-            Log::error('PDF Weekly Error: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('PDF Weekly Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json(['error' => 'Failed to generate PDF: ' . $e->getMessage()], 500);
         }
     }
@@ -100,8 +104,10 @@ class PdfReportController extends Controller
             
             $filename = 'laporan_bulanan_' . $startDate->format('Y_m') . '.pdf';
             return $this->downloadPdfWithFallback('reports.pdf.monthly', $pdfData, $filename);
-        } catch (\Exception $e) {
-            Log::error('PDF Monthly Error: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('PDF Monthly Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json(['error' => 'Failed to generate PDF: ' . $e->getMessage()], 500);
         }
     }
@@ -132,8 +138,10 @@ class PdfReportController extends Controller
             
             $filename = 'laporan_efisiensi_' . $startDate->format('Y_m_d') . '.pdf';
             return $this->downloadPdfWithFallback('reports.pdf.efficiency', $pdfData, $filename);
-        } catch (\Exception $e) {
-            Log::error('PDF Efficiency Error: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('PDF Efficiency Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json(['error' => 'Failed to generate PDF: ' . $e->getMessage()], 500);
         }
     }
@@ -196,8 +204,10 @@ class PdfReportController extends Controller
 
             return response()->json(['data' => $data, 'summary' => $summary]);
 
-        } catch (\Exception $e) {
-            Log::error('PDF Custom Error: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('PDF Custom Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json(['error' => 'Failed to generate Custom report: ' . $e->getMessage()], 500);
         }
     }
