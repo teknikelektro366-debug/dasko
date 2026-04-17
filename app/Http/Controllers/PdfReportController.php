@@ -284,15 +284,19 @@ class PdfReportController extends Controller
     private function calculateEfficiencySummary($data, $startDate, $endDate)
     {
         $acOnData = $data->filter(function ($item) {
-            return $this->isAcActive($item->ac_status ?? null);
+            return $this->isStatusOn($item->ac_status ?? null);
         });
-        $lampOnData = $data->where('lamp_status', 'ON');
+        $lampOnData = $data->filter(function ($item) {
+            return $this->isStatusOn($item->lamp_status ?? null);
+        });
+        $acValidStatusCount = $this->countValidStatus($data, 'ac_status');
+        $lampValidStatusCount = $this->countValidStatus($data, 'lamp_status');
         
         return [
             'period' => $startDate->format('d M Y') . ' - ' . $endDate->format('d M Y'),
             'total_records' => $data->count(),
-            'ac_usage_percentage' => $data->count() > 0 ? round(($acOnData->count() / $data->count()) * 100, 1) : 0,
-            'lamp_usage_percentage' => $data->count() > 0 ? round(($lampOnData->count() / $data->count()) * 100, 1) : 0,
+            'ac_usage_percentage' => $acValidStatusCount > 0 ? round(($acOnData->count() / $acValidStatusCount) * 100, 1) : 0,
+            'lamp_usage_percentage' => $lampValidStatusCount > 0 ? round(($lampOnData->count() / $lampValidStatusCount) * 100, 1) : 0,
             'avg_people_when_ac_on' => $this->calculateAveragePeople($acOnData),
             'avg_people_when_lamp_on' => $this->calculateAveragePeople($lampOnData),
             'avg_temperature' => $this->calculateAverageFloat($data, 'room_temperature', 1),
@@ -331,11 +335,20 @@ class PdfReportController extends Controller
     private function countActiveAc(Collection $data): int
     {
         return $data->filter(function ($item) {
-            return $this->isAcActive($item->ac_status ?? null);
+            return $this->isStatusOn($item->ac_status ?? null);
         })->count();
     }
 
-    private function isAcActive($status): bool
+    private function countValidStatus(Collection $data, string $field): int
+    {
+        return $data->pluck($field)
+            ->filter(function ($value) {
+                return is_string($value) && trim($value) !== '';
+            })
+            ->count();
+    }
+
+    private function isStatusOn($status): bool
     {
         if (!is_string($status)) {
             return false;
@@ -343,6 +356,6 @@ class PdfReportController extends Controller
 
         $status = strtoupper(trim($status));
 
-        return $status !== '' && $status !== 'OFF';
+        return $status === 'ON';
     }
 }
