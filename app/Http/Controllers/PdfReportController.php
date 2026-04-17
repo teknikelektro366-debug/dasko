@@ -6,6 +6,7 @@ use App\Models\SensorData;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 class PdfReportController extends Controller
@@ -150,11 +151,17 @@ class PdfReportController extends Controller
             
             $startDate = Carbon::parse($dateFrom)->startOfDay();
             $endDate = Carbon::parse($dateTo)->endOfDay();
+
+            if ($endDate->lt($startDate)) {
+                return response()->json(['error' => 'Parameter date_to tidak boleh lebih kecil dari date_from'], 422);
+            }
+
+            if (!in_array($format, ['pdf', 'json'], true)) {
+                return response()->json(['error' => 'Format harus pdf atau json'], 422);
+            }
             
             $query = SensorData::whereBetween('created_at', [$startDate, $endDate]);
             
-            // Hati-hati: Pastikan kolom 'device_id' memang ada di tabel. 
-            // Jika tidak ada, baris di bawah ini akan menyebabkan Error 500.
             if ($deviceType && $deviceType !== 'all') {
                 $query->where('device_id', $deviceType);
             }
@@ -164,12 +171,12 @@ class PdfReportController extends Controller
             $summary = [
                 'period' => $startDate->format('d M Y') . ' - ' . $endDate->format('d M Y'),
                 'total_records' => $data->count(),
-                'avg_people' => round($data->avg('people_count') ?? 0, 1),
-                'max_people' => $data->max('people_count') ?? 0,
-                'avg_temperature' => round($data->avg('room_temperature') ?? 0, 1),
-                'avg_humidity' => round($data->avg('humidity') ?? 0, 1),
-                'avg_light' => round($data->avg('light_level') ?? 0, 0),
-                'ac_on_count' => $data->where('ac_status', '!=', 'OFF')->count(),
+                'avg_people' => $this->calculateAveragePeople($data),
+                'max_people' => (int) ($data->max('people_count') ?? 0),
+                'avg_temperature' => $this->calculateAverageFloat($data, 'room_temperature', 1),
+                'avg_humidity' => $this->calculateAverageFloat($data, 'humidity', 1),
+                'avg_light' => $this->calculateAverageFloat($data, 'light_level', 0),
+                'ac_on_count' => $this->countActiveAc($data),
                 'lamp_on_count' => $data->where('lamp_status', 'ON')->count(),
                 'device_type' => $deviceType === 'all' ? 'Semua Perangkat' : $deviceType,
             ];
@@ -201,12 +208,12 @@ class PdfReportController extends Controller
         return [
             'date' => $date->format('d F Y'),
             'total_records' => $data->count(),
-            'avg_people' => round($data->avg('people_count') ?? 0, 1),
-            'max_people' => $data->max('people_count') ?? 0,
-            'avg_temperature' => round($data->avg('room_temperature') ?? 0, 1),
-            'avg_humidity' => round($data->avg('humidity') ?? 0, 1),
-            'avg_light' => round($data->avg('light_level') ?? 0, 0),
-            'ac_on_count' => $data->where('ac_status', '!=', 'OFF')->count(),
+            'avg_people' => $this->calculateAveragePeople($data),
+            'max_people' => (int) ($data->max('people_count') ?? 0),
+            'avg_temperature' => $this->calculateAverageFloat($data, 'room_temperature', 1),
+            'avg_humidity' => $this->calculateAverageFloat($data, 'humidity', 1),
+            'avg_light' => $this->calculateAverageFloat($data, 'light_level', 0),
+            'ac_on_count' => $this->countActiveAc($data),
             'lamp_on_count' => $data->where('lamp_status', 'ON')->count(),
         ];
     }
@@ -223,17 +230,17 @@ class PdfReportController extends Controller
                 'date' => $date->format('d M'),
                 'day' => $date->format('l'),
                 'records' => $dayData->count(),
-                'avg_people' => round($dayData->avg('people_count') ?? 0, 1),
-                'avg_temp' => round($dayData->avg('room_temperature') ?? 0, 1),
+                'avg_people' => $this->calculateAveragePeople($dayData),
+                'avg_temp' => $this->calculateAverageFloat($dayData, 'room_temperature', 1),
             ];
         }
         
         return [
             'period' => $startDate->format('d M Y') . ' - ' . $endDate->format('d M Y'),
             'total_records' => $data->count(),
-            'avg_people' => round($data->avg('people_count') ?? 0, 1),
-            'max_people' => $data->max('people_count') ?? 0,
-            'avg_temperature' => round($data->avg('room_temperature') ?? 0, 1),
+            'avg_people' => $this->calculateAveragePeople($data),
+            'max_people' => (int) ($data->max('people_count') ?? 0),
+            'avg_temperature' => $this->calculateAverageFloat($data, 'room_temperature', 1),
             'daily_data' => $dailyData,
         ];
     }
@@ -256,8 +263,8 @@ class PdfReportController extends Controller
                 'week' => 'Minggu ' . $weekNum,
                 'period' => $weekStart->format('d M') . ' - ' . $weekEnd->format('d M'),
                 'records' => $weekData->count(),
-                'avg_people' => round($weekData->avg('people_count') ?? 0, 1),
-                'avg_temp' => round($weekData->avg('room_temperature') ?? 0, 1),
+                'avg_people' => $this->calculateAveragePeople($weekData),
+                'avg_temp' => $this->calculateAverageFloat($weekData, 'room_temperature', 1),
             ];
             
             $weekStart->addWeek();
@@ -267,16 +274,18 @@ class PdfReportController extends Controller
         return [
             'month' => $startDate->format('F Y'),
             'total_records' => $data->count(),
-            'avg_people' => round($data->avg('people_count') ?? 0, 1),
-            'max_people' => $data->max('people_count') ?? 0,
-            'avg_temperature' => round($data->avg('room_temperature') ?? 0, 1),
+            'avg_people' => $this->calculateAveragePeople($data),
+            'max_people' => (int) ($data->max('people_count') ?? 0),
+            'avg_temperature' => $this->calculateAverageFloat($data, 'room_temperature', 1),
             'weekly_data' => $weeklyData,
         ];
     }
     
     private function calculateEfficiencySummary($data, $startDate, $endDate)
     {
-        $acOnData = $data->where('ac_status', '!=', 'OFF');
+        $acOnData = $data->filter(function ($item) {
+            return $this->isAcActive($item->ac_status ?? null);
+        });
         $lampOnData = $data->where('lamp_status', 'ON');
         
         return [
@@ -284,10 +293,56 @@ class PdfReportController extends Controller
             'total_records' => $data->count(),
             'ac_usage_percentage' => $data->count() > 0 ? round(($acOnData->count() / $data->count()) * 100, 1) : 0,
             'lamp_usage_percentage' => $data->count() > 0 ? round(($lampOnData->count() / $data->count()) * 100, 1) : 0,
-            'avg_people_when_ac_on' => round($acOnData->avg('people_count') ?? 0, 1),
-            'avg_people_when_lamp_on' => round($lampOnData->avg('people_count') ?? 0, 1),
-            'avg_temperature' => round($data->avg('room_temperature') ?? 0, 1),
-            'avg_humidity' => round($data->avg('humidity') ?? 0, 1),
+            'avg_people_when_ac_on' => $this->calculateAveragePeople($acOnData),
+            'avg_people_when_lamp_on' => $this->calculateAveragePeople($lampOnData),
+            'avg_temperature' => $this->calculateAverageFloat($data, 'room_temperature', 1),
+            'avg_humidity' => $this->calculateAverageFloat($data, 'humidity', 1),
         ];
+    }
+
+    private function calculateAveragePeople(Collection $data): int
+    {
+        $avgPeople = $data
+            ->pluck('people_count')
+            ->filter(function ($value) {
+                return is_numeric($value);
+            })
+            ->avg();
+
+        return $avgPeople === null ? 0 : (int) round($avgPeople);
+    }
+
+    private function calculateAverageFloat(Collection $data, string $field, int $precision = 1): float
+    {
+        $average = $data
+            ->pluck($field)
+            ->filter(function ($value) {
+                return is_numeric($value);
+            })
+            ->avg();
+
+        if ($average === null) {
+            return 0.0;
+        }
+
+        return round((float) $average, $precision);
+    }
+
+    private function countActiveAc(Collection $data): int
+    {
+        return $data->filter(function ($item) {
+            return $this->isAcActive($item->ac_status ?? null);
+        })->count();
+    }
+
+    private function isAcActive($status): bool
+    {
+        if (!is_string($status)) {
+            return false;
+        }
+
+        $status = strtoupper(trim($status));
+
+        return $status !== '' && $status !== 'OFF';
     }
 }

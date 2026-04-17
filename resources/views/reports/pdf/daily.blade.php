@@ -147,8 +147,8 @@
             <tr>
                 <td>{{ $item->created_at->format('H:i:s') }}</td>
                 <td>{{ $item->people_count }}</td>
-                <td>{{ number_format($item->room_temperature, 1) }}°C</td>
-                <td>{{ number_format($item->humidity, 1) }}%</td>
+                <td>{{ $item->room_temperature !== null ? number_format((float) $item->room_temperature, 1) : '-' }}°C</td>
+                <td>{{ $item->humidity !== null ? number_format((float) $item->humidity, 1) : '-' }}%</td>
                 <td>{{ $item->light_level }} lux</td>
                 <td>
                     @if($item->ac_status != 'OFF')
