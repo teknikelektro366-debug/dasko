@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SensorData;
+use Dompdf\Dompdf;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -28,14 +29,14 @@ class PdfReportController extends Controller
             
             $summary = $this->calculateDailySummary($data, $date);
             
-            $pdf = Pdf::loadView('reports.pdf.daily', [
+            $pdfData = [
                 'data' => $data,
                 'summary' => $summary,
                 'date' => $date
-            ]);
+            ];
             
             $filename = 'laporan_harian_' . $date->format('Y_m_d') . '.pdf';
-            return $pdf->download($filename);
+            return $this->downloadPdfWithFallback('reports.pdf.daily', $pdfData, $filename);
             
         } catch (\Exception $e) {
             Log::error('PDF Daily Error: ' . $e->getMessage());
@@ -59,15 +60,15 @@ class PdfReportController extends Controller
             
             $summary = $this->calculateWeeklySummary($data, $startDate, $endDate);
             
-            $pdf = Pdf::loadView('reports.pdf.weekly', [
+            $pdfData = [
                 'data' => $data,
                 'summary' => $summary,
                 'startDate' => $startDate,
                 'endDate' => $endDate
-            ]);
+            ];
             
             $filename = 'laporan_mingguan_' . $startDate->format('Y_m_d') . '.pdf';
-            return $pdf->download($filename);
+            return $this->downloadPdfWithFallback('reports.pdf.weekly', $pdfData, $filename);
         } catch (\Exception $e) {
             Log::error('PDF Weekly Error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to generate PDF: ' . $e->getMessage()], 500);
@@ -90,15 +91,15 @@ class PdfReportController extends Controller
             
             $summary = $this->calculateMonthlySummary($data, $startDate, $endDate);
             
-            $pdf = Pdf::loadView('reports.pdf.monthly', [
+            $pdfData = [
                 'data' => $data,
                 'summary' => $summary,
                 'startDate' => $startDate,
                 'endDate' => $endDate
-            ]);
+            ];
             
             $filename = 'laporan_bulanan_' . $startDate->format('Y_m') . '.pdf';
-            return $pdf->download($filename);
+            return $this->downloadPdfWithFallback('reports.pdf.monthly', $pdfData, $filename);
         } catch (\Exception $e) {
             Log::error('PDF Monthly Error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to generate PDF: ' . $e->getMessage()], 500);
@@ -122,15 +123,15 @@ class PdfReportController extends Controller
             
             $summary = $this->calculateEfficiencySummary($data, $startDate, $endDate);
             
-            $pdf = Pdf::loadView('reports.pdf.efficiency', [
+            $pdfData = [
                 'data' => $data,
                 'summary' => $summary,
                 'startDate' => $startDate,
                 'endDate' => $endDate
-            ]);
+            ];
             
             $filename = 'laporan_efisiensi_' . $startDate->format('Y_m_d') . '.pdf';
-            return $pdf->download($filename);
+            return $this->downloadPdfWithFallback('reports.pdf.efficiency', $pdfData, $filename);
         } catch (\Exception $e) {
             Log::error('PDF Efficiency Error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to generate PDF: ' . $e->getMessage()], 500);
@@ -182,15 +183,15 @@ class PdfReportController extends Controller
             ];
             
             if ($format === 'pdf') {
-                $pdf = Pdf::loadView('reports.pdf.custom', [
+                $pdfData = [
                     'data' => $data,
                     'summary' => $summary,
                     'startDate' => $startDate,
                     'endDate' => $endDate
-                ]);
+                ];
                 
                 $filename = 'laporan_kustom_' . $startDate->format('Y_m_d') . '.pdf';
-                return $pdf->download($filename);
+                return $this->downloadPdfWithFallback('reports.pdf.custom', $pdfData, $filename);
             }
 
             return response()->json(['data' => $data, 'summary' => $summary]);
@@ -357,5 +358,37 @@ class PdfReportController extends Controller
         $status = strtoupper(trim($status));
 
         return $status === 'ON';
+    }
+
+    private function downloadPdfWithFallback(string $view, array $data, string $filename)
+    {
+        try {
+            return Pdf::loadView($view, $data)->download($filename);
+        } catch (\Throwable $e) {
+            if (!$this->isDompdfWrapperBindingError($e) || !class_exists(Dompdf::class)) {
+                throw $e;
+            }
+
+            Log::warning('Dompdf wrapper binding tidak tersedia, pakai fallback Dompdf native: ' . $e->getMessage());
+
+            $html = view($view, $data)->render();
+            $dompdf = new Dompdf([
+                'isRemoteEnabled' => true,
+                'isHtml5ParserEnabled' => true,
+            ]);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->loadHtml($html, 'UTF-8');
+            $dompdf->render();
+
+            return response($dompdf->output(), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]);
+        }
+    }
+
+    private function isDompdfWrapperBindingError(\Throwable $e): bool
+    {
+        return str_contains(strtolower($e->getMessage()), 'dompdf.wrapper');
     }
 }
