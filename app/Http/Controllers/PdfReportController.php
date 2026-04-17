@@ -6,38 +6,39 @@ use App\Models\SensorData;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class PdfReportController extends Controller
 {
     /**
      * Generate Daily PDF Report
+     * Route: /api/reports/pdf/daily
      */
     public function dailyReport(Request $request)
     {
         try {
-            $date = $request->input('date', now()->format('Y-m-d'));
-            $startDate = Carbon::parse($date)->startOfDay();
-            $endDate = Carbon::parse($date)->endOfDay();
+            $dateInput = $request->input('date', now()->format('Y-m-d'));
+            $date = Carbon::parse($dateInput);
             
-            $data = SensorData::whereBetween('created_at', [$startDate, $endDate])
-                             ->orderBy('created_at', 'desc')
-                             ->get();
+            // Menggunakan whereDate untuk presisi data harian
+            $data = SensorData::whereDate('created_at', $date)
+                               ->orderBy('created_at', 'desc')
+                               ->get();
             
-            $summary = $this->calculateDailySummary($data, $startDate);
+            $summary = $this->calculateDailySummary($data, $date);
             
-            $pdf = PDF::loadView('reports.pdf.daily', [
+            $pdf = Pdf::loadView('reports.pdf.daily', [
                 'data' => $data,
                 'summary' => $summary,
-                'date' => $startDate
+                'date' => $date
             ]);
             
-            $filename = 'laporan_harian_' . $startDate->format('Y_m_d') . '.pdf';
-            
-            // Use download() for force download
+            $filename = 'laporan_harian_' . $date->format('Y_m_d') . '.pdf';
             return $pdf->download($filename);
+            
         } catch (\Exception $e) {
-            \Log::error('PDF Generation Error: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to generate PDF: ' . $e->getMessage()], 500);
+            Log::error('PDF Daily Error: ' . $e->getMessage());
+            return response()->json(['error' => 'Gagal generate PDF Harian: ' . $e->getMessage()], 500);
         }
     }
     
@@ -52,12 +53,12 @@ class PdfReportController extends Controller
             $endDate = $startDate->copy()->endOfWeek();
             
             $data = SensorData::whereBetween('created_at', [$startDate, $endDate])
-                             ->orderBy('created_at', 'desc')
-                             ->get();
+                               ->orderBy('created_at', 'desc')
+                               ->get();
             
             $summary = $this->calculateWeeklySummary($data, $startDate, $endDate);
             
-            $pdf = PDF::loadView('reports.pdf.weekly', [
+            $pdf = Pdf::loadView('reports.pdf.weekly', [
                 'data' => $data,
                 'summary' => $summary,
                 'startDate' => $startDate,
@@ -67,7 +68,7 @@ class PdfReportController extends Controller
             $filename = 'laporan_mingguan_' . $startDate->format('Y_m_d') . '.pdf';
             return $pdf->download($filename);
         } catch (\Exception $e) {
-            \Log::error('PDF Generation Error: ' . $e->getMessage());
+            Log::error('PDF Weekly Error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to generate PDF: ' . $e->getMessage()], 500);
         }
     }
@@ -83,12 +84,12 @@ class PdfReportController extends Controller
             $endDate = Carbon::parse($month)->endOfMonth();
             
             $data = SensorData::whereBetween('created_at', [$startDate, $endDate])
-                             ->orderBy('created_at', 'desc')
-                             ->get();
+                               ->orderBy('created_at', 'desc')
+                               ->get();
             
             $summary = $this->calculateMonthlySummary($data, $startDate, $endDate);
             
-            $pdf = PDF::loadView('reports.pdf.monthly', [
+            $pdf = Pdf::loadView('reports.pdf.monthly', [
                 'data' => $data,
                 'summary' => $summary,
                 'startDate' => $startDate,
@@ -98,7 +99,7 @@ class PdfReportController extends Controller
             $filename = 'laporan_bulanan_' . $startDate->format('Y_m') . '.pdf';
             return $pdf->download($filename);
         } catch (\Exception $e) {
-            \Log::error('PDF Generation Error: ' . $e->getMessage());
+            Log::error('PDF Monthly Error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to generate PDF: ' . $e->getMessage()], 500);
         }
     }
@@ -115,12 +116,12 @@ class PdfReportController extends Controller
             $endDate = Carbon::parse($dateTo)->endOfDay();
             
             $data = SensorData::whereBetween('created_at', [$startDate, $endDate])
-                             ->orderBy('created_at', 'desc')
-                             ->get();
+                               ->orderBy('created_at', 'desc')
+                               ->get();
             
             $summary = $this->calculateEfficiencySummary($data, $startDate, $endDate);
             
-            $pdf = PDF::loadView('reports.pdf.efficiency', [
+            $pdf = Pdf::loadView('reports.pdf.efficiency', [
                 'data' => $data,
                 'summary' => $summary,
                 'startDate' => $startDate,
@@ -130,14 +131,71 @@ class PdfReportController extends Controller
             $filename = 'laporan_efisiensi_' . $startDate->format('Y_m_d') . '.pdf';
             return $pdf->download($filename);
         } catch (\Exception $e) {
-            \Log::error('PDF Generation Error: ' . $e->getMessage());
+            Log::error('PDF Efficiency Error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to generate PDF: ' . $e->getMessage()], 500);
         }
     }
     
     /**
-     * Calculate Daily Summary
+     * Generate Custom PDF Report
+     * Route: /api/reports/custom
      */
+    public function customReport(Request $request)
+    {
+        try {
+            $dateFrom = $request->input('date_from', now()->subDays(7)->format('Y-m-d'));
+            $dateTo = $request->input('date_to', now()->format('Y-m-d'));
+            $deviceType = $request->input('device_type', 'all');
+            $format = $request->input('format', 'pdf');
+            
+            $startDate = Carbon::parse($dateFrom)->startOfDay();
+            $endDate = Carbon::parse($dateTo)->endOfDay();
+            
+            $query = SensorData::whereBetween('created_at', [$startDate, $endDate]);
+            
+            // Hati-hati: Pastikan kolom 'device_id' memang ada di tabel. 
+            // Jika tidak ada, baris di bawah ini akan menyebabkan Error 500.
+            if ($deviceType && $deviceType !== 'all') {
+                $query->where('device_id', $deviceType);
+            }
+            
+            $data = $query->orderBy('created_at', 'desc')->get();
+            
+            $summary = [
+                'period' => $startDate->format('d M Y') . ' - ' . $endDate->format('d M Y'),
+                'total_records' => $data->count(),
+                'avg_people' => round($data->avg('people_count') ?? 0, 1),
+                'max_people' => $data->max('people_count') ?? 0,
+                'avg_temperature' => round($data->avg('room_temperature') ?? 0, 1),
+                'avg_humidity' => round($data->avg('humidity') ?? 0, 1),
+                'avg_light' => round($data->avg('light_level') ?? 0, 0),
+                'ac_on_count' => $data->where('ac_status', '!=', 'OFF')->count(),
+                'lamp_on_count' => $data->where('lamp_status', 'ON')->count(),
+                'device_type' => $deviceType === 'all' ? 'Semua Perangkat' : $deviceType,
+            ];
+            
+            if ($format === 'pdf') {
+                $pdf = Pdf::loadView('reports.pdf.custom', [
+                    'data' => $data,
+                    'summary' => $summary,
+                    'startDate' => $startDate,
+                    'endDate' => $endDate
+                ]);
+                
+                $filename = 'laporan_kustom_' . $startDate->format('Y_m_d') . '.pdf';
+                return $pdf->download($filename);
+            }
+
+            return response()->json(['data' => $data, 'summary' => $summary]);
+
+        } catch (\Exception $e) {
+            Log::error('PDF Custom Error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to generate Custom report: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // --- Private Calculation Methods (Sudah Sinkron Nama Field) ---
+
     private function calculateDailySummary($data, $date)
     {
         return [
@@ -153,9 +211,6 @@ class PdfReportController extends Controller
         ];
     }
     
-    /**
-     * Calculate Weekly Summary
-     */
     private function calculateWeeklySummary($data, $startDate, $endDate)
     {
         $dailyData = [];
@@ -183,9 +238,6 @@ class PdfReportController extends Controller
         ];
     }
     
-    /**
-     * Calculate Monthly Summary
-     */
     private function calculateMonthlySummary($data, $startDate, $endDate)
     {
         $weeklyData = [];
@@ -194,9 +246,7 @@ class PdfReportController extends Controller
         
         while ($weekStart->lte($endDate)) {
             $weekEnd = $weekStart->copy()->endOfWeek();
-            if ($weekEnd->gt($endDate)) {
-                $weekEnd = $endDate->copy();
-            }
+            if ($weekEnd->gt($endDate)) $weekEnd = $endDate->copy();
             
             $weekData = $data->filter(function($item) use ($weekStart, $weekEnd) {
                 return $item->created_at->between($weekStart, $weekEnd);
@@ -224,9 +274,6 @@ class PdfReportController extends Controller
         ];
     }
     
-    /**
-     * Calculate Efficiency Summary
-     */
     private function calculateEfficiencySummary($data, $startDate, $endDate)
     {
         $acOnData = $data->where('ac_status', '!=', 'OFF');
@@ -242,66 +289,5 @@ class PdfReportController extends Controller
             'avg_temperature' => round($data->avg('room_temperature') ?? 0, 1),
             'avg_humidity' => round($data->avg('humidity') ?? 0, 1),
         ];
-    }
-    
-    /**
-     * Generate Custom PDF Report
-     */
-    public function customReport(Request $request)
-    {
-        try {
-            $dateFrom = $request->input('date_from', now()->subDays(7)->format('Y-m-d'));
-            $dateTo = $request->input('date_to', now()->format('Y-m-d'));
-            $deviceType = $request->input('device_type', 'all');
-            $format = $request->input('format', 'pdf');
-            
-            $startDate = Carbon::parse($dateFrom)->startOfDay();
-            $endDate = Carbon::parse($dateTo)->endOfDay();
-            
-            // Query data
-            $query = SensorData::whereBetween('created_at', [$startDate, $endDate]);
-            
-            // Filter by device type if specified
-            if ($deviceType && $deviceType !== 'all') {
-                $query->where('device_id', $deviceType);
-            }
-            
-            $data = $query->orderBy('created_at', 'desc')->get();
-            
-            // Calculate summary
-            $summary = [
-                'period' => $startDate->format('d M Y') . ' - ' . $endDate->format('d M Y'),
-                'total_records' => $data->count(),
-                'avg_people' => round($data->avg('people_count') ?? 0, 1),
-                'max_people' => $data->max('people_count') ?? 0,
-                'avg_temperature' => round($data->avg('room_temperature') ?? 0, 1),
-                'avg_humidity' => round($data->avg('humidity') ?? 0, 1),
-                'avg_light' => round($data->avg('light_level') ?? 0, 0),
-                'ac_on_count' => $data->where('ac_status', '!=', 'OFF')->count(),
-                'lamp_on_count' => $data->where('lamp_status', 'ON')->count(),
-                'device_type' => $deviceType === 'all' ? 'Semua Perangkat' : $deviceType,
-            ];
-            
-            if ($format === 'pdf') {
-                $pdf = PDF::loadView('reports.pdf.custom', [
-                    'data' => $data,
-                    'summary' => $summary,
-                    'startDate' => $startDate,
-                    'endDate' => $endDate
-                ]);
-                
-                $filename = 'laporan_kustom_' . $startDate->format('Y_m_d') . '_' . $endDate->format('Y_m_d') . '.pdf';
-                return $pdf->download($filename);
-            } else {
-                // Return JSON for other formats
-                return response()->json([
-                    'data' => $data,
-                    'summary' => $summary
-                ]);
-            }
-        } catch (\Exception $e) {
-            \Log::error('Custom Report Error: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to generate report: ' . $e->getMessage()], 500);
-        }
     }
 }

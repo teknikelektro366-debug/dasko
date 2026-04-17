@@ -84,7 +84,7 @@ Route::prefix('reports')->group(function () {
     Route::get('/efficiency', [SimpleReportController::class, 'monthlyReport']);
     
     // PDF Download Routes
-    Route::get('/pdf/daily', [\App\Http\Controllers\PdfReportController::class, 'dailyReport']);
+    Route::get('/pdf/daily', [\App\Http\Controllers\PdfReportController::class,  'dailyReport']);
     Route::get('/pdf/weekly', [\App\Http\Controllers\PdfReportController::class, 'weeklyReport']);
     Route::get('/pdf/monthly', [\App\Http\Controllers\PdfReportController::class, 'monthlyReport']);
     Route::get('/pdf/efficiency', [\App\Http\Controllers\PdfReportController::class, 'efficiencyReport']);
