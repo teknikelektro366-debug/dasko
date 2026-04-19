@@ -1919,8 +1919,7 @@
                     <h3>Laporan Harian</h3>
                     <p>Konsumsi energi hari ini</p>
                     <div class="report-actions">
-                        <button type="button" onclick="viewDailyReport()"><i class="fas fa-eye"></i> Lihat</button>
-                        <button type="button" onclick="downloadDailyReport(); return false;"><i class="fas fa-download"></i> PDF</button>
+                        <button type="button" onclick="downloadDailyReport(); return false;"><i class="fas fa-download"></i> Download PDF</button>
                     </div>
                 </div>
                 
@@ -1931,8 +1930,7 @@
                     <h3>Laporan Mingguan</h3>
                     <p>Ringkasan pemakaian energi 7 hari terakhir</p>
                     <div class="report-actions">
-                        <button type="button" onclick="viewWeeklyReport()"><i class="fas fa-eye"></i> Lihat</button>
-                        <button type="button" onclick="downloadWeeklyReport(); return false;"><i class="fas fa-download"></i> PDF</button>
+                        <button type="button" onclick="downloadWeeklyReport(); return false;"><i class="fas fa-download"></i> Download PDF</button>
                     </div>
                 </div>
                 
@@ -1943,8 +1941,7 @@
                     <h3>Laporan Bulanan</h3>
                     <p>Analisis komprehensif pemakaian bulanan</p>
                     <div class="report-actions">
-                        <button type="button" onclick="viewMonthlyReport()"><i class="fas fa-eye"></i> Lihat</button>
-                        <button type="button" onclick="downloadMonthlyReport(); return false;"><i class="fas fa-download"></i> PDF</button>
+                        <button type="button" onclick="downloadMonthlyReport(); return false;"><i class="fas fa-download"></i> Download PDF</button>
                     </div>
                 </div>
                 
@@ -1955,8 +1952,7 @@
                     <h3>Laporan Efisiensi</h3>
                     <p>Evaluasi tingkat efisiensi energi</p>
                     <div class="report-actions">
-                        <button type="button" onclick="viewEfficiencyReport()"><i class="fas fa-eye"></i> Lihat</button>
-                        <button type="button" onclick="downloadEfficiencyReport(); return false;"><i class="fas fa-download"></i> PDF</button>
+                        <button type="button" onclick="downloadEfficiencyReport(); return false;"><i class="fas fa-download"></i> Download PDF</button>
                     </div>
                 </div>
             </div>
