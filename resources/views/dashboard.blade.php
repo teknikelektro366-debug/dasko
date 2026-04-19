@@ -3927,11 +3927,25 @@
                 }, (part - 1) * 300);
             }
         }
+
+        function getJakartaDateISO(date = new Date()) {
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Jakarta',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            const parts = formatter.formatToParts(date);
+            const year = parts.find(p => p.type === 'year')?.value;
+            const month = parts.find(p => p.type === 'month')?.value;
+            const day = parts.find(p => p.type === 'day')?.value;
+            return `${year}-${month}-${day}`;
+        }
         
         // Download Daily Report
         async function downloadDailyReport() {
             try {
-                const today = new Date().toISOString().split('T')[0];
+                const today = getJakartaDateISO();
                 const baseUrl = `/api/reports/pdf/daily?date=${today}`;
                 const meta = await getReportMeta(baseUrl);
                 const totalParts = Number(meta.total_parts || 1);
@@ -4152,8 +4166,8 @@
             const dateFromInput = document.getElementById('reportDateFrom');
             const dateToInput = document.getElementById('reportDateTo');
             
-            if (dateFromInput) dateFromInput.value = lastWeek.toISOString().split('T')[0];
-            if (dateToInput) dateToInput.value = today.toISOString().split('T')[0];
+            if (dateFromInput) dateFromInput.value = getJakartaDateISO(lastWeek);
+            if (dateToInput) dateToInput.value = getJakartaDateISO(today);
         });
     </script>
     <script src="<?php echo e(asset('ac-control.js')); ?>"></script>
