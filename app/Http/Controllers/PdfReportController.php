@@ -30,8 +30,10 @@ class PdfReportController extends Controller
             $startDate = $date->copy()->startOfDay();
             $endDate = $date->copy()->endOfDay();
 
-            // Ambil kolom yang dipakai PDF saja untuk menekan memory usage
-            $baseQuery = SensorData::whereBetween('created_at', [$startDate, $endDate])
+            $baseQuery = SensorData::whereBetween('created_at', [$startDate, $endDate]);
+
+            $totalRecords = (clone $baseQuery)->count();
+            $data = (clone $baseQuery)
                 ->select([
                     'id',
                     'created_at',
@@ -41,10 +43,8 @@ class PdfReportController extends Controller
                     'light_level',
                     'ac_status',
                     'lamp_status',
-                ]);
-
-            $totalRecords = (clone $baseQuery)->count();
-            $data = $baseQuery->orderBy('created_at', 'desc')
+                ])
+                ->orderBy('created_at', 'desc')
                 ->limit(self::PDF_MAX_DETAIL_ROWS)
                 ->get();
             
@@ -220,7 +220,14 @@ class PdfReportController extends Controller
                 return response()->json(['error' => 'Format harus pdf atau json'], 422);
             }
             
-            $query = SensorData::whereBetween('created_at', [$startDate, $endDate])
+            $query = SensorData::whereBetween('created_at', [$startDate, $endDate]);
+            
+            if ($deviceType && $deviceType !== 'all') {
+                $query->where('device_id', $deviceType);
+            }
+            
+            $totalRecords = (clone $query)->count();
+            $data = (clone $query)
                 ->select([
                     'id',
                     'device_id',
@@ -231,14 +238,8 @@ class PdfReportController extends Controller
                     'light_level',
                     'ac_status',
                     'lamp_status',
-                ]);
-            
-            if ($deviceType && $deviceType !== 'all') {
-                $query->where('device_id', $deviceType);
-            }
-            
-            $totalRecords = (clone $query)->count();
-            $data = $query->orderBy('created_at', 'desc')
+                ])
+                ->orderBy('created_at', 'desc')
                 ->when($format === 'pdf', function ($q) {
                     $q->limit(self::PDF_MAX_DETAIL_ROWS);
                 })
