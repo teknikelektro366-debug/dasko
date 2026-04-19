@@ -492,6 +492,7 @@
             padding: 10px 8px;
             border-bottom: 1px solid #e9ecef;
             vertical-align: middle;
+            color: #374151;
         }
 
         .history-table tr:hover {
