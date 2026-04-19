@@ -9,7 +9,6 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use ZipArchive;
 
 class PdfReportController extends Controller
 {
@@ -34,20 +33,6 @@ class PdfReportController extends Controller
             $baseQuery = SensorData::whereBetween('created_at', [$startDate, $endDate]);
 
             $totalRecords = (clone $baseQuery)->count();
-            $data = (clone $baseQuery)
-                ->select([
-                    'id',
-                    'created_at',
-                    'people_count',
-                    'room_temperature',
-                    'humidity',
-                    'light_level',
-                    'ac_status',
-                    'lamp_status',
-                ])
-                ->orderBy('created_at', 'desc')
-                ->limit(self::PDF_MAX_DETAIL_ROWS)
-                ->get();
             
             $aggregate = (clone $baseQuery)->selectRaw("
                 COUNT(*) as total_records,
@@ -71,41 +56,60 @@ class PdfReportController extends Controller
                 'ac_on_count' => (int) ($aggregate->ac_on_count ?? 0),
                 'lamp_on_count' => (int) ($aggregate->lamp_on_count ?? 0),
             ];
-            
+
+            $totalParts = max(1, (int) ceil($totalRecords / self::PDF_MAX_DETAIL_ROWS));
+            $requestedPart = max(1, (int) $request->input('part', 1));
+
+            if ($request->boolean('meta')) {
+                return response()->json([
+                    'success' => true,
+                    'total_records' => $totalRecords,
+                    'per_file' => self::PDF_MAX_DETAIL_ROWS,
+                    'total_parts' => $totalParts,
+                    'date' => $date->format('Y-m-d'),
+                ]);
+            }
+
+            if ($requestedPart > $totalParts) {
+                return response()->json([
+                    'error' => 'Parameter part melebihi total bagian laporan',
+                    'total_parts' => $totalParts,
+                ], 422);
+            }
+
+            $offset = ($requestedPart - 1) * self::PDF_MAX_DETAIL_ROWS;
+            $data = (clone $baseQuery)
+                ->select([
+                    'id',
+                    'created_at',
+                    'people_count',
+                    'room_temperature',
+                    'humidity',
+                    'light_level',
+                    'ac_status',
+                    'lamp_status',
+                ])
+                ->orderBy('created_at', 'desc')
+                ->offset($offset)
+                ->limit(self::PDF_MAX_DETAIL_ROWS)
+                ->get();
+
             $pdfData = [
                 'data' => $data,
                 'summary' => $summary,
                 'date' => $date,
-                'is_truncated' => $totalRecords > self::PDF_MAX_DETAIL_ROWS,
+                'is_truncated' => false,
                 'displayed_records' => $data->count(),
+                'part_number' => $requestedPart,
+                'total_parts' => $totalParts,
             ];
-            
+
             $baseFilename = 'laporan_harian_' . $date->format('Y_m_d');
+            $filename = $totalParts > 1
+                ? $baseFilename . '_part_' . $requestedPart . '_of_' . $totalParts . '.pdf'
+                : $baseFilename . '.pdf';
 
-            if ($totalRecords > self::PDF_MAX_DETAIL_ROWS) {
-                $fullDataQuery = (clone $baseQuery)
-                    ->select([
-                        'id',
-                        'created_at',
-                        'people_count',
-                        'room_temperature',
-                        'humidity',
-                        'light_level',
-                        'ac_status',
-                        'lamp_status',
-                    ])
-                    ->orderBy('created_at', 'desc');
-
-                return $this->downloadChunkedPdfAsZip(
-                    'reports.pdf.daily',
-                    $pdfData,
-                    $fullDataQuery,
-                    $baseFilename,
-                    $totalRecords
-                );
-            }
-
-            return $this->downloadPdfWithFallback('reports.pdf.daily', $pdfData, $baseFilename . '.pdf');
+            return $this->downloadPdfWithFallback('reports.pdf.daily', $pdfData, $filename);
             
         } catch (\Throwable $e) {
             Log::error('PDF Daily Error: ' . $e->getMessage(), [
@@ -295,42 +299,62 @@ class PdfReportController extends Controller
             ];
             
             if ($format === 'pdf') {
+                $totalParts = max(1, (int) ceil($totalRecords / self::PDF_MAX_DETAIL_ROWS));
+                $requestedPart = max(1, (int) $request->input('part', 1));
+
+                if ($request->boolean('meta')) {
+                    return response()->json([
+                        'success' => true,
+                        'total_records' => $totalRecords,
+                        'per_file' => self::PDF_MAX_DETAIL_ROWS,
+                        'total_parts' => $totalParts,
+                        'date_from' => $startDate->format('Y-m-d'),
+                        'date_to' => $endDate->format('Y-m-d'),
+                    ]);
+                }
+
+                if ($requestedPart > $totalParts) {
+                    return response()->json([
+                        'error' => 'Parameter part melebihi total bagian laporan',
+                        'total_parts' => $totalParts,
+                    ], 422);
+                }
+
+                $offset = ($requestedPart - 1) * self::PDF_MAX_DETAIL_ROWS;
+                $data = (clone $query)
+                    ->select([
+                        'id',
+                        'device_id',
+                        'created_at',
+                        'people_count',
+                        'room_temperature',
+                        'humidity',
+                        'light_level',
+                        'ac_status',
+                        'lamp_status',
+                    ])
+                    ->orderBy('created_at', 'desc')
+                    ->offset($offset)
+                    ->limit(self::PDF_MAX_DETAIL_ROWS)
+                    ->get();
+
                 $pdfData = [
                     'data' => $data,
                     'summary' => $summary,
                     'startDate' => $startDate,
                     'endDate' => $endDate,
-                    'is_truncated' => $totalRecords > self::PDF_MAX_DETAIL_ROWS,
+                    'is_truncated' => false,
                     'displayed_records' => $data->count(),
+                    'part_number' => $requestedPart,
+                    'total_parts' => $totalParts,
                 ];
                 
                 $baseFilename = 'laporan_kustom_' . $startDate->format('Y_m_d');
+                $filename = $totalParts > 1
+                    ? $baseFilename . '_part_' . $requestedPart . '_of_' . $totalParts . '.pdf'
+                    : $baseFilename . '.pdf';
 
-                if ($totalRecords > self::PDF_MAX_DETAIL_ROWS) {
-                    $fullDataQuery = (clone $query)
-                        ->select([
-                            'id',
-                            'device_id',
-                            'created_at',
-                            'people_count',
-                            'room_temperature',
-                            'humidity',
-                            'light_level',
-                            'ac_status',
-                            'lamp_status',
-                        ])
-                        ->orderBy('created_at', 'desc');
-
-                    return $this->downloadChunkedPdfAsZip(
-                        'reports.pdf.custom',
-                        $pdfData,
-                        $fullDataQuery,
-                        $baseFilename,
-                        $totalRecords
-                    );
-                }
-
-                return $this->downloadPdfWithFallback('reports.pdf.custom', $pdfData, $baseFilename . '.pdf');
+                return $this->downloadPdfWithFallback('reports.pdf.custom', $pdfData, $filename);
             }
 
             return response()->json(['data' => $data, 'summary' => $summary]);
@@ -541,48 +565,4 @@ class PdfReportController extends Controller
         }
     }
 
-    private function downloadChunkedPdfAsZip(
-        string $view,
-        array $basePdfData,
-        $orderedQuery,
-        string $baseFilename,
-        int $totalRecords
-    ) {
-        $totalParts = (int) ceil($totalRecords / self::PDF_MAX_DETAIL_ROWS);
-        $zipPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $baseFilename . '_' . uniqid('parts_', true) . '.zip';
-
-        $zip = new ZipArchive();
-        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            throw new \RuntimeException('Gagal membuat file ZIP laporan.');
-        }
-
-        for ($part = 1; $part <= $totalParts; $part++) {
-            $offset = ($part - 1) * self::PDF_MAX_DETAIL_ROWS;
-
-            $chunk = (clone $orderedQuery)
-                ->offset($offset)
-                ->limit(self::PDF_MAX_DETAIL_ROWS)
-                ->get();
-
-            if ($chunk->isEmpty()) {
-                continue;
-            }
-
-            $partPdfData = $basePdfData;
-            $partPdfData['data'] = $chunk;
-            $partPdfData['is_truncated'] = false;
-            $partPdfData['displayed_records'] = $chunk->count();
-            $partPdfData['part_number'] = $part;
-            $partPdfData['total_parts'] = $totalParts;
-
-            $partFilename = $baseFilename . '_part_' . $part . '_of_' . $totalParts . '.pdf';
-            $zip->addFromString($partFilename, $this->renderPdfBinary($view, $partPdfData));
-        }
-
-        $zip->close();
-
-        return response()->download($zipPath, $baseFilename . '_parts.zip', [
-            'Content-Type' => 'application/zip',
-        ])->deleteFileAfterSend(true);
-    }
 }

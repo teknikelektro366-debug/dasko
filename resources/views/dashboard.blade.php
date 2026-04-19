@@ -3888,26 +3888,73 @@
         };
 
         // ===== REPORT DOWNLOAD FUNCTIONS =====
+        function triggerFileDownload(url, filename) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            if (filename) {
+                link.download = filename;
+            }
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        async function getReportMeta(baseUrl) {
+            const separator = baseUrl.includes('?') ? '&' : '?';
+            const metaUrl = `${baseUrl}${separator}meta=1`;
+            const response = await fetch(metaUrl, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Gagal mengambil metadata report (${response.status})`);
+            }
+
+            return response.json();
+        }
+
+        function downloadReportByParts(baseUrl, buildFilename, totalParts) {
+            for (let part = 1; part <= totalParts; part++) {
+                const separator = baseUrl.includes('?') ? '&' : '?';
+                const url = `${baseUrl}${separator}part=${part}`;
+                const filename = buildFilename(part, totalParts);
+                setTimeout(() => {
+                    triggerFileDownload(url, filename);
+                }, (part - 1) * 300);
+            }
+        }
         
         // Download Daily Report
-        function downloadDailyReport() {
+        async function downloadDailyReport() {
             try {
                 const today = new Date().toISOString().split('T')[0];
-                const url = `/api/reports/pdf/daily?date=${today}`;
-                console.log('Downloading daily report from:', url);
-                
-                // Create a temporary link to trigger download
-                const link = document.createElement('a');
-                link.href = url;
-                link.target = '_blank';
-                link.download = `laporan_harian_${today.replace(/-/g, '_')}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                // Show success message
+                const baseUrl = `/api/reports/pdf/daily?date=${today}`;
+                const meta = await getReportMeta(baseUrl);
+                const totalParts = Number(meta.total_parts || 1);
+
+                if (totalParts <= 1) {
+                    const url = `${baseUrl}&part=1`;
+                    console.log('Downloading daily report from:', url);
+                    triggerFileDownload(url, `laporan_harian_${today.replace(/-/g, '_')}.pdf`);
+                    setTimeout(() => {
+                        alert('Download laporan harian dimulai...');
+                    }, 100);
+                    return false;
+                }
+
+                console.log(`Downloading daily report in ${totalParts} parts`);
+                downloadReportByParts(
+                    baseUrl,
+                    (part, parts) => `laporan_harian_${today.replace(/-/g, '_')}_part_${part}_of_${parts}.pdf`,
+                    totalParts
+                );
+
                 setTimeout(() => {
-                    alert('Download laporan harian dimulai...');
+                    alert(`Download laporan harian dimulai dalam ${totalParts} file (part).`);
                 }, 100);
             } catch (error) {
                 console.error('Error downloading daily report:', error);
@@ -4023,7 +4070,7 @@
         }
 
         // Generate Custom Report
-        function generateCustomReport() {
+        async function generateCustomReport() {
             try {
                 const dateFrom = document.getElementById('reportDateFrom').value;
                 const dateTo = document.getElementById('reportDateTo').value;
@@ -4040,23 +4087,42 @@
                     return false;
                 }
 
-                let url = `/api/reports/custom?date_from=${dateFrom}&date_to=${dateTo}&format=${format}`;
+                let baseUrl = `/api/reports/custom?date_from=${dateFrom}&date_to=${dateTo}&format=${format}`;
                 if (deviceType) {
-                    url += `&device_type=${deviceType}`;
+                    baseUrl += `&device_type=${deviceType}`;
                 }
 
-                console.log('Downloading custom report from:', url);
-                
-                const link = document.createElement('a');
-                link.href = url;
-                link.target = '_blank';
-                link.download = `laporan_kustom_${dateFrom.replace(/-/g, '_')}.${format}`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                if (format !== 'pdf') {
+                    console.log('Downloading custom report from:', baseUrl);
+                    triggerFileDownload(baseUrl, `laporan_kustom_${dateFrom.replace(/-/g, '_')}.${format}`);
+                    setTimeout(() => {
+                        alert('Download laporan kustom dimulai...');
+                    }, 100);
+                    return false;
+                }
+
+                const meta = await getReportMeta(baseUrl);
+                const totalParts = Number(meta.total_parts || 1);
+
+                if (totalParts <= 1) {
+                    const url = `${baseUrl}&part=1`;
+                    console.log('Downloading custom report from:', url);
+                    triggerFileDownload(url, `laporan_kustom_${dateFrom.replace(/-/g, '_')}.pdf`);
+                    setTimeout(() => {
+                        alert('Download laporan kustom dimulai...');
+                    }, 100);
+                    return false;
+                }
+
+                console.log(`Downloading custom report in ${totalParts} parts`);
+                downloadReportByParts(
+                    baseUrl,
+                    (part, parts) => `laporan_kustom_${dateFrom.replace(/-/g, '_')}_part_${part}_of_${parts}.pdf`,
+                    totalParts
+                );
                 
                 setTimeout(() => {
-                    alert('Download laporan kustom dimulai...');
+                    alert(`Download laporan kustom dimulai dalam ${totalParts} file (part).`);
                 }, 100);
             } catch (error) {
                 console.error('Error downloading custom report:', error);
