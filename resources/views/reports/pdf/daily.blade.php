@@ -130,6 +130,11 @@
     </div>
 
     <h3>Detail Data Sensor</h3>
+    @if(!empty($is_truncated))
+    <p style="font-size: 10px; color: #B45309; margin: 0 0 8px 0;">
+        Menampilkan {{ $displayed_records ?? count($data) }} dari total {{ $summary['total_records'] }} record untuk menjaga performa PDF.
+    </p>
+    @endif
     <table>
         <thead>
             <tr>
@@ -145,7 +150,7 @@
         <tbody>
             @forelse($data as $item)
             <tr>
-                <td>{{ $item->created_at->format('H:i:s') }}</td>
+                <td>{{ optional($item->created_at)->format('H:i:s') ?? '-' }}</td>
                 <td>{{ $item->people_count }}</td>
                 <td>{{ $item->room_temperature !== null ? number_format((float) $item->room_temperature, 1) : '-' }}°C</td>
                 <td>{{ $item->humidity !== null ? number_format((float) $item->humidity, 1) : '-' }}%</td>

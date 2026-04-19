@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Log;
 
 class PdfReportController extends Controller
 {
+    private const PDF_MAX_DETAIL_ROWS = 1500;
+
     /**
      * Generate Daily PDF Report
      * Route: /api/reports/pdf/daily
@@ -19,20 +21,62 @@ class PdfReportController extends Controller
     public function dailyReport(Request $request)
     {
         try {
-            $dateInput = $request->input('date', now()->format('Y-m-d'));
-            $date = Carbon::parse($dateInput);
+            $dateInput = (string) $request->input('date', now('Asia/Jakarta')->format('Y-m-d'));
+            $date = Carbon::createFromFormat('Y-m-d', $dateInput, 'Asia/Jakarta');
+            if ($date === false) {
+                return response()->json(['error' => 'Format date tidak valid, gunakan Y-m-d'], 422);
+            }
+
+            $startDate = $date->copy()->startOfDay();
+            $endDate = $date->copy()->endOfDay();
+
+            // Ambil kolom yang dipakai PDF saja untuk menekan memory usage
+            $baseQuery = SensorData::whereBetween('created_at', [$startDate, $endDate])
+                ->select([
+                    'id',
+                    'created_at',
+                    'people_count',
+                    'room_temperature',
+                    'humidity',
+                    'light_level',
+                    'ac_status',
+                    'lamp_status',
+                ]);
+
+            $totalRecords = (clone $baseQuery)->count();
+            $data = $baseQuery->orderBy('created_at', 'desc')
+                ->limit(self::PDF_MAX_DETAIL_ROWS)
+                ->get();
             
-            // Menggunakan whereDate untuk presisi data harian
-            $data = SensorData::whereDate('created_at', $date)
-                               ->orderBy('created_at', 'desc')
-                               ->get();
-            
-            $summary = $this->calculateDailySummary($data, $date);
+            $aggregate = (clone $baseQuery)->selectRaw("
+                COUNT(*) as total_records,
+                AVG(people_count) as avg_people,
+                MAX(people_count) as max_people,
+                AVG(room_temperature) as avg_temperature,
+                AVG(humidity) as avg_humidity,
+                AVG(light_level) as avg_light,
+                SUM(CASE WHEN UPPER(TRIM(COALESCE(ac_status, ''))) = 'ON' THEN 1 ELSE 0 END) as ac_on_count,
+                SUM(CASE WHEN UPPER(TRIM(COALESCE(lamp_status, ''))) = 'ON' THEN 1 ELSE 0 END) as lamp_on_count
+            ")->first();
+
+            $summary = [
+                'date' => $date->format('d F Y'),
+                'total_records' => (int) ($aggregate->total_records ?? $totalRecords),
+                'avg_people' => (int) round((float) ($aggregate->avg_people ?? 0)),
+                'max_people' => (int) ($aggregate->max_people ?? 0),
+                'avg_temperature' => round((float) ($aggregate->avg_temperature ?? 0), 1),
+                'avg_humidity' => round((float) ($aggregate->avg_humidity ?? 0), 1),
+                'avg_light' => round((float) ($aggregate->avg_light ?? 0), 0),
+                'ac_on_count' => (int) ($aggregate->ac_on_count ?? 0),
+                'lamp_on_count' => (int) ($aggregate->lamp_on_count ?? 0),
+            ];
             
             $pdfData = [
                 'data' => $data,
                 'summary' => $summary,
-                'date' => $date
+                'date' => $date,
+                'is_truncated' => $totalRecords > self::PDF_MAX_DETAIL_ROWS,
+                'displayed_records' => $data->count(),
             ];
             
             $filename = 'laporan_harian_' . $date->format('Y_m_d') . '.pdf';
@@ -153,13 +197,20 @@ class PdfReportController extends Controller
     public function customReport(Request $request)
     {
         try {
-            $dateFrom = $request->input('date_from', now()->subDays(7)->format('Y-m-d'));
-            $dateTo = $request->input('date_to', now()->format('Y-m-d'));
+            $dateFrom = (string) $request->input('date_from', now('Asia/Jakarta')->subDays(7)->format('Y-m-d'));
+            $dateTo = (string) $request->input('date_to', now('Asia/Jakarta')->format('Y-m-d'));
             $deviceType = $request->input('device_type', 'all');
             $format = $request->input('format', 'pdf');
             
-            $startDate = Carbon::parse($dateFrom)->startOfDay();
-            $endDate = Carbon::parse($dateTo)->endOfDay();
+            $startDate = Carbon::createFromFormat('Y-m-d', $dateFrom, 'Asia/Jakarta');
+            $endDate = Carbon::createFromFormat('Y-m-d', $dateTo, 'Asia/Jakarta');
+
+            if ($startDate === false || $endDate === false) {
+                return response()->json(['error' => 'Format date_from/date_to tidak valid, gunakan Y-m-d'], 422);
+            }
+
+            $startDate = $startDate->startOfDay();
+            $endDate = $endDate->endOfDay();
 
             if ($endDate->lt($startDate)) {
                 return response()->json(['error' => 'Parameter date_to tidak boleh lebih kecil dari date_from'], 422);
@@ -169,24 +220,51 @@ class PdfReportController extends Controller
                 return response()->json(['error' => 'Format harus pdf atau json'], 422);
             }
             
-            $query = SensorData::whereBetween('created_at', [$startDate, $endDate]);
+            $query = SensorData::whereBetween('created_at', [$startDate, $endDate])
+                ->select([
+                    'id',
+                    'device_id',
+                    'created_at',
+                    'people_count',
+                    'room_temperature',
+                    'humidity',
+                    'light_level',
+                    'ac_status',
+                    'lamp_status',
+                ]);
             
             if ($deviceType && $deviceType !== 'all') {
                 $query->where('device_id', $deviceType);
             }
             
-            $data = $query->orderBy('created_at', 'desc')->get();
+            $totalRecords = (clone $query)->count();
+            $data = $query->orderBy('created_at', 'desc')
+                ->when($format === 'pdf', function ($q) {
+                    $q->limit(self::PDF_MAX_DETAIL_ROWS);
+                })
+                ->get();
             
+            $aggregate = (clone $query)->selectRaw("
+                COUNT(*) as total_records,
+                AVG(people_count) as avg_people,
+                MAX(people_count) as max_people,
+                AVG(room_temperature) as avg_temperature,
+                AVG(humidity) as avg_humidity,
+                AVG(light_level) as avg_light,
+                SUM(CASE WHEN UPPER(TRIM(COALESCE(ac_status, ''))) = 'ON' THEN 1 ELSE 0 END) as ac_on_count,
+                SUM(CASE WHEN UPPER(TRIM(COALESCE(lamp_status, ''))) = 'ON' THEN 1 ELSE 0 END) as lamp_on_count
+            ")->first();
+
             $summary = [
                 'period' => $startDate->format('d M Y') . ' - ' . $endDate->format('d M Y'),
-                'total_records' => $data->count(),
-                'avg_people' => $this->calculateAveragePeople($data),
-                'max_people' => (int) ($data->max('people_count') ?? 0),
-                'avg_temperature' => $this->calculateAverageFloat($data, 'room_temperature', 1),
-                'avg_humidity' => $this->calculateAverageFloat($data, 'humidity', 1),
-                'avg_light' => $this->calculateAverageFloat($data, 'light_level', 0),
-                'ac_on_count' => $this->countActiveAc($data),
-                'lamp_on_count' => $data->where('lamp_status', 'ON')->count(),
+                'total_records' => (int) ($aggregate->total_records ?? $totalRecords),
+                'avg_people' => (int) round((float) ($aggregate->avg_people ?? 0)),
+                'max_people' => (int) ($aggregate->max_people ?? 0),
+                'avg_temperature' => round((float) ($aggregate->avg_temperature ?? 0), 1),
+                'avg_humidity' => round((float) ($aggregate->avg_humidity ?? 0), 1),
+                'avg_light' => round((float) ($aggregate->avg_light ?? 0), 0),
+                'ac_on_count' => (int) ($aggregate->ac_on_count ?? 0),
+                'lamp_on_count' => (int) ($aggregate->lamp_on_count ?? 0),
                 'device_type' => $deviceType === 'all' ? 'Semua Perangkat' : $deviceType,
             ];
             
@@ -195,7 +273,9 @@ class PdfReportController extends Controller
                     'data' => $data,
                     'summary' => $summary,
                     'startDate' => $startDate,
-                    'endDate' => $endDate
+                    'endDate' => $endDate,
+                    'is_truncated' => $totalRecords > self::PDF_MAX_DETAIL_ROWS,
+                    'displayed_records' => $data->count(),
                 ];
                 
                 $filename = 'laporan_kustom_' . $startDate->format('Y_m_d') . '.pdf';
