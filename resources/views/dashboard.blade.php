@@ -1590,25 +1590,25 @@
             <!-- Tab Navigation -->
             <div class="sensor-section">
                 <h3><i class="fas fa-table"></i> Data History 
-                    <button onclick="loadHistoryData()" class="btn-refresh" style="margin-left: 10px; padding: 5px 10px; font-size: 12px;">
+                    <button type="button" onclick="loadHistoryData()" class="btn-refresh" style="margin-left: 10px; padding: 5px 10px; font-size: 12px;">
                         <i class="fas fa-sync-alt"></i> Refresh
                     </button>
-                    <button onclick="testHistoryAPI()" class="btn-export" style="margin-left: 5px; padding: 5px 10px; font-size: 12px;">
+                    <button type="button" onclick="testHistoryAPI()" class="btn-export" style="margin-left: 5px; padding: 5px 10px; font-size: 12px;">
                         <i class="fas fa-bug"></i> Test API
                     </button>
                 </h3>
                 <div class="history-tabs">
-                    <button class="tab-button active" onclick="showHistoryTab('sensor-data')">
+                    <button type="button" class="tab-button active" onclick="showHistoryTab('sensor-data', this)">
                         <i class="fas fa-chart-line"></i> Data Sensor
                     </button>
                     
-                    <button class="tab-button" onclick="showHistoryTab('people-count')">
+                    <button type="button" class="tab-button" onclick="showHistoryTab('people-count', this)">
                         <i class="fas fa-users"></i> Jumlah Orang
                     </button>
-                    <button class="tab-button" onclick="showHistoryTab('environment')">
+                    <button type="button" class="tab-button" onclick="showHistoryTab('environment', this)">
                         <i class="fas fa-thermometer-half"></i> Lingkungan
                     </button>
-                    <button class="tab-button" onclick="showHistoryTab('system-events')">
+                    <button type="button" class="tab-button" onclick="showHistoryTab('system-events', this)">
                         <i class="fas fa-cog"></i> System Events
                     </button>
                 </div>
@@ -1645,11 +1645,11 @@
                         </table>
                     </div>
                     <div class="table-pagination">
-                        <button onclick="previousPage('sensor')" id="sensorPrevBtn" class="btn-small" disabled>
+                        <button type="button" onclick="previousPage('sensor', event)" id="sensorPrevBtn" class="btn-small" disabled>
                             <i class="fas fa-chevron-left"></i> Previous
                         </button>
                         <span id="sensorPageInfo">Page 1 of 1</span>
-                        <button onclick="nextPage('sensor')" id="sensorNextBtn" class="btn-small" disabled>
+                        <button type="button" onclick="nextPage('sensor', event)" id="sensorNextBtn" class="btn-small" disabled>
                             Next <i class="fas fa-chevron-right"></i>
                         </button>
                     </div>
@@ -2427,6 +2427,11 @@
         let historyChart = null;
         let currentHistoryPage = 1;
         let historyData = {};
+        let sensorPagination = {
+            current_page: 1,
+            last_page: 1,
+            total: 0
+        };
 
         function initializeHistory() {
             // Initialize history data loading
@@ -2451,11 +2456,31 @@
                             customRange.style.display = 'none';
                         }
                     }
+
+                    // Selalu kembali ke halaman awal saat filter periode berubah
+                    currentHistoryPage = 1;
+                    loadSensorData();
+                });
+            }
+
+            const limitSelect = document.getElementById('sensorDataLimit');
+            if (limitSelect) {
+                limitSelect.addEventListener('change', function() {
+                    currentHistoryPage = 1;
+                    loadSensorData();
+                });
+            }
+
+            const deviceFilterSelect = document.getElementById('deviceFilter');
+            if (deviceFilterSelect) {
+                deviceFilterSelect.addEventListener('change', function() {
+                    currentHistoryPage = 1;
+                    loadSensorData();
                 });
             }
         }
 
-        function showHistoryTab(tabName) {
+        function showHistoryTab(tabName, buttonElement = null) {
             // Hide all tab contents
             const tabContents = document.querySelectorAll('.history-table-container');
             tabContents.forEach(content => {
@@ -2475,13 +2500,14 @@
             }
             
             // Add active class to clicked button
-            if (event && event.target) {
-                event.target.classList.add('active');
+            if (buttonElement) {
+                buttonElement.classList.add('active');
             }
             
             // Load data for the selected tab
             switch(tabName) {
                 case 'sensor-data':
+                    currentHistoryPage = 1;
                     loadSensorData();
                     break;
                 case 'ac-activity':
@@ -2568,13 +2594,13 @@
             const periodSelect = document.getElementById('historyPeriod');
             const deviceFilterSelect = document.getElementById('deviceFilter');
             
-            const limit = limitSelect ? limitSelect.value : '50';
+            const limit = limitSelect ? limitSelect.value : '20';
             const period = periodSelect ? periodSelect.value : 'week';
             const deviceFilter = deviceFilterSelect ? deviceFilterSelect.value : '';
             
             tbody.innerHTML = '<tr><td colspan="14" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading data sensor...</td></tr>';
             
-            let url = `/api/sensor/history?per_page=${limit}`;
+            let url = `/api/sensor/history?per_page=${limit}&page=${currentHistoryPage}`;
             if (deviceFilter) {
                 url += `&device_id=${encodeURIComponent(deviceFilter)}`;
             }
@@ -2607,6 +2633,13 @@
                     console.log('API Response:', data);
                     
                     if (data.success) {
+                        if (data.pagination) {
+                            currentHistoryPage = data.pagination.current_page || 1;
+                            updateSensorPagination(data.pagination);
+                        } else {
+                            updateSensorPagination(null);
+                        }
+
                         if (data.data && Array.isArray(data.data) && data.data.length > 0) {
                             let html = '';
                             let previousPeopleCount = null;
@@ -2665,12 +2698,6 @@
                             
                             tbody.innerHTML = html;
                             
-                            // Update pagination info
-                            const pageInfo = document.getElementById('sensorPageInfo');
-                            if (data.pagination && pageInfo) {
-                                pageInfo.textContent = `Page ${data.pagination.current_page} of ${data.pagination.last_page} (Total: ${data.pagination.total} records)`;
-                            }
-                            
                             // Update summary stats
                             updateSummaryStats(data.data);
                             
@@ -2687,6 +2714,7 @@
                             console.log('No sensor data found:', data);
                         }
                     } else {
+                        updateSensorPagination(null);
                         tbody.innerHTML = `<tr><td colspan="12" class="error-row">API Error: ${data.message || 'Unknown error'}</td></tr>`;
                         console.error('API returned error:', data);
                     }
@@ -2694,6 +2722,7 @@
                 .catch(error => {
                     clearTimeout(timeoutId);
                     console.error('Error loading sensor data:', error);
+                    updateSensorPagination(null);
                     
                     let errorMessage = 'Error loading data';
                     if (error.name === 'AbortError') {
@@ -2704,6 +2733,34 @@
                     
                     tbody.innerHTML = `<tr><td colspan="12" class="error-row">${errorMessage}<br><small>Check console for details</small></td></tr>`;
                 });
+        }
+
+        function updateSensorPagination(pagination) {
+            const prevBtn = document.getElementById('sensorPrevBtn');
+            const nextBtn = document.getElementById('sensorNextBtn');
+            const pageInfo = document.getElementById('sensorPageInfo');
+
+            if (!pagination) {
+                sensorPagination = { current_page: 1, last_page: 1, total: 0 };
+            } else {
+                sensorPagination = {
+                    current_page: Math.max(1, Number(pagination.current_page) || 1),
+                    last_page: Math.max(1, Number(pagination.last_page) || 1),
+                    total: Math.max(0, Number(pagination.total) || 0)
+                };
+            }
+
+            if (pageInfo) {
+                pageInfo.textContent = `Page ${sensorPagination.current_page} of ${sensorPagination.last_page} (Total: ${sensorPagination.total} records)`;
+            }
+
+            if (prevBtn) {
+                prevBtn.disabled = sensorPagination.current_page <= 1;
+            }
+
+            if (nextBtn) {
+                nextBtn.disabled = sensorPagination.current_page >= sensorPagination.last_page || sensorPagination.total === 0;
+            }
         }
 
         function loadACActivity() {
@@ -3203,16 +3260,26 @@
             document.body.removeChild(link);
         }
 
-        function previousPage(type) {
-            if (currentHistoryPage > 1) {
+        function previousPage(type, event = null) {
+            if (event) {
+                event.preventDefault();
+            }
+
+            if (type === 'sensor' && currentHistoryPage > 1) {
                 currentHistoryPage--;
-                loadHistoryData();
+                loadSensorData();
             }
         }
 
-        function nextPage(type) {
-            currentHistoryPage++;
-            loadHistoryData();
+        function nextPage(type, event = null) {
+            if (event) {
+                event.preventDefault();
+            }
+
+            if (type === 'sensor' && currentHistoryPage < sensorPagination.last_page) {
+                currentHistoryPage++;
+                loadSensorData();
+            }
         }
 
         function showChart(chartType) {
