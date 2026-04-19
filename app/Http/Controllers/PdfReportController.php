@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 
 class PdfReportController extends Controller
 {
-    private const PDF_MAX_DETAIL_ROWS = 1500;
+    private const PDF_MAX_DETAIL_ROWS = 300;
 
     /**
      * Generate Daily PDF Report
@@ -454,18 +454,22 @@ class PdfReportController extends Controller
     private function downloadPdfWithFallback(string $view, array $data, string $filename)
     {
         try {
-            return Pdf::loadView($view, $data)->download($filename);
-        } catch (\Throwable $e) {
-            if (!$this->isDompdfWrapperBindingError($e) || !class_exists(Dompdf::class)) {
-                throw $e;
+            $html = view($view, $data)->render();
+
+            // Guard untuk shared hosting: hindari render HTML terlalu besar.
+            if (strlen($html) > 2_500_000) {
+                throw new \RuntimeException('Ukuran dokumen PDF terlalu besar untuk diproses server.');
             }
 
-            Log::warning('Dompdf wrapper binding tidak tersedia, pakai fallback Dompdf native: ' . $e->getMessage());
+            if (!class_exists(Dompdf::class)) {
+                // Fallback jika class Dompdf native tidak tersedia.
+                return Pdf::loadHTML($html)->download($filename);
+            }
 
-            $html = view($view, $data)->render();
             $dompdf = new Dompdf([
-                'isRemoteEnabled' => true,
+                'isRemoteEnabled' => false,
                 'isHtml5ParserEnabled' => true,
+                'defaultFont' => 'Arial',
             ]);
             $dompdf->setPaper('A4', 'portrait');
             $dompdf->loadHtml($html, 'UTF-8');
@@ -475,11 +479,14 @@ class PdfReportController extends Controller
                 'Content-Type' => 'application/pdf',
                 'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             ]);
+        } catch (\Throwable $e) {
+            // Coba sekali lagi lewat facade jika gagal di native.
+            try {
+                Log::warning('Native Dompdf gagal, coba facade: ' . $e->getMessage());
+                return Pdf::loadView($view, $data)->download($filename);
+            } catch (\Throwable $fallbackError) {
+                throw $fallbackError;
+            }
         }
-    }
-
-    private function isDompdfWrapperBindingError(\Throwable $e): bool
-    {
-        return str_contains(strtolower($e->getMessage()), 'dompdf.wrapper');
     }
 }
