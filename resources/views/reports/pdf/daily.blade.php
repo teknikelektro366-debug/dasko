@@ -105,6 +105,9 @@
         <p>Smart Energy Monitoring System</p>
         <p>Ruang Dosen Prodi Teknik Elektro - UNJA</p>
         <p><strong>{{ $date->format('d F Y') }}</strong></p>
+        @if(!empty($part_number) && !empty($total_parts))
+        <p><strong>Bagian {{ $part_number }} dari {{ $total_parts }}</strong></p>
+        @endif
     </div>
 
     <div class="summary">

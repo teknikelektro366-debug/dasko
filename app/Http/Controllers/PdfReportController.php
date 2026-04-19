@@ -9,6 +9,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use ZipArchive;
 
 class PdfReportController extends Controller
 {
@@ -79,8 +80,32 @@ class PdfReportController extends Controller
                 'displayed_records' => $data->count(),
             ];
             
-            $filename = 'laporan_harian_' . $date->format('Y_m_d') . '.pdf';
-            return $this->downloadPdfWithFallback('reports.pdf.daily', $pdfData, $filename);
+            $baseFilename = 'laporan_harian_' . $date->format('Y_m_d');
+
+            if ($totalRecords > self::PDF_MAX_DETAIL_ROWS) {
+                $fullDataQuery = (clone $baseQuery)
+                    ->select([
+                        'id',
+                        'created_at',
+                        'people_count',
+                        'room_temperature',
+                        'humidity',
+                        'light_level',
+                        'ac_status',
+                        'lamp_status',
+                    ])
+                    ->orderBy('created_at', 'desc');
+
+                return $this->downloadChunkedPdfAsZip(
+                    'reports.pdf.daily',
+                    $pdfData,
+                    $fullDataQuery,
+                    $baseFilename,
+                    $totalRecords
+                );
+            }
+
+            return $this->downloadPdfWithFallback('reports.pdf.daily', $pdfData, $baseFilename . '.pdf');
             
         } catch (\Throwable $e) {
             Log::error('PDF Daily Error: ' . $e->getMessage(), [
@@ -279,8 +304,33 @@ class PdfReportController extends Controller
                     'displayed_records' => $data->count(),
                 ];
                 
-                $filename = 'laporan_kustom_' . $startDate->format('Y_m_d') . '.pdf';
-                return $this->downloadPdfWithFallback('reports.pdf.custom', $pdfData, $filename);
+                $baseFilename = 'laporan_kustom_' . $startDate->format('Y_m_d');
+
+                if ($totalRecords > self::PDF_MAX_DETAIL_ROWS) {
+                    $fullDataQuery = (clone $query)
+                        ->select([
+                            'id',
+                            'device_id',
+                            'created_at',
+                            'people_count',
+                            'room_temperature',
+                            'humidity',
+                            'light_level',
+                            'ac_status',
+                            'lamp_status',
+                        ])
+                        ->orderBy('created_at', 'desc');
+
+                    return $this->downloadChunkedPdfAsZip(
+                        'reports.pdf.custom',
+                        $pdfData,
+                        $fullDataQuery,
+                        $baseFilename,
+                        $totalRecords
+                    );
+                }
+
+                return $this->downloadPdfWithFallback('reports.pdf.custom', $pdfData, $baseFilename . '.pdf');
             }
 
             return response()->json(['data' => $data, 'summary' => $summary]);
@@ -453,6 +503,16 @@ class PdfReportController extends Controller
 
     private function downloadPdfWithFallback(string $view, array $data, string $filename)
     {
+        $pdfBinary = $this->renderPdfBinary($view, $data);
+
+        return response($pdfBinary, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    private function renderPdfBinary(string $view, array $data): string
+    {
         try {
             $html = view($view, $data)->render();
 
@@ -462,8 +522,7 @@ class PdfReportController extends Controller
             }
 
             if (!class_exists(Dompdf::class)) {
-                // Fallback jika class Dompdf native tidak tersedia.
-                return Pdf::loadHTML($html)->download($filename);
+                return Pdf::loadHTML($html)->output();
             }
 
             $dompdf = new Dompdf([
@@ -475,18 +534,55 @@ class PdfReportController extends Controller
             $dompdf->loadHtml($html, 'UTF-8');
             $dompdf->render();
 
-            return response($dompdf->output(), 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            ]);
+            return $dompdf->output();
         } catch (\Throwable $e) {
-            // Coba sekali lagi lewat facade jika gagal di native.
-            try {
-                Log::warning('Native Dompdf gagal, coba facade: ' . $e->getMessage());
-                return Pdf::loadView($view, $data)->download($filename);
-            } catch (\Throwable $fallbackError) {
-                throw $fallbackError;
-            }
+            Log::warning('Native Dompdf gagal, coba facade: ' . $e->getMessage());
+            return Pdf::loadView($view, $data)->output();
         }
+    }
+
+    private function downloadChunkedPdfAsZip(
+        string $view,
+        array $basePdfData,
+        $orderedQuery,
+        string $baseFilename,
+        int $totalRecords
+    ) {
+        $totalParts = (int) ceil($totalRecords / self::PDF_MAX_DETAIL_ROWS);
+        $zipPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $baseFilename . '_' . uniqid('parts_', true) . '.zip';
+
+        $zip = new ZipArchive();
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            throw new \RuntimeException('Gagal membuat file ZIP laporan.');
+        }
+
+        for ($part = 1; $part <= $totalParts; $part++) {
+            $offset = ($part - 1) * self::PDF_MAX_DETAIL_ROWS;
+
+            $chunk = (clone $orderedQuery)
+                ->offset($offset)
+                ->limit(self::PDF_MAX_DETAIL_ROWS)
+                ->get();
+
+            if ($chunk->isEmpty()) {
+                continue;
+            }
+
+            $partPdfData = $basePdfData;
+            $partPdfData['data'] = $chunk;
+            $partPdfData['is_truncated'] = false;
+            $partPdfData['displayed_records'] = $chunk->count();
+            $partPdfData['part_number'] = $part;
+            $partPdfData['total_parts'] = $totalParts;
+
+            $partFilename = $baseFilename . '_part_' . $part . '_of_' . $totalParts . '.pdf';
+            $zip->addFromString($partFilename, $this->renderPdfBinary($view, $partPdfData));
+        }
+
+        $zip->close();
+
+        return response()->download($zipPath, $baseFilename . '_parts.zip', [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
     }
 }
