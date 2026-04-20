@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,6 +19,7 @@
             color: #28a745;
             margin-left: 10px;
         }
+
         .realtime-dot {
             width: 8px;
             height: 8px;
@@ -25,30 +27,44 @@
             border-radius: 50%;
             animation: pulse 2s infinite;
         }
+
         @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
         }
+
         .data-timestamp {
             font-size: 11px;
             color: #666;
             margin-top: 5px;
         }
+
         .connection-status {
             padding: 2px 8px;
             border-radius: 12px;
             font-size: 11px;
             font-weight: bold;
         }
+
         .connection-status.online {
             background: #d4edda;
             color: #155724;
         }
+
         .connection-status.offline {
             background: #f8d7da;
             color: #721c24;
         }
+
         .sensor-card.updating {
             border: 2px solid #28a745;
             box-shadow: 0 0 10px rgba(40, 167, 69, 0.3);
@@ -111,7 +127,7 @@
             background: white;
             border-radius: 10px;
             padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             border: 1px solid #e0e0e0;
         }
 
@@ -135,7 +151,7 @@
             background: white;
             border-radius: 10px;
             padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             border-left: 4px solid #007bff;
             display: flex;
             gap: 15px;
@@ -177,7 +193,7 @@
             background: white;
             border-radius: 10px;
             padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             text-align: center;
             border: 1px solid #e0e0e0;
         }
@@ -231,13 +247,15 @@
             gap: 15px;
         }
 
-        .power-control, .temp-control {
+        .power-control,
+        .temp-control {
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
-        .power-control label, .temp-control label {
+        .power-control label,
+        .temp-control label {
             font-weight: bold;
             min-width: 60px;
         }
@@ -326,7 +344,8 @@
             gap: 10px;
         }
 
-        .apply-btn, .emergency-btn {
+        .apply-btn,
+        .emergency-btn {
             padding: 10px 20px;
             border: none;
             border-radius: 5px;
@@ -413,12 +432,12 @@
             .ac-units-control {
                 grid-template-columns: 1fr;
             }
-            
+
             .control-actions {
                 flex-direction: column;
                 align-items: stretch;
             }
-            
+
             .action-buttons {
                 justify-content: center;
             }
@@ -457,13 +476,13 @@
             color: #007bff;
             border-bottom-color: #007bff;
             background: white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
         .history-table-container {
             background: white;
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             overflow: hidden;
             margin-top: 20px;
         }
@@ -743,7 +762,7 @@
         .chart-tab-btn.active {
             background: #007bff;
             color: white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
 
         .chart-container {
@@ -753,14 +772,14 @@
             background: white;
             border-radius: 8px;
             padding: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
         @media (max-width: 768px) {
             .history-tabs {
                 flex-direction: column;
             }
-            
+
             .tab-button {
                 text-align: center;
             }
@@ -776,17 +795,21 @@
         <div class="sidebar-toggle" onclick="toggleSidebar()">
             <i class="fas fa-bars" id="toggleIcon"></i>
         </div>
-        
+
         <div class="sidebar-content">
             <h2><i class="fas fa-home"></i> <span class="sidebar-text">Smart Energy</span></h2>
             <ul>
-                <li><a href="#" onclick="showSection('Kontrol', this)" class="active" title="Monitoring"><i class="fas fa-desktop"></i> <span class="sidebar-text">Monitoring</span></a></li>
-                <li><a href="#" onclick="showSection('analytics', this)" title="Analisa"><i class="fas fa-chart-line"></i> <span class="sidebar-text">Analisa</span></a></li>
-                <li><a href="#" onclick="showSection('history', this)" title="History"><i class="fas fa-history"></i> <span class="sidebar-text">History</span></a></li>
-                <li><a href="#" onclick="showSection('reports', this)" title="Laporan"><i class="fas fa-file-alt"></i> <span class="sidebar-text">Laporan</span></a></li>
-               
+                <li><a href="#" onclick="showSection('Kontrol', this)" class="active" title="Monitoring"><i
+                            class="fas fa-desktop"></i> <span class="sidebar-text">Monitoring</span></a></li>
+                <li><a href="#" onclick="showSection('analytics', this)" title="Analisa"><i
+                            class="fas fa-chart-line"></i> <span class="sidebar-text">Analisa</span></a></li>
+                <li><a href="#" onclick="showSection('history', this)" title="History"><i class="fas fa-history"></i>
+                        <span class="sidebar-text">History</span></a></li>
+                <li><a href="#" onclick="showSection('reports', this)" title="Laporan"><i class="fas fa-file-alt"></i>
+                        <span class="sidebar-text">Laporan</span></a></li>
+
             </ul>
-            
+
             <div class="sidebar-footer">
                 <div class="user-info">
                     <i class="fas fa-user-circle"></i>
@@ -806,17 +829,19 @@
         <!-- ===== Monitoring Section ===== -->
         <section id="Kontrol">
             <div class="navbar">
-                <i class="fas fa-building"></i> <?php echo e($sensorData['location'] ?? 'Ruang Dosen Prodi Teknik Elektro'); ?>
+                <i class="fas fa-building"></i>
+                <?php echo e($sensorData['location'] ?? 'Ruang Dosen Prodi Teknik Elektro'); ?>
 
-                <?php if($sensorData['connection_status'] === 'online'): ?>
-                    <span class="realtime-indicator">
-                        <div class="realtime-dot"></div>
-                        ONLINE
-                    </span>
+                <?php if ($sensorData['connection_status'] === 'online'): ?>
+                <span class="realtime-indicator">
+                    <div class="realtime-dot"></div>
+                    ONLINE
+                </span>
                 <?php endif; ?>
             </div>
             <div class="subnav" id="waktuRealtime">
-                <i class="fas fa-clock"></i> <span id="currentDateTime"><?php echo e(now()->format('l, d F Y - H:i:s')); ?> WIB</span>
+                <i class="fas fa-clock"></i> <span
+                    id="currentDateTime"><?php echo e(now()->format('l, d F Y - H:i:s')); ?> WIB</span>
             </div>
 
             <!-- Connection Status -->
@@ -834,11 +859,11 @@
                             </span>
                         </div>
                         <div class="data-timestamp">
-                            <?php if($sensorData['connection_status'] === 'online'): ?>
-                                Terakhir update: <?php echo e($sensorData['last_update_time']); ?>
+                            <?php if ($sensorData['connection_status'] === 'online'): ?>
+                            Terakhir update: <?php    echo e($sensorData['last_update_time']); ?>
 
                             <?php else: ?>
-                                Data terakhir: <?php echo e($sensorData['time_ago'] ?? ''); ?>
+                            Data terakhir: <?php    echo e($sensorData['time_ago'] ?? ''); ?>
 
                             <?php endif; ?>
                         </div>
@@ -849,7 +874,9 @@
                         </div>
                         <div class="title">Device Info</div>
                         <div class="value"><?php echo e($sensorData['device_id'] ?? 'ESP32_Smart_Energy'); ?></div>
-                        <div class="data-timestamp"><?php echo e($sensorData['location'] ?? 'Ruang Dosen Prodi Teknik Elektro'); ?></div>
+                        <div class="data-timestamp">
+                            <?php echo e($sensorData['location'] ?? 'Ruang Dosen Prodi Teknik Elektro'); ?>
+                        </div>
                     </div>
                     <div class="card sensor-card">
                         <div class="card-icon">
@@ -857,10 +884,10 @@
                         </div>
                         <div class="title">WiFi Signal</div>
                         <div class="value">
-                            <?php if($sensorData['wifi_rssi']): ?>
-                                <?php echo e($sensorData['wifi_rssi']); ?> dBm
+                            <?php if ($sensorData['wifi_rssi']): ?>
+                            <?php    echo e($sensorData['wifi_rssi']); ?> dBm
                             <?php else: ?>
-                                -- dBm
+                            -- dBm
                             <?php endif; ?>
                         </div>
                         <div class="data-timestamp"><?php echo e($sensorData['wifi_quality'] ?? '--'); ?></div>
@@ -886,13 +913,15 @@
                         </div>
                         <div class="title">Suhu Ruangan</div>
                         <div class="value">
-                            <?php if($sensorData['temperature']): ?>
-                                <?php echo e(number_format($sensorData['temperature'], 1)); ?>°C
+                            <?php if ($sensorData['temperature']): ?>
+                            <?php    echo e(number_format($sensorData['temperature'], 1)); ?>°C
                             <?php else: ?>
-                                --°C
+                            --°C
                             <?php endif; ?>
                         </div>
-                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
+                        <div class="data-timestamp">
+                            <?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?>
+                        </div>
                     </div>
 
                     <div class="card sensor-card">
@@ -901,13 +930,15 @@
                         </div>
                         <div class="title">Kelembaban Ruangan</div>
                         <div class="value">
-                            <?php if($sensorData['humidity']): ?>
-                                <?php echo e(number_format($sensorData['humidity'], 1)); ?>%
+                            <?php if ($sensorData['humidity']): ?>
+                            <?php    echo e(number_format($sensorData['humidity'], 1)); ?>%
                             <?php else: ?>
-                                --%
+                            --%
                             <?php endif; ?>
                         </div>
-                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
+                        <div class="data-timestamp">
+                            <?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?>
+                        </div>
                     </div>
 
                     <div class="card sensor-card">
@@ -916,7 +947,9 @@
                         </div>
                         <div class="title">Jumlah Orang di Ruangan</div>
                         <div class="value"><?php echo e($sensorData['people_count'] ?? 0); ?></div>
-                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
+                        <div class="data-timestamp">
+                            <?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?>
+                        </div>
                     </div>
 
                     <div class="card sensor-card">
@@ -925,13 +958,15 @@
                         </div>
                         <div class="title">Intensitas Cahaya</div>
                         <div class="value">
-                            <?php if($sensorData['light_intensity']): ?>
-                                <?php echo e(number_format($sensorData['light_intensity'])); ?> lux
+                            <?php if ($sensorData['light_intensity']): ?>
+                            <?php    echo e(number_format($sensorData['light_intensity'])); ?> lux
                             <?php else: ?>
-                                -- lux
+                            -- lux
                             <?php endif; ?>
                         </div>
-                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
+                        <div class="data-timestamp">
+                            <?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?>
+                        </div>
                     </div>
 
                     <div class="card sensor-card">
@@ -940,13 +975,15 @@
                         </div>
                         <div class="title">Status Lampu</div>
                         <div class="value">
-                            <?php if(isset($sensorData['lamp_status']) && $sensorData['lamp_status'] === 'ON'): ?>
-                                <span style="color: #ffc107;">ON</span>
+                            <?php if (isset($sensorData['lamp_status']) && $sensorData['lamp_status'] === 'ON'): ?>
+                            <span style="color: #ffc107;">ON</span>
                             <?php else: ?>
-                                <span style="color: #6c757d;">OFF</span>
+                            <span style="color: #6c757d;">OFF</span>
                             <?php endif; ?>
                         </div>
-                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
+                        <div class="data-timestamp">
+                            <?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -961,7 +998,9 @@
                         </div>
                         <div class="title">Status AC</div>
                         <div class="value"><?php echo e($sensorData['ac_status'] ?? 'OFF'); ?></div>
-                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
+                        <div class="data-timestamp">
+                            <?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?>
+                        </div>
                     </div>
 
                     <div class="card sensor-card">
@@ -970,13 +1009,15 @@
                         </div>
                         <div class="title">Set Temperature AC</div>
                         <div class="value">
-                            <?php if($sensorData['set_temperature']): ?>
-                                <?php echo e($sensorData['set_temperature']); ?>°C
+                            <?php if ($sensorData['set_temperature']): ?>
+                            <?php    echo e($sensorData['set_temperature']); ?>°C
                             <?php else: ?>
-                                --°C
+                            --°C
                             <?php endif; ?>
                         </div>
-                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
+                        <div class="data-timestamp">
+                            <?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?>
+                        </div>
                     </div>
 
                     <div class="card sensor-card">
@@ -985,11 +1026,13 @@
                         </div>
                         <div class="title">Sensor Deteksi Orang</div>
                         <div class="value">
-                            IN: <?php echo e($sensorData['proximity_in'] ? 'AKTIF' : 'OFF'); ?> | 
+                            IN: <?php echo e($sensorData['proximity_in'] ? 'AKTIF' : 'OFF'); ?> |
                             OUT: <?php echo e($sensorData['proximity_out'] ? 'AKTIF' : 'OFF'); ?>
 
                         </div>
-                        <div class="data-timestamp"><?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?></div>
+                        <div class="data-timestamp">
+                            <?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?>
+                        </div>
                     </div>
 
                     <div class="card sensor-card">
@@ -998,10 +1041,10 @@
                         </div>
                         <div class="title">Update Frequency</div>
                         <div class="value">
-                            <?php if($updateFrequency): ?>
-                                <?php echo e($updateFrequency); ?> detik
+                            <?php if ($updateFrequency): ?>
+                            <?php    echo e($updateFrequency); ?> detik
                             <?php else: ?>
-                                -- detik
+                            -- detik
                             <?php endif; ?>
                         </div>
                         <div class="data-timestamp">Interval update data</div>
@@ -1021,11 +1064,11 @@
                         </div>
                         <div class="title">Data Hari Ini</div>
                         <div class="value">
-                            <?php if(isset($dailyStats['today_count'])): ?>
-                                <?php echo e(number_format($dailyStats['today_count'])); ?>
+                            <?php if (isset($dailyStats['today_count'])): ?>
+                            <?php    echo e(number_format($dailyStats['today_count'])); ?>
 
                             <?php else: ?>
-                                0
+                            0
                             <?php endif; ?>
                         </div>
                         <div class="data-timestamp">Record data sensor</div>
@@ -1037,10 +1080,10 @@
                         </div>
                         <div class="title">Rata-rata Suhu Hari Ini</div>
                         <div class="value">
-                            <?php if(isset($dailyStats['avg_temperature'])): ?>
-                                <?php echo e(number_format($dailyStats['avg_temperature'], 1)); ?>°C
+                            <?php if (isset($dailyStats['avg_temperature'])): ?>
+                            <?php    echo e(number_format($dailyStats['avg_temperature'], 1)); ?>°C
                             <?php else: ?>
-                                --°C
+                            --°C
                             <?php endif; ?>
                         </div>
                         <div class="data-timestamp">Suhu rata-rata</div>
@@ -1052,11 +1095,11 @@
                         </div>
                         <div class="title">Max Orang Hari Ini</div>
                         <div class="value">
-                            <?php if(isset($dailyStats['max_people'])): ?>
-                                <?php echo e($dailyStats['max_people']); ?>
+                            <?php if (isset($dailyStats['max_people'])): ?>
+                            <?php    echo e($dailyStats['max_people']); ?>
 
                             <?php else: ?>
-                                0
+                            0
                             <?php endif; ?>
                         </div>
                         <div class="data-timestamp">Jumlah maksimum</div>
@@ -1068,12 +1111,14 @@
                         </div>
                         <div class="title">Data Age</div>
                         <div class="value">
-                            <?php if($sensorData['data_age_minutes'] <= 2): ?>
-                                <span style="color: #28a745;">Fresh</span>
-                            <?php elseif($sensorData['data_age_minutes'] <= 10): ?>
-                                <span style="color: #ffc107;"><?php echo e($sensorData['data_age_minutes']); ?> min</span>
+                            <?php if ($sensorData['data_age_minutes'] <= 2): ?>
+                            <span style="color: #28a745;">Fresh</span>
+                            <?php elseif ($sensorData['data_age_minutes'] <= 10): ?>
+                            <span style="color: #ffc107;"><?php    echo e($sensorData['data_age_minutes']); ?>
+                                min</span>
                             <?php else: ?>
-                                <span style="color: #dc3545;"><?php echo e($sensorData['data_age_minutes']); ?> min</span>
+                            <span style="color: #dc3545;"><?php    echo e($sensorData['data_age_minutes']); ?>
+                                min</span>
                             <?php endif; ?>
                         </div>
                         <div class="data-timestamp"><?php echo e($sensorData['time_ago'] ?? ''); ?></div>
@@ -1154,7 +1199,7 @@
             <div class="device-section">
                 <h3><i class="fas fa-microchip"></i> Kontrol Perangkat Listrik</h3>
                 <div class="device-grid">
-                    
+
                     <!-- AC Panasonic -->
                     <div class="card device-card ac-card">
                         <div class="card-icon">
@@ -1164,27 +1209,29 @@
                         <div class="device-info">
                             <span>Daya: 1050W per unit | Total Konsumsi: 10.8 kWh</span>
                         </div>
-                        
+
                         <!-- Status kedua AC -->
                         <div class="ac-units-status">
                             <div class="ac-unit">
                                 <span>AC Unit 1:</span>
                                 <div id="ac1Status" class="mini-status status-off">MATI</div>
-                                <button onclick="toggleACUnit(1)" class="mini-btn"><i class="fas fa-power-off"></i></button>
+                                <button onclick="toggleACUnit(1)" class="mini-btn"><i
+                                        class="fas fa-power-off"></i></button>
                             </div>
                             <div class="ac-unit">
                                 <span>AC Unit 2:</span>
                                 <div id="ac2Status" class="mini-status status-off">MATI</div>
-                                <button onclick="toggleACUnit(2)" class="mini-btn"><i class="fas fa-power-off"></i></button>
+                                <button onclick="toggleACUnit(2)" class="mini-btn"><i
+                                        class="fas fa-power-off"></i></button>
                             </div>
                         </div>
-                        
+
                         <!-- Status keseluruhan -->
                         <div id="acStatus" class="status-off">SEMUA MATI</div>
-                        
+
                         <!-- Kontrol keseluruhan -->
                         <button onclick="toggleAllAC()"><i class="fas fa-power-off"></i> KONTROL SEMUA AC</button>
-                        
+
                         <div class="device-controls">
                             <div class="title" style="margin-top:10px;">Suhu Setting</div>
                             <div class="value" id="acTempValue">24 °C</div>
@@ -1209,24 +1256,26 @@
                         <div class="device-info">
                             <span>Daya: 22W per unit | Total Konsumsi: 2.112 kWh</span>
                         </div>
-                        
+
                         <!-- Status kedua jalur lampu -->
                         <div class="lamp-circuits-status">
                             <div class="lamp-circuit">
                                 <span>Jalur 1 (6 Unit):</span>
                                 <div id="lamp1Status" class="mini-status status-off">MATI</div>
-                                <button onclick="toggleLampCircuit(1)" class="mini-btn"><i class="fas fa-power-off"></i></button>
+                                <button onclick="toggleLampCircuit(1)" class="mini-btn"><i
+                                        class="fas fa-power-off"></i></button>
                             </div>
                             <div class="lamp-circuit">
                                 <span>Jalur 2 (6 Unit):</span>
                                 <div id="lamp2Status" class="mini-status status-off">MATI</div>
-                                <button onclick="toggleLampCircuit(2)" class="mini-btn"><i class="fas fa-power-off"></i></button>
+                                <button onclick="toggleLampCircuit(2)" class="mini-btn"><i
+                                        class="fas fa-power-off"></i></button>
                             </div>
                         </div>
-                        
+
                         <!-- Status keseluruhan -->
                         <div id="lampStatus" class="status-off">SEMUA MATI</div>
-                        
+
                         <!-- Kontrol keseluruhan -->
                         <button onclick="toggleAllLamps()"><i class="fas fa-power-off"></i> KONTROL SEMUA LAMPU</button>
                     </div>
@@ -1257,114 +1306,7 @@
                     ANALYTICS
                 </span>
             </div>
-            <div class="subnav">
-                <i class="fas fa-analytics"></i> Analisis mendalam data sensor ESP32, pola penggunaan AC, dan efisiensi energi Ruang Dosen Prodi Teknik Elektro UNJA
-            </div>
 
-            <!-- Summary Analytics Cards -->
-            <div class="sensor-section">
-                <h3><i class="fas fa-chart-pie"></i> Ringkasan Analisis</h3>
-                <div class="sensor-grid">
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="title">Okupansi Saat Ini</div>
-                        <div class="value" id="currentOccupancy">0%</div>
-                        <div class="data-timestamp">Dari 20 kapasitas maksimal</div>
-                    </div>
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-snowflake"></i>
-                        </div>
-                        <div class="title">Status AC</div>
-                        <div class="value" id="acStatusAnalytics">OFF</div>
-                        <div class="data-timestamp">Kontrol otomatis</div>
-                    </div>
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-thermometer-half"></i>
-                        </div>
-                        <div class="title">Suhu Ruangan</div>
-                        <div class="value" id="tempAnalytics">25.0°C</div>
-                        <div class="data-timestamp">DHT22 Sensor</div>
-                    </div>
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-tint"></i>
-                        </div>
-                        <div class="title">Kelembaban</div>
-                        <div class="value" id="humidityAnalytics">60.0%</div>
-                        <div class="data-timestamp">DHT22 Sensor</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Performance Metrics -->
-            <div class="sensor-section">
-                <h3><i class="fas fa-tachometer-alt"></i> Metrik Performa Sistem</h3>
-                <div class="sensor-grid">
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="title">Response Time</div>
-                        <div class="value" id="responseTimeAnalytics">1.2s</div>
-                        <div class="data-timestamp">Waktu update sensor</div>
-                    </div>
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-database"></i>
-                        </div>
-                        <div class="title">Total Records</div>
-                        <div class="value" id="totalRecordsAnalytics">0</div>
-                        <div class="data-timestamp">Data tersimpan</div>
-                    </div>
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-wifi"></i>
-                        </div>
-                        <div class="title">WiFi Signal</div>
-                        <div class="value" id="wifiSignalAnalytics">-45 dBm</div>
-                        <div class="data-timestamp">Kekuatan sinyal ESP32</div>
-                    </div>
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-bolt"></i>
-                        </div>
-                        <div class="title">Efisiensi Energi</div>
-                        <div class="value" id="energyEfficiencyAnalytics">85%</div>
-                        <div class="data-timestamp">Skor efisiensi</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Analysis Insights -->
-            <div class="sensor-section">
-                <h3><i class="fas fa-brain"></i> Insight & Rekomendasi</h3>
-                <div class="sensor-grid">
-                    <div class="card sensor-card" style="grid-column: span 2;">
-                        <div class="card-icon">
-                            <i class="fas fa-lightbulb"></i>
-                        </div>
-                        <div class="title">Rekomendasi Efisiensi</div>
-                        <div class="value" style="font-size: 14px; line-height: 1.4;" id="efficiencyRecommendation">
-                            Sistem akan menganalisis pola penggunaan AC berdasarkan okupansi ruangan untuk memberikan rekomendasi efisiensi energi yang optimal.
-                        </div>
-                        <div class="data-timestamp">Update berdasarkan data real-time</div>
-                    </div>
-                    <div class="card sensor-card" style="grid-column: span 2;">
-                        <div class="card-icon">
-                            <i class="fas fa-chart-trending-up"></i>
-                        </div>
-                        <div class="title">Analisis Pola Penggunaan</div>
-                        <div class="value" style="font-size: 14px; line-height: 1.4;" id="usagePatternAnalysis">
-                            Monitoring okupansi ruangan secara real-time untuk mengoptimalkan penggunaan AC dan menghemat energi berdasarkan kebutuhan aktual.
-                        </div>
-                        <div class="data-timestamp">Analisis berdasarkan data historis</div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Chart Section -->
             <div class="sensor-section">
@@ -1378,44 +1320,6 @@
                 </div>
             </div>
 
-            <!-- System Status -->
-            <div class="sensor-section">
-                <h3><i class="fas fa-cog"></i> Status Sistem</h3>
-                <div class="sensor-grid">
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-microchip"></i>
-                        </div>
-                        <div class="title">ESP32 Status</div>
-                        <div class="value" id="esp32Status">Online</div>
-                        <div class="data-timestamp">Koneksi aktif</div>
-                    </div>
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-server"></i>
-                        </div>
-                        <div class="title">Server Status</div>
-                        <div class="value" id="serverStatus">Running</div>
-                        <div class="data-timestamp">Laravel server</div>
-                    </div>
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-database"></i>
-                        </div>
-                        <div class="title">Database Status</div>
-                        <div class="value" id="databaseStatus">Connected</div>
-                        <div class="data-timestamp">MySQL connection</div>
-                    </div>
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-shield-alt"></i>
-                        </div>
-                        <div class="title">System Health</div>
-                        <div class="value" id="systemHealth">Excellent</div>
-                        <div class="data-timestamp">Overall status</div>
-                    </div>
-                </div>
-            </div>
         </section>
 
         <!-- ===== History Section ===== -->
@@ -1427,67 +1331,20 @@
                     HISTORY
                 </span>
             </div>
-           
 
-           
 
-            <!-- Summary Cards -->
-            <div class="sensor-section">
-                <h3><i class="fas fa-chart-bar"></i> Ringkasan Data</h3>
-                <div class="sensor-grid">
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-database"></i>
-                        </div>
-                        <div class="title">Total Records</div>
-                        <div class="value" id="totalRecords"><?php echo e(number_format($totalRecords)); ?></div>
-                        <div class="data-timestamp">Data tersimpan</div>
-                    </div>
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="title">Data Terakhir</div>
-                        <div class="value" id="lastUpdate"><?php echo e($sensorData['last_update_time'] ?? '--'); ?></div>
-                        <div class="data-timestamp"><?php echo e($sensorData['time_ago'] ?? 'Belum ada data'); ?></div>
-                    </div>
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-wifi"></i>
-                        </div>
-                        <div class="title">Status Koneksi</div>
-                        <div class="value">
-                            <span class="connection-status <?php echo e($sensorData['connection_status'] ?? 'offline'); ?>">
-                                <?php echo e($sensorData['status'] === 'active' ? 'Online' : 'Offline'); ?>
 
-                            </span>
-                        </div>
-                        <div class="data-timestamp">ESP32 Connection</div>
-                    </div>
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <div class="title">Update Frequency</div>
-                        <div class="value" id="updateFreq">
-                            <?php if($updateFrequency): ?>
-                                <?php echo e($updateFrequency); ?>s
-                            <?php else: ?>
-                                --s
-                            <?php endif; ?>
-                        </div>
-                        <div class="data-timestamp">Interval rata-rata</div>
-                    </div>
-                </div>
-            </div>
+
 
             <!-- Tab Navigation -->
             <div class="sensor-section">
-                <h3><i class="fas fa-table"></i> Data History 
-                    <button type="button" onclick="loadHistoryData()" class="btn-refresh" style="margin-left: 10px; padding: 5px 10px; font-size: 12px;">
+                <h3><i class="fas fa-table"></i> Data History
+                    <button type="button" onclick="loadHistoryData()" class="btn-refresh"
+                        style="margin-left: 10px; padding: 5px 10px; font-size: 12px;">
                         <i class="fas fa-sync-alt"></i> Refresh
                     </button>
-                    <button type="button" onclick="testHistoryAPI()" class="btn-export" style="margin-left: 5px; padding: 5px 10px; font-size: 12px;">
+                    <button type="button" onclick="testHistoryAPI()" class="btn-export"
+                        style="margin-left: 5px; padding: 5px 10px; font-size: 12px;">
                         <i class="fas fa-bug"></i> Test API
                     </button>
                 </h3>
@@ -1495,7 +1352,7 @@
                     <button type="button" class="tab-button active" onclick="showHistoryTab('sensor-data', this)">
                         <i class="fas fa-chart-line"></i> Data Sensor
                     </button>
-                    
+
                     <button type="button" class="tab-button" onclick="showHistoryTab('people-count', this)">
                         <i class="fas fa-users"></i> Jumlah Orang
                     </button>
@@ -1539,11 +1396,13 @@
                         </table>
                     </div>
                     <div class="table-pagination">
-                        <button type="button" onclick="previousPage('sensor', event)" id="sensorPrevBtn" class="btn-small" disabled>
+                        <button type="button" onclick="previousPage('sensor', event)" id="sensorPrevBtn"
+                            class="btn-small" disabled>
                             <i class="fas fa-chevron-left"></i> Previous
                         </button>
                         <span id="sensorPageInfo">Page 1 of 1</span>
-                        <button type="button" onclick="nextPage('sensor', event)" id="sensorNextBtn" class="btn-small" disabled>
+                        <button type="button" onclick="nextPage('sensor', event)" id="sensorNextBtn" class="btn-small"
+                            disabled>
                             Next <i class="fas fa-chevron-right"></i>
                         </button>
                     </div>
@@ -1617,7 +1476,8 @@
                                 <i class="fas fa-users"></i>
                             </div>
                             <div class="title">Max Hari Ini</div>
-                            <div class="value" id="maxPeopleToday"><?php echo e($dailyStats['max_people'] ?? 0); ?></div>
+                            <div class="value" id="maxPeopleToday"><?php echo e($dailyStats['max_people'] ?? 0); ?>
+                            </div>
                             <div class="data-timestamp">Jumlah maksimum</div>
                         </div>
                         <div class="card sensor-card">
@@ -1625,7 +1485,9 @@
                                 <i class="fas fa-chart-line"></i>
                             </div>
                             <div class="title">Rata-rata</div>
-                            <div class="value" id="avgPeopleToday"><?php echo e(isset($dailyStats['avg_people']) ? number_format($dailyStats['avg_people'], 1) : '0.0'); ?></div>
+                            <div class="value" id="avgPeopleToday">
+                                <?php echo e(isset($dailyStats['avg_people']) ? number_format($dailyStats['avg_people'], 1) : '0.0'); ?>
+                            </div>
                             <div class="data-timestamp">Rata-rata harian</div>
                         </div>
                         <div class="card sensor-card">
@@ -1633,7 +1495,8 @@
                                 <i class="fas fa-clock"></i>
                             </div>
                             <div class="title">Waktu Puncak</div>
-                            <div class="value" id="peakTimeToday"><?php echo e($dailyStats['peak_time'] ?? '--:--'); ?></div>
+                            <div class="value" id="peakTimeToday"><?php echo e($dailyStats['peak_time'] ?? '--:--'); ?>
+                            </div>
                             <div class="data-timestamp">Jam tersibuk</div>
                         </div>
                         <div class="card sensor-card">
@@ -1677,7 +1540,9 @@
                                 <i class="fas fa-thermometer-half"></i>
                             </div>
                             <div class="title">Suhu Rata-rata</div>
-                            <div class="value" id="avgTempToday"><?php echo e(isset($dailyStats['avg_temperature']) ? number_format($dailyStats['avg_temperature'], 1) : '--'); ?>°C</div>
+                            <div class="value" id="avgTempToday">
+                                <?php echo e(isset($dailyStats['avg_temperature']) ? number_format($dailyStats['avg_temperature'], 1) : '--'); ?>°C
+                            </div>
                             <div class="data-timestamp">Hari ini</div>
                         </div>
                         <div class="card sensor-card">
@@ -1685,7 +1550,9 @@
                                 <i class="fas fa-tint"></i>
                             </div>
                             <div class="title">Kelembaban Rata-rata</div>
-                            <div class="value" id="avgHumidityToday"><?php echo e(isset($dailyStats['avg_humidity']) ? number_format($dailyStats['avg_humidity'], 1) : '--'); ?>%</div>
+                            <div class="value" id="avgHumidityToday">
+                                <?php echo e(isset($dailyStats['avg_humidity']) ? number_format($dailyStats['avg_humidity'], 1) : '--'); ?>%
+                            </div>
                             <div class="data-timestamp">Hari ini</div>
                         </div>
                         <div class="card sensor-card">
@@ -1693,7 +1560,10 @@
                                 <i class="fas fa-sun"></i>
                             </div>
                             <div class="title">Cahaya Rata-rata</div>
-                            <div class="value" id="avgLightToday"><?php echo e(isset($dailyStats['avg_light']) ? number_format($dailyStats['avg_light']) : '--'); ?> lux</div>
+                            <div class="value" id="avgLightToday">
+                                <?php echo e(isset($dailyStats['avg_light']) ? number_format($dailyStats['avg_light']) : '--'); ?>
+                                lux
+                            </div>
                             <div class="data-timestamp">Hari ini</div>
                         </div>
                         <div class="card sensor-card">
@@ -1795,7 +1665,7 @@
                 </div>
             </div>
 
-           
+
         </section>
 
         <!-- ===== Reports Section ===== -->
@@ -1803,7 +1673,7 @@
             <header>
                 <h1><i class="fas fa-file-chart-line"></i> Laporan Energi</h1>
             </header>
-            
+
             <!-- Quick Reports -->
             <div class="reports-container">
                 <div class="report-card">
@@ -1813,10 +1683,11 @@
                     <h3>Laporan Harian</h3>
                     <p>Konsumsi energi hari ini</p>
                     <div class="report-actions">
-                        <button type="button" onclick="downloadDailyReport(); return false;"><i class="fas fa-download"></i> Download PDF</button>
+                        <button type="button" onclick="downloadDailyReport(); return false;"><i
+                                class="fas fa-download"></i> Download PDF</button>
                     </div>
                 </div>
-                
+
                 <div class="report-card">
                     <div class="report-icon">
                         <i class="fas fa-calendar-week"></i>
@@ -1824,10 +1695,11 @@
                     <h3>Laporan Mingguan</h3>
                     <p>Ringkasan pemakaian energi 7 hari terakhir</p>
                     <div class="report-actions">
-                        <button type="button" onclick="downloadWeeklyReport(); return false;"><i class="fas fa-download"></i> Download PDF</button>
+                        <button type="button" onclick="downloadWeeklyReport(); return false;"><i
+                                class="fas fa-download"></i> Download PDF</button>
                     </div>
                 </div>
-                
+
                 <div class="report-card">
                     <div class="report-icon">
                         <i class="fas fa-calendar-alt"></i>
@@ -1835,10 +1707,11 @@
                     <h3>Laporan Bulanan</h3>
                     <p>Analisis komprehensif pemakaian bulanan</p>
                     <div class="report-actions">
-                        <button type="button" onclick="downloadMonthlyReport(); return false;"><i class="fas fa-download"></i> Download PDF</button>
+                        <button type="button" onclick="downloadMonthlyReport(); return false;"><i
+                                class="fas fa-download"></i> Download PDF</button>
                     </div>
                 </div>
-                
+
                 <div class="report-card">
                     <div class="report-icon">
                         <i class="fas fa-leaf"></i>
@@ -1846,7 +1719,8 @@
                     <h3>Laporan Efisiensi</h3>
                     <p>Evaluasi tingkat efisiensi energi</p>
                     <div class="report-actions">
-                        <button type="button" onclick="downloadEfficiencyReport(); return false;"><i class="fas fa-download"></i> Download PDF</button>
+                        <button type="button" onclick="downloadEfficiencyReport(); return false;"><i
+                                class="fas fa-download"></i> Download PDF</button>
                     </div>
                 </div>
             </div>
@@ -1896,33 +1770,6 @@
                 </div>
             </div>
 
-            <!-- Quick Download Links -->
-            <div class="quick-downloads">
-                <h2><i class="fas fa-bolt"></i> Download Cepat</h2>
-                <div class="download-links">
-                    <a href="javascript:void(0)" onclick="downloadTodayReport(); return false;" class="download-link">
-                        <i class="fas fa-file-pdf"></i>
-                        <div>
-                            <h4>Laporan Hari Ini</h4>
-                            <p>Download laporan energi hari ini</p>
-                        </div>
-                    </a>
-                    <a href="javascript:void(0)" onclick="downloadWeekReport(); return false;" class="download-link">
-                        <i class="fas fa-file-excel"></i>
-                        <div>
-                            <h4>Laporan Minggu Ini</h4>
-                            <p>Download ringkasan minggu ini</p>
-                        </div>
-                    </a>
-                    <a href="javascript:void(0)" onclick="downloadMonthReport(); return false;" class="download-link">
-                        <i class="fas fa-file-csv"></i>
-                        <div>
-                            <h4>Laporan Bulan Ini</h4>
-                            <p>Download analisis bulanan</p>
-                        </div>
-                    </a>
-                </div>
-            </div>
         </section>
 
         <!-- ===== Devices Section ===== -->
@@ -1964,21 +1811,22 @@
                         <button class="btn-small"><i class="fas fa-cog"></i></button>
                     </div>
                 </div>
-                
+
                 <!-- Pemakaian Listrik Lainnya -->
                 <div class="device-card other-devices-card-sidebar">
                     <div class="device-status partial"></div>
                     <i class="fas fa-plug device-icon"></i>
                     <h3>Pemakaian Listrik Lainnya</h3>
                     <p>Total Daya: 2795W | Total: 7 Perangkat</p>
-                    
+
                     <!-- Detail perangkat lainnya -->
                     <div class="other-devices-detail-sidebar">
                         <div class="device-item-sidebar">
                             <span><i class="fas fa-desktop"></i> Komputer (2 Unit)</span>
                             <div class="device-toggle-sidebar">
                                 <div id="computerStatusSidebar" class="mini-status status-off">OFF</div>
-                                <button onclick="toggleDevice('computer')" class="mini-btn"><i class="fas fa-power-off"></i></button>
+                                <button onclick="toggleDevice('computer')" class="mini-btn"><i
+                                        class="fas fa-power-off"></i></button>
                             </div>
                         </div>
 
@@ -1986,7 +1834,8 @@
                             <span><i class="fas fa-tint"></i> Dispenser Sanken</span>
                             <div class="device-toggle-sidebar">
                                 <div id="dispenserStatusSidebar" class="mini-status status-off">OFF</div>
-                                <button onclick="toggleDevice('dispenser')" class="mini-btn"><i class="fas fa-power-off"></i></button>
+                                <button onclick="toggleDevice('dispenser')" class="mini-btn"><i
+                                        class="fas fa-power-off"></i></button>
                             </div>
                         </div>
 
@@ -1994,7 +1843,8 @@
                             <span><i class="fas fa-tv"></i> Smart TV Horizon</span>
                             <div class="device-toggle-sidebar">
                                 <div id="tvStatusSidebar" class="mini-status status-off">OFF</div>
-                                <button onclick="toggleDevice('tv')" class="mini-btn"><i class="fas fa-power-off"></i></button>
+                                <button onclick="toggleDevice('tv')" class="mini-btn"><i
+                                        class="fas fa-power-off"></i></button>
                             </div>
                         </div>
 
@@ -2002,7 +1852,8 @@
                             <span><i class="fas fa-archive"></i> Kulkas Sharp</span>
                             <div class="device-toggle-sidebar">
                                 <div id="fridgeStatusSidebar" class="mini-status status-on">ON</div>
-                                <button onclick="toggleDevice('fridge')" class="mini-btn"><i class="fas fa-power-off"></i></button>
+                                <button onclick="toggleDevice('fridge')" class="mini-btn"><i
+                                        class="fas fa-power-off"></i></button>
                             </div>
                         </div>
 
@@ -2010,7 +1861,8 @@
                             <span><i class="fas fa-wifi"></i> Router Wi-Fi</span>
                             <div class="device-toggle-sidebar">
                                 <div id="routerStatusSidebar" class="mini-status status-on">ON</div>
-                                <button onclick="toggleDevice('router')" class="mini-btn"><i class="fas fa-power-off"></i></button>
+                                <button onclick="toggleDevice('router')" class="mini-btn"><i
+                                        class="fas fa-power-off"></i></button>
                             </div>
                         </div>
 
@@ -2018,7 +1870,8 @@
                             <span><i class="fas fa-coffee"></i> Teko Listrik</span>
                             <div class="device-toggle-sidebar">
                                 <div id="kettleStatusSidebar" class="mini-status status-off">OFF</div>
-                                <button onclick="toggleDevice('kettle')" class="mini-btn"><i class="fas fa-power-off"></i></button>
+                                <button onclick="toggleDevice('kettle')" class="mini-btn"><i
+                                        class="fas fa-power-off"></i></button>
                             </div>
                         </div>
 
@@ -2026,13 +1879,15 @@
                             <span><i class="fas fa-mug-hot"></i> Mesin Kopi</span>
                             <div class="device-toggle-sidebar">
                                 <div id="coffeeStatusSidebar" class="mini-status status-off">OFF</div>
-                                <button onclick="toggleDevice('coffee')" class="mini-btn"><i class="fas fa-power-off"></i></button>
+                                <button onclick="toggleDevice('coffee')" class="mini-btn"><i
+                                        class="fas fa-power-off"></i></button>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="device-controls">
-                        <button class="btn-small" onclick="toggleAllOtherDevices()"><i class="fas fa-power-off"></i></button>
+                        <button class="btn-small" onclick="toggleAllOtherDevices()"><i
+                                class="fas fa-power-off"></i></button>
                         <button class="btn-small"><i class="fas fa-cog"></i></button>
                     </div>
                 </div>
@@ -2255,7 +2110,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="settings-group">
                     <h3><i class="fas fa-microchip"></i> Koneksi Arduino</h3>
                     <div class="setting-item">
@@ -2283,9 +2138,9 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const toggleIcon = document.getElementById('toggleIcon');
-            
+
             sidebar.classList.toggle('collapsed');
-            
+
             if (sidebar.classList.contains('collapsed')) {
                 toggleIcon.classList.remove('fa-bars');
                 toggleIcon.classList.add('fa-chevron-right');
@@ -2301,10 +2156,10 @@
             sections.forEach(section => {
                 section.style.display = 'none';
             });
-            
+
             // Show selected section
             document.getElementById(sectionId).style.display = 'block';
-            
+
             // Update active menu item
             const menuItems = document.querySelectorAll('.sidebar a');
             menuItems.forEach(item => {
@@ -2326,11 +2181,11 @@
         function initializeHistory() {
             // Initialize history data loading
             loadSensorData();
-            
+
             // Set up period filter change handler
             const periodSelect = document.getElementById('historyPeriod');
             if (periodSelect) {
-                periodSelect.addEventListener('change', function() {
+                periodSelect.addEventListener('change', function () {
                     const customRange = document.getElementById('customDateRange');
                     if (customRange) {
                         if (this.value === 'custom') {
@@ -2355,7 +2210,7 @@
 
             const limitSelect = document.getElementById('sensorDataLimit');
             if (limitSelect) {
-                limitSelect.addEventListener('change', function() {
+                limitSelect.addEventListener('change', function () {
                     currentHistoryPage = 1;
                     loadSensorData();
                 });
@@ -2363,7 +2218,7 @@
 
             const deviceFilterSelect = document.getElementById('deviceFilter');
             if (deviceFilterSelect) {
-                deviceFilterSelect.addEventListener('change', function() {
+                deviceFilterSelect.addEventListener('change', function () {
                     currentHistoryPage = 1;
                     loadSensorData();
                 });
@@ -2376,26 +2231,26 @@
             tabContents.forEach(content => {
                 content.style.display = 'none';
             });
-            
+
             // Remove active class from all tab buttons
             const tabButtons = document.querySelectorAll('.tab-button');
             tabButtons.forEach(button => {
                 button.classList.remove('active');
             });
-            
+
             // Show selected tab content
             const selectedTab = document.getElementById(tabName + '-table');
             if (selectedTab) {
                 selectedTab.style.display = 'block';
             }
-            
+
             // Add active class to clicked button
             if (buttonElement) {
                 buttonElement.classList.add('active');
             }
-            
+
             // Load data for the selected tab
-            switch(tabName) {
+            switch (tabName) {
                 case 'sensor-data':
                     currentHistoryPage = 1;
                     loadSensorData();
@@ -2417,14 +2272,14 @@
 
         function testHistoryAPI() {
             console.log('Testing History API...');
-            
+
             // Test multiple endpoints
             const endpoints = [
                 '/api/sensor/history?per_page=10',
                 '/api/sensor/data?per_page=10',
                 '/api/sensor/latest'
             ];
-            
+
             endpoints.forEach(endpoint => {
                 console.log(`Testing endpoint: ${endpoint}`);
                 fetch(endpoint)
@@ -2442,7 +2297,7 @@
                         console.error(`${endpoint} - Error:`, error);
                     });
             });
-            
+
             // Also test database count
             fetch('/api/sensor/data')
                 .then(response => response.json())
@@ -2479,29 +2334,29 @@
                 console.error('sensor-data-body element not found');
                 return;
             }
-            
+
             const limitSelect = document.getElementById('sensorDataLimit');
             const periodSelect = document.getElementById('historyPeriod');
             const deviceFilterSelect = document.getElementById('deviceFilter');
-            
+
             const limit = limitSelect ? limitSelect.value : '20';
             const period = periodSelect ? periodSelect.value : 'week';
             const deviceFilter = deviceFilterSelect ? deviceFilterSelect.value : '';
-            
+
             tbody.innerHTML = '<tr><td colspan="14" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading data sensor...</td></tr>';
-            
+
             let url = `/api/sensor/history?per_page=${limit}&page=${currentHistoryPage}`;
             if (deviceFilter) {
                 url += `&device_id=${encodeURIComponent(deviceFilter)}`;
             }
-            
+
             console.log('Loading sensor data from:', url);
-            
+
             // Set timeout for fetch request
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-            
-            fetch(url, { 
+
+            fetch(url, {
                 signal: controller.signal,
                 headers: {
                     'Accept': 'application/json',
@@ -2513,7 +2368,7 @@
                     clearTimeout(timeoutId);
                     console.log('Response status:', response.status);
                     console.log('Response headers:', response.headers);
-                    
+
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
                     }
@@ -2521,7 +2376,7 @@
                 })
                 .then(data => {
                     console.log('API Response:', data);
-                    
+
                     if (data.success) {
                         if (data.pagination) {
                             currentHistoryPage = data.pagination.current_page || 1;
@@ -2533,20 +2388,20 @@
                         if (data.data && Array.isArray(data.data) && data.data.length > 0) {
                             let html = '';
                             let previousPeopleCount = null;
-                            
+
                             data.data.forEach((item, index) => {
                                 try {
-                                    const timestamp = item.created_at ? 
+                                    const timestamp = item.created_at ?
                                         new Date(item.created_at).toLocaleString('id-ID', {
                                             timeZone: 'Asia/Jakarta'
                                         }) : '--';
-                                    
+
                                     const proximityStatus = `IN: ${item.proximity_in ? 'ON' : 'OFF'} | OUT: ${item.proximity_out ? 'ON' : 'OFF'}`;
-                                    
+
                                     // Hitung orang masuk dan keluar
                                     let masuk = '--';
                                     let keluar = '--';
-                                    
+
                                     if (previousPeopleCount !== null) {
                                         const diff = item.people_count - previousPeopleCount;
                                         if (diff > 0) {
@@ -2560,9 +2415,9 @@
                                             keluar = '0';
                                         }
                                     }
-                                    
+
                                     previousPeopleCount = item.people_count;
-                                    
+
                                     html += `
                                         <tr>
                                             <td>${item.id || '--'}</td>
@@ -2585,12 +2440,12 @@
                                     console.error('Error processing item:', itemError, item);
                                 }
                             });
-                            
+
                             tbody.innerHTML = html;
-                            
+
                             // Update summary stats
                             updateSummaryStats(data.data);
-                            
+
                             console.log(`Successfully loaded ${data.data.length} sensor records`);
                         } else {
                             let message = 'Tidak ada data sensor ditemukan';
@@ -2613,14 +2468,14 @@
                     clearTimeout(timeoutId);
                     console.error('Error loading sensor data:', error);
                     updateSensorPagination(null);
-                    
+
                     let errorMessage = 'Error loading data';
                     if (error.name === 'AbortError') {
                         errorMessage = 'Request timeout - please try again';
                     } else if (error.message) {
                         errorMessage = error.message;
                     }
-                    
+
                     tbody.innerHTML = `<tr><td colspan="12" class="error-row">${errorMessage}<br><small>Check console for details</small></td></tr>`;
                 });
         }
@@ -2656,9 +2511,9 @@
         function loadACActivity() {
             const tbody = document.getElementById('ac-activity-body');
             if (!tbody) return;
-            
+
             tbody.innerHTML = '<tr><td colspan="7" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading aktivitas AC...</td></tr>';
-            
+
             // Load AC control history from API
             fetch('/api/ac/history')
                 .then(response => response.json())
@@ -2669,25 +2524,25 @@
                         let totalOnTime = 0;
                         let tempSum = 0;
                         let tempCount = 0;
-                        
+
                         data.data.forEach((item, index) => {
                             const timestamp = new Date(item.created_at).toLocaleString('id-ID', {
                                 timeZone: 'Asia/Jakarta'
                             });
                             const mode = item.control_mode === 'manual' ? 'Manual Control' : 'Auto Control';
-                            
+
                             let keterangan = '';
                             if (item.control_mode === 'manual') {
                                 keterangan = `Manual control by ${item.created_by || 'user'}`;
                             } else {
                                 keterangan = 'Automatic control based on people count';
                             }
-                            
+
                             const ac1Status = item.ac1_status ? 'ON' : 'OFF';
                             const ac2Status = item.ac2_status ? 'ON' : 'OFF';
-                            const acStatus = (item.ac1_status && item.ac2_status) ? '2 AC ON' : 
-                                           (item.ac1_status || item.ac2_status) ? '1 AC ON' : 'AC OFF';
-                            
+                            const acStatus = (item.ac1_status && item.ac2_status) ? '2 AC ON' :
+                                (item.ac1_status || item.ac2_status) ? '1 AC ON' : 'AC OFF';
+
                             html += `
                                 <tr>
                                     <td>${timestamp}</td>
@@ -2699,7 +2554,7 @@
                                     <td><small>${keterangan}</small></td>
                                 </tr>
                             `;
-                            
+
                             acEvents++;
                             if (item.ac1_temperature) {
                                 tempSum += item.ac1_temperature;
@@ -2710,14 +2565,14 @@
                                 tempCount++;
                             }
                         });
-                        
+
                         tbody.innerHTML = html;
-                        
+
                         // Update AC activity stats
                         document.getElementById('totalACEvents').textContent = acEvents;
                         document.getElementById('avgACTemp').textContent = tempCount > 0 ? (tempSum / tempCount).toFixed(1) + '°C' : '--°C';
                         document.getElementById('controlMode').textContent = 'Auto/Manual';
-                        
+
                     } else {
                         // Fallback to sensor data for AC activity
                         loadACActivityFromSensorData();
@@ -2732,7 +2587,7 @@
 
         function loadACActivityFromSensorData() {
             const tbody = document.getElementById('ac-activity-body');
-            
+
             fetch('/api/sensor/history?per_page=100')
                 .then(response => response.json())
                 .then(data => {
@@ -2742,7 +2597,7 @@
                         let acEvents = 0;
                         let tempSum = 0;
                         let tempCount = 0;
-                        
+
                         data.data.forEach((item, index) => {
                             // Only show records where AC status changed
                             if (item.ac_status !== lastACStatus) {
@@ -2751,7 +2606,7 @@
                                 });
                                 const mode = 'Auto (People Detection)';
                                 let keterangan = '';
-                                
+
                                 if (item.ac_status === 'OFF') {
                                     keterangan = 'AC dimatikan karena tidak ada orang';
                                 } else if (item.people_count <= 5) {
@@ -2761,7 +2616,7 @@
                                 } else {
                                     keterangan = '2 AC aktif untuk 11+ orang';
                                 }
-                                
+
                                 html += `
                                     <tr>
                                         <td>${timestamp}</td>
@@ -2775,25 +2630,25 @@
                                 `;
                                 lastACStatus = item.ac_status;
                                 acEvents++;
-                                
+
                                 if (item.set_temperature) {
                                     tempSum += item.set_temperature;
                                     tempCount++;
                                 }
                             }
                         });
-                        
+
                         if (html) {
                             tbody.innerHTML = html;
                         } else {
                             tbody.innerHTML = '<tr><td colspan="7" class="no-data">Tidak ada perubahan aktivitas AC ditemukan</td></tr>';
                         }
-                        
+
                         // Update AC activity stats
                         document.getElementById('totalACEvents').textContent = acEvents;
                         document.getElementById('avgACTemp').textContent = tempCount > 0 ? (tempSum / tempCount).toFixed(1) + '°C' : '--°C';
                         document.getElementById('controlMode').textContent = 'Auto';
-                        
+
                     } else {
                         tbody.innerHTML = '<tr><td colspan="7" class="no-data">Tidak ada data aktivitas AC ditemukan</td></tr>';
                     }
@@ -2807,9 +2662,9 @@
         function loadPeopleCountData() {
             const tbody = document.getElementById('people-count-body');
             if (!tbody) return;
-            
+
             tbody.innerHTML = '<tr><td colspan="7" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading data jumlah orang...</td></tr>';
-            
+
             fetch('/api/sensor/history?per_page=100')
                 .then(response => response.json())
                 .then(data => {
@@ -2817,7 +2672,7 @@
                         let html = '';
                         let lastPeopleCount = -1;
                         let totalMovement = 0;
-                        
+
                         data.data.forEach((item, index) => {
                             // Only show records where people count changed
                             if (item.people_count !== lastPeopleCount) {
@@ -2827,7 +2682,7 @@
                                 const change = lastPeopleCount === -1 ? 0 : item.people_count - lastPeopleCount;
                                 const changeIcon = change > 0 ? '↑' : change < 0 ? '↓' : '=';
                                 const changeClass = change > 0 ? 'increase' : change < 0 ? 'decrease' : 'same';
-                                
+
                                 let acResponse = 'Tidak ada perubahan';
                                 if (item.people_count === 0) {
                                     acResponse = 'AC OFF';
@@ -2838,7 +2693,7 @@
                                 } else {
                                     acResponse = '2 AC ON (20°C)';
                                 }
-                                
+
                                 let keterangan = '';
                                 if (change > 0) {
                                     keterangan = `${change} orang masuk ruangan`;
@@ -2849,7 +2704,7 @@
                                 } else if (lastPeopleCount === -1) {
                                     keterangan = 'Data awal sistem';
                                 }
-                                
+
                                 html += `
                                     <tr>
                                         <td>${timestamp}</td>
@@ -2864,16 +2719,16 @@
                                 lastPeopleCount = item.people_count;
                             }
                         });
-                        
+
                         if (html) {
                             tbody.innerHTML = html;
                         } else {
                             tbody.innerHTML = '<tr><td colspan="7" class="no-data">Tidak ada perubahan jumlah orang ditemukan</td></tr>';
                         }
-                        
+
                         // Update total movement
                         document.getElementById('totalMovement').textContent = totalMovement;
-                        
+
                     } else {
                         tbody.innerHTML = '<tr><td colspan="7" class="no-data">Tidak ada data jumlah orang ditemukan</td></tr>';
                     }
@@ -2887,21 +2742,21 @@
         function loadEnvironmentData() {
             const tbody = document.getElementById('environment-body');
             if (!tbody) return;
-            
+
             tbody.innerHTML = '<tr><td colspan="7" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading data lingkungan...</td></tr>';
-            
+
             fetch('/api/sensor/history?per_page=50')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.data.length > 0) {
                         let html = '';
                         let tempSum = 0, humSum = 0, lightSum = 0, count = 0;
-                        
+
                         data.data.forEach((item, index) => {
                             const timestamp = new Date(item.created_at).toLocaleString('id-ID', {
                                 timeZone: 'Asia/Jakarta'
                             });
-                            
+
                             // Determine condition based on environment data
                             let kondisi = 'Normal';
                             if (item.room_temperature > 28) {
@@ -2909,19 +2764,19 @@
                             } else if (item.room_temperature < 20) {
                                 kondisi = 'Dingin';
                             }
-                            
+
                             if (item.humidity > 70) {
                                 kondisi += ', Lembab';
                             } else if (item.humidity < 40) {
                                 kondisi += ', Kering';
                             }
-                            
+
                             if (item.light_level < 200) {
                                 kondisi += ', Gelap';
                             } else if (item.light_level > 800) {
                                 kondisi += ', Terang';
                             }
-                            
+
                             html += `
                                 <tr>
                                     <td>${timestamp}</td>
@@ -2933,7 +2788,7 @@
                                     <td><span class="condition-badge">${kondisi}</span></td>
                                 </tr>
                             `;
-                            
+
                             // Calculate averages
                             if (item.room_temperature) {
                                 tempSum += item.room_temperature;
@@ -2942,24 +2797,24 @@
                             if (item.humidity) humSum += item.humidity;
                             if (item.light_level) lightSum += item.light_level;
                         });
-                        
+
                         tbody.innerHTML = html;
-                        
+
                         // Update room condition
                         if (count > 0) {
                             const avgTemp = tempSum / count;
                             const avgHum = humSum / count;
                             let roomCondition = 'Normal';
-                            
+
                             if (avgTemp > 28) roomCondition = 'Panas';
                             else if (avgTemp < 20) roomCondition = 'Dingin';
-                            
+
                             if (avgHum > 70) roomCondition += ', Lembab';
                             else if (avgHum < 40) roomCondition += ', Kering';
-                            
+
                             document.getElementById('roomCondition').textContent = roomCondition;
                         }
-                        
+
                     } else {
                         tbody.innerHTML = '<tr><td colspan="7" class="no-data">Tidak ada data lingkungan ditemukan</td></tr>';
                     }
@@ -2973,85 +2828,85 @@
         function loadSystemEvents() {
             const tbody = document.getElementById('system-events-body');
             if (!tbody) return;
-            
+
             const eventFilterSelect = document.getElementById('eventTypeFilter');
             const eventFilter = eventFilterSelect ? eventFilterSelect.value : '';
             tbody.innerHTML = '<tr><td colspan="6" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading system events...</td></tr>';
-            
+
             // Generate system events based on sensor data and AC control history
             Promise.all([
                 fetch('/api/sensor/history?per_page=30').then(r => r.json()),
-                fetch('/api/ac/history').then(r => r.json()).catch(() => ({success: false}))
+                fetch('/api/ac/history').then(r => r.json()).catch(() => ({ success: false }))
             ])
-            .then(([sensorData, acData]) => {
-                let html = '';
-                let events = [];
-                let totalEvents = 0;
-                let successEvents = 0;
-                let errorEvents = 0;
-                
-                // Generate events from sensor data
-                if (sensorData.success && sensorData.data) {
-                    sensorData.data.forEach((item, index) => {
-                        const timestamp = new Date(item.created_at);
-                        
-                        // Connection events
-                        events.push({
-                            timestamp: timestamp,
-                            type: 'sensor_update',
-                            device: item.device_id || 'ESP32',
-                            description: 'Sensor data received',
-                            data: `People: ${item.people_count}, Temp: ${item.room_temperature}°C`,
-                            status: 'success'
-                        });
-                        
-                        // AC control events
-                        if (item.ac_status !== 'OFF') {
+                .then(([sensorData, acData]) => {
+                    let html = '';
+                    let events = [];
+                    let totalEvents = 0;
+                    let successEvents = 0;
+                    let errorEvents = 0;
+
+                    // Generate events from sensor data
+                    if (sensorData.success && sensorData.data) {
+                        sensorData.data.forEach((item, index) => {
+                            const timestamp = new Date(item.created_at);
+
+                            // Connection events
                             events.push({
                                 timestamp: timestamp,
-                                type: 'ac_control',
+                                type: 'sensor_update',
                                 device: item.device_id || 'ESP32',
-                                description: `AC activated: ${item.ac_status}`,
-                                data: `Set temp: ${item.set_temperature}°C, People: ${item.people_count}`,
+                                description: 'Sensor data received',
+                                data: `People: ${item.people_count}, Temp: ${item.room_temperature}°C`,
+                                status: 'success'
+                            });
+
+                            // AC control events
+                            if (item.ac_status !== 'OFF') {
+                                events.push({
+                                    timestamp: timestamp,
+                                    type: 'ac_control',
+                                    device: item.device_id || 'ESP32',
+                                    description: `AC activated: ${item.ac_status}`,
+                                    data: `Set temp: ${item.set_temperature}°C, People: ${item.people_count}`,
+                                    status: 'info'
+                                });
+                            }
+                        });
+                    }
+
+                    // Generate events from AC control history
+                    if (acData.success && acData.data) {
+                        acData.data.forEach((item, index) => {
+                            const timestamp = new Date(item.created_at);
+
+                            events.push({
+                                timestamp: timestamp,
+                                type: 'manual_control',
+                                device: 'Dashboard',
+                                description: `Manual AC control activated`,
+                                data: `AC1: ${item.ac1_status ? 'ON' : 'OFF'}, AC2: ${item.ac2_status ? 'ON' : 'OFF'}`,
                                 status: 'info'
                             });
-                        }
-                    });
-                }
-                
-                // Generate events from AC control history
-                if (acData.success && acData.data) {
-                    acData.data.forEach((item, index) => {
-                        const timestamp = new Date(item.created_at);
-                        
-                        events.push({
-                            timestamp: timestamp,
-                            type: 'manual_control',
-                            device: 'Dashboard',
-                            description: `Manual AC control activated`,
-                            data: `AC1: ${item.ac1_status ? 'ON' : 'OFF'}, AC2: ${item.ac2_status ? 'ON' : 'OFF'}`,
-                            status: 'info'
                         });
-                    });
-                }
-                
-                // Sort events by timestamp (newest first)
-                events.sort((a, b) => b.timestamp - a.timestamp);
-                
-                // Filter events if needed
-                if (eventFilter) {
-                    events = events.filter(event => event.type === eventFilter);
-                }
-                
-                // Generate HTML
-                events.slice(0, 50).forEach(event => {
-                    const timestampStr = event.timestamp.toLocaleString('id-ID', {
-                        timeZone: 'Asia/Jakarta'
-                    });
-                    const statusClass = event.status === 'success' ? 'status-success' : 
-                                      event.status === 'error' ? 'status-error' : 'status-info';
-                    
-                    html += `
+                    }
+
+                    // Sort events by timestamp (newest first)
+                    events.sort((a, b) => b.timestamp - a.timestamp);
+
+                    // Filter events if needed
+                    if (eventFilter) {
+                        events = events.filter(event => event.type === eventFilter);
+                    }
+
+                    // Generate HTML
+                    events.slice(0, 50).forEach(event => {
+                        const timestampStr = event.timestamp.toLocaleString('id-ID', {
+                            timeZone: 'Asia/Jakarta'
+                        });
+                        const statusClass = event.status === 'success' ? 'status-success' :
+                            event.status === 'error' ? 'status-error' : 'status-info';
+
+                        html += `
                         <tr>
                             <td>${timestampStr}</td>
                             <td><span class="event-type-badge ${event.type}">${event.type.replace('_', ' ').toUpperCase()}</span></td>
@@ -3061,40 +2916,40 @@
                             <td><span class="status-badge ${statusClass}">${event.status.toUpperCase()}</span></td>
                         </tr>
                     `;
-                    
-                    totalEvents++;
-                    if (event.status === 'success') successEvents++;
-                    if (event.status === 'error') errorEvents++;
+
+                        totalEvents++;
+                        if (event.status === 'success') successEvents++;
+                        if (event.status === 'error') errorEvents++;
+                    });
+
+                    if (html) {
+                        tbody.innerHTML = html;
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="6" class="no-data">Tidak ada system events ditemukan</td></tr>';
+                    }
+
+                    // Update event stats
+                    document.getElementById('totalEvents').textContent = totalEvents;
+                    document.getElementById('successEvents').textContent = successEvents;
+                    document.getElementById('errorEvents').textContent = errorEvents;
+
+                })
+                .catch(error => {
+                    console.error('Error loading system events:', error);
+                    tbody.innerHTML = '<tr><td colspan="6" class="error-row">Error loading data. Please try again.</td></tr>';
                 });
-                
-                if (html) {
-                    tbody.innerHTML = html;
-                } else {
-                    tbody.innerHTML = '<tr><td colspan="6" class="no-data">Tidak ada system events ditemukan</td></tr>';
-                }
-                
-                // Update event stats
-                document.getElementById('totalEvents').textContent = totalEvents;
-                document.getElementById('successEvents').textContent = successEvents;
-                document.getElementById('errorEvents').textContent = errorEvents;
-                
-            })
-            .catch(error => {
-                console.error('Error loading system events:', error);
-                tbody.innerHTML = '<tr><td colspan="6" class="error-row">Error loading data. Please try again.</td></tr>';
-            });
         }
 
         function updateSummaryStats(data) {
             if (!data || data.length === 0) return;
-            
+
             try {
                 // Update total records
                 const totalRecordsEl = document.getElementById('totalRecords');
                 if (totalRecordsEl) {
                     totalRecordsEl.textContent = data.length.toLocaleString();
                 }
-                
+
                 // Update last update time
                 const lastUpdateEl = document.getElementById('lastUpdate');
                 if (lastUpdateEl && data[0] && data[0].created_at) {
@@ -3105,7 +2960,7 @@
                         });
                     }
                 }
-                
+
                 // Calculate update frequency
                 if (data.length > 1) {
                     const firstTime = new Date(data[0].created_at);
@@ -3113,7 +2968,7 @@
                     if (!isNaN(firstTime.getTime()) && !isNaN(lastTime.getTime())) {
                         const diffMinutes = (firstTime - lastTime) / (1000 * 60);
                         const avgInterval = diffMinutes / data.length;
-                        
+
                         const updateFreqEl = document.getElementById('updateFreq');
                         if (updateFreqEl) {
                             updateFreqEl.textContent = Math.round(Math.abs(avgInterval) * 60) + 's';
@@ -3132,15 +2987,15 @@
         function exportHistoryData() {
             const periodSelect = document.getElementById('historyPeriod');
             const deviceFilterSelect = document.getElementById('deviceFilter');
-            
+
             const period = periodSelect ? periodSelect.value : 'week';
             const deviceFilter = deviceFilterSelect ? deviceFilterSelect.value : '';
-            
+
             let url = '/api/sensor/history?format=csv';
             if (deviceFilter) {
                 url += `&device_id=${deviceFilter}`;
             }
-            
+
             // Create download link
             const link = document.createElement('a');
             link.href = url;
@@ -3177,12 +3032,12 @@
             document.querySelectorAll('.chart-tab-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            
+
             // Add active class to clicked button
             if (event && event.target) {
                 event.target.classList.add('active');
             }
-            
+
             // Load chart data
             loadChartData(chartType);
         }
@@ -3194,18 +3049,18 @@
                     if (data.success && data.data.length > 0) {
                         const canvas = document.getElementById('historyChart');
                         if (!canvas) return;
-                        
+
                         const ctx = canvas.getContext('2d');
-                        
+
                         // Destroy existing chart
                         if (historyChart) {
                             historyChart.destroy();
                         }
-                        
+
                         const labels = data.data.map(item => item.time);
                         let chartData, label, color;
-                        
-                        switch(chartType) {
+
+                        switch (chartType) {
                             case 'temperature':
                                 chartData = data.data.map(item => item.temperature);
                                 label = 'Suhu (°C)';
@@ -3227,7 +3082,7 @@
                                 color = 'rgb(255, 205, 86)';
                                 break;
                         }
-                        
+
                         historyChart = new Chart(ctx, {
                             type: 'line',
                             data: {
@@ -3287,9 +3142,9 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const toggleIcon = document.getElementById('toggleIcon');
-            
+
             sidebar.classList.toggle('collapsed');
-            
+
             if (sidebar.classList.contains('collapsed')) {
                 toggleIcon.classList.remove('fa-bars');
                 toggleIcon.classList.add('fa-chevron-right');
@@ -3305,10 +3160,10 @@
             sections.forEach(section => {
                 section.style.display = 'none';
             });
-            
+
             // Show selected section
             document.getElementById(sectionId).style.display = 'block';
-            
+
             // Update active menu item
             const menuItems = document.querySelectorAll('.sidebar a');
             menuItems.forEach(item => {
@@ -3318,12 +3173,12 @@
         }
 
         // ===== INITIALIZE =====
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             console.log('Smart Energy Dashboard - Server-side Mode');
-            
+
             // Initialize AC control
             initializeACControl();
-            
+
             // Add manual refresh button
             const navbar = document.querySelector('.navbar');
             if (navbar) {
@@ -3382,7 +3237,7 @@
                 manualControls.style.display = 'none';
                 autoModeInfo.style.display = 'block';
                 currentACState.mode = 'auto';
-                
+
                 // Return to auto mode via API
                 returnToAutoMode();
             } else {
@@ -3397,7 +3252,7 @@
         function toggleAC(unit) {
             const toggle = document.getElementById(`ac${unit}Toggle`);
             const status = document.getElementById(`ac${unit}Status`);
-            
+
             if (unit === 1) {
                 currentACState.ac1_status = !currentACState.ac1_status;
                 toggle.classList.toggle('active', currentACState.ac1_status);
@@ -3413,16 +3268,16 @@
             const tempSpan = document.getElementById(`ac${unit}Temp`);
             let currentTemp = parseInt(tempSpan.textContent);
             let newTemp = currentTemp + delta;
-            
+
             // Limit temperature range
             newTemp = Math.max(16, Math.min(30, newTemp));
-            
+
             if (unit === 1) {
                 currentACState.ac1_temperature = newTemp;
             } else {
                 currentACState.ac2_temperature = newTemp;
             }
-            
+
             tempSpan.textContent = newTemp;
         }
 
@@ -3430,11 +3285,11 @@
             // Update toggles
             document.getElementById('ac1Toggle').classList.toggle('active', currentACState.ac1_status);
             document.getElementById('ac2Toggle').classList.toggle('active', currentACState.ac2_status);
-            
+
             // Update status text
             document.getElementById('ac1Status').textContent = currentACState.ac1_status ? 'ON' : 'OFF';
             document.getElementById('ac2Status').textContent = currentACState.ac2_status ? 'ON' : 'OFF';
-            
+
             // Update temperatures
             document.getElementById('ac1Temp').textContent = currentACState.ac1_temperature;
             document.getElementById('ac2Temp').textContent = currentACState.ac2_temperature;
@@ -3442,7 +3297,7 @@
 
         function applyACControl() {
             const duration = document.getElementById('controlDuration').value;
-            
+
             const controlData = {
                 device_id: 'ESP32_Smart_Energy_ChangeDetection',
                 location: 'Ruang Dosen Prodi Teknik Elektro',
@@ -3463,19 +3318,19 @@
                 },
                 body: JSON.stringify(controlData)
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('✓ Pengaturan AC berhasil diterapkan!');
-                    updateControlStatus(data.data);
-                } else {
-                    alert('✗ Gagal menerapkan pengaturan: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('✗ Terjadi kesalahan saat menerapkan pengaturan');
-            });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✓ Pengaturan AC berhasil diterapkan!');
+                        updateControlStatus(data.data);
+                    } else {
+                        alert('✗ Gagal menerapkan pengaturan: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('✗ Terjadi kesalahan saat menerapkan pengaturan');
+                });
         }
 
         function emergencyStopAC() {
@@ -3491,23 +3346,23 @@
                         location: 'Ruang Dosen Prodi Teknik Elektro'
                     })
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('✓ Emergency stop berhasil! Semua AC dimatikan.');
-                        // Reset UI
-                        currentACState.ac1_status = false;
-                        currentACState.ac2_status = false;
-                        updateACControlUI();
-                        updateControlStatus(data.data);
-                    } else {
-                        alert('✗ Gagal melakukan emergency stop: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('✗ Terjadi kesalahan saat emergency stop');
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('✓ Emergency stop berhasil! Semua AC dimatikan.');
+                            // Reset UI
+                            currentACState.ac1_status = false;
+                            currentACState.ac2_status = false;
+                            updateACControlUI();
+                            updateControlStatus(data.data);
+                        } else {
+                            alert('✗ Gagal melakukan emergency stop: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('✗ Terjadi kesalahan saat emergency stop');
+                    });
             }
         }
 
@@ -3523,32 +3378,32 @@
                     location: 'Ruang Dosen Prodi Teknik Elektro'
                 })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateControlStatus({
-                        control_mode: 'auto',
-                        manual_override: false,
-                        message: 'Arduino mengontrol AC berdasarkan jumlah orang'
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error returning to auto mode:', error);
-            });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateControlStatus({
+                            control_mode: 'auto',
+                            manual_override: false,
+                            message: 'Arduino mengontrol AC berdasarkan jumlah orang'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error returning to auto mode:', error);
+                });
         }
 
         function updateControlStatus(controlData) {
             const statusDisplay = document.getElementById('controlStatus');
             let statusText = '';
-            
+
             if (controlData.control_mode === 'auto') {
                 statusText = 'Mode: Otomatis | Arduino mengontrol AC berdasarkan jumlah orang';
             } else {
                 const ac1Text = controlData.ac1_status ? `AC1: ON (${controlData.ac1_temperature}°C)` : 'AC1: OFF';
                 const ac2Text = controlData.ac2_status ? `AC2: ON (${controlData.ac2_temperature}°C)` : 'AC2: OFF';
                 statusText = `Mode: Manual | ${ac1Text}, ${ac2Text}`;
-                
+
                 if (controlData.expires_at) {
                     const expiryDate = new Date(controlData.expires_at);
                     statusText += ` | Berakhir: ${expiryDate.toLocaleString('id-ID', {
@@ -3556,20 +3411,20 @@
                     })}`;
                 }
             }
-            
+
             statusDisplay.textContent = statusText;
         }
 
         // ===== INITIALIZE =====
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             console.log('Smart Energy Dashboard - Server-side Mode');
-            
+
             // Initialize AC control
             initializeACControl();
-            
+
             // Initialize History section
             initializeHistory();
-            
+
             // Add manual refresh button
             const navbar = document.querySelector('.navbar');
             if (navbar) {
@@ -3584,12 +3439,12 @@
         // ===== REAL-TIME CLOCK UPDATE =====
         function updateDateTime() {
             const now = new Date();
-            
+
             // Format tanggal dan waktu dalam bahasa Indonesia dengan zona waktu Jakarta
             const options = {
                 timeZone: 'Asia/Jakarta',
                 weekday: 'long',
-                year: 'numeric', 
+                year: 'numeric',
                 month: 'long',
                 day: 'numeric',
                 hour: '2-digit',
@@ -3597,16 +3452,16 @@
                 second: '2-digit',
                 hour12: false
             };
-            
+
             const formatter = new Intl.DateTimeFormat('id-ID', options);
             const formattedDateTime = formatter.format(now);
-            
+
             // Update elemen waktu utama
             const dateTimeElement = document.getElementById('currentDateTime');
             if (dateTimeElement) {
                 dateTimeElement.textContent = formattedDateTime + ' WIB';
             }
-            
+
             // Update elemen waktu lainnya jika ada
             const currentTimeDisplayElement = document.getElementById('currentTimeDisplay');
             if (currentTimeDisplayElement) {
@@ -3617,21 +3472,21 @@
                     second: '2-digit',
                     hour12: false
                 });
-                
+
                 const dayName = now.toLocaleDateString('id-ID', {
                     timeZone: 'Asia/Jakarta',
                     weekday: 'short'
                 });
-                
+
                 currentTimeDisplayElement.textContent = `${timeOnly} (${dayName})`;
             }
         }
 
         // Mulai update waktu setiap detik
         setInterval(updateDateTime, 1000);
-        
+
         // Update waktu segera saat halaman dimuat
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             updateDateTime();
         });
 
@@ -3676,11 +3531,11 @@
                         }
                     });
                 }
-                
+
                 // Start real-time updates
                 updateAnalyticsData();
                 analyticsUpdateInterval = setInterval(updateAnalyticsData, 5000);
-                
+
             } catch (error) {
                 console.error('Error initializing analytics:', error);
             }
@@ -3693,20 +3548,20 @@
                 .then(data => {
                     if (data.success && data.data) {
                         const sensorData = data.data;
-                        
+
                         // Update analytics cards
                         updateAnalyticsElement('currentOccupancy', Math.round((sensorData.people_count / 20) * 100) + '%');
                         updateAnalyticsElement('acStatusAnalytics', sensorData.ac_status || 'OFF');
                         updateAnalyticsElement('tempAnalytics', (sensorData.room_temperature || 25).toFixed(1) + '°C');
                         updateAnalyticsElement('humidityAnalytics', (sensorData.humidity || 60).toFixed(1) + '%');
                         updateAnalyticsElement('wifiSignalAnalytics', (sensorData.wifi_rssi || -45) + ' dBm');
-                        
+
                         // Update recommendations
                         updateRecommendations(sensorData);
-                        
+
                         // Update system status
                         updateAnalyticsElement('esp32Status', sensorData.status === 'active' ? 'Online' : 'Offline');
-                        
+
                     }
                 })
                 .catch(error => {
@@ -3724,7 +3579,7 @@
 
         function updateRecommendations(sensorData) {
             let recommendation = "Sistem berjalan normal. ";
-            
+
             if (sensorData.people_count === 0 && sensorData.ac_status !== 'OFF') {
                 recommendation = "⚠️ AC menyala tanpa okupansi. Pertimbangkan mematikan AC untuk menghemat energi.";
             } else if (sensorData.people_count > 0 && sensorData.ac_status === 'OFF') {
@@ -3734,9 +3589,9 @@
             } else if (sensorData.people_count > 0) {
                 recommendation = "✅ Penggunaan AC optimal sesuai okupansi " + sensorData.people_count + " orang.";
             }
-            
+
             updateAnalyticsElement('efficiencyRecommendation', recommendation);
-            
+
             // Update usage pattern
             let usagePattern = "Okupansi saat ini: " + sensorData.people_count + "/20 (" + Math.round((sensorData.people_count / 20) * 100) + "%). ";
             if (sensorData.people_count === 0) {
@@ -3748,7 +3603,7 @@
             } else {
                 usagePattern += "Okupansi tinggi - 2 AC unit untuk kenyamanan maksimal.";
             }
-            
+
             updateAnalyticsElement('usagePatternAnalysis', usagePattern);
         }
 
@@ -3761,14 +3616,14 @@
 
         // Update showSection function to handle analytics
         const originalShowSection = showSection;
-        showSection = function(sectionId, element) {
+        showSection = function (sectionId, element) {
             // Stop analytics updates when leaving analytics section
             if (analyticsUpdateInterval && sectionId !== 'analytics') {
                 stopAnalytics();
             }
-            
+
             originalShowSection(sectionId, element);
-            
+
             // Initialize analytics when entering analytics section
             if (sectionId === 'analytics') {
                 setTimeout(() => {
@@ -3831,7 +3686,7 @@
             const day = parts.find(p => p.type === 'day')?.value;
             return `${year}-${month}-${day}`;
         }
-        
+
         // Download Daily Report
         async function downloadDailyReport() {
             try {
@@ -3875,7 +3730,7 @@
                 const weekStart = startOfWeek.toISOString().split('T')[0];
                 const url = `/api/reports/pdf/weekly?week_start=${weekStart}`;
                 console.log('Downloading weekly report from:', url);
-                
+
                 const link = document.createElement('a');
                 link.href = url;
                 link.target = '_blank';
@@ -3883,7 +3738,7 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                
+
                 setTimeout(() => {
                     alert('Download laporan mingguan dimulai...');
                 }, 100);
@@ -3901,7 +3756,7 @@
                 const month = today.toISOString().slice(0, 7); // YYYY-MM format
                 const url = `/api/reports/pdf/monthly?month=${month}`;
                 console.log('Downloading monthly report from:', url);
-                
+
                 const link = document.createElement('a');
                 link.href = url;
                 link.target = '_blank';
@@ -3909,7 +3764,7 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                
+
                 setTimeout(() => {
                     alert('Download laporan bulanan dimulai...');
                 }, 100);
@@ -3929,7 +3784,7 @@
                 const dateTo = today.toISOString().split('T')[0];
                 const url = `/api/reports/pdf/efficiency?date_from=${dateFrom}&date_to=${dateTo}`;
                 console.log('Downloading efficiency report from:', url);
-                
+
                 const link = document.createElement('a');
                 link.href = url;
                 link.target = '_blank';
@@ -3937,7 +3792,7 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                
+
                 setTimeout(() => {
                     alert('Download laporan efisiensi dimulai...');
                 }, 100);
@@ -4024,7 +3879,7 @@
                     (part, parts) => `laporan_kustom_${dateFrom.replace(/-/g, '_')}_part_${part}_of_${parts}.pdf`,
                     totalParts
                 );
-                
+
                 setTimeout(() => {
                     alert(`Download laporan kustom dimulai dalam ${totalParts} file (part).`);
                 }, 100);
@@ -4049,13 +3904,13 @@
         }
 
         // Set default dates for custom report
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const today = new Date();
             const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-            
+
             const dateFromInput = document.getElementById('reportDateFrom');
             const dateToInput = document.getElementById('reportDateTo');
-            
+
             if (dateFromInput) dateFromInput.value = getJakartaDateISO(lastWeek);
             if (dateToInput) dateToInput.value = getJakartaDateISO(today);
         });
@@ -4063,4 +3918,6 @@
     <script src="<?php echo e(asset('ac-control.js')); ?>"></script>
     <script src="<?php echo e(asset('script.js')); ?>"></script>
 </body>
-</html><?php /**PATH C:\Users\MyPC PRO\Documents\1. PUNYA UMAIIII\dasko\dasko-app\resources\views/dashboard.blade.php ENDPATH**/ ?>
+
+</html>
+<?php /**PATH C:\Users\MyPC PRO\Documents\1. PUNYA UMAIIII\dasko\dasko-app\resources\views/dashboard.blade.php ENDPATH**/ ?>
