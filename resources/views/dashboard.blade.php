@@ -831,13 +831,6 @@
             <div class="navbar">
                 <i class="fas fa-building"></i>
                 <?php echo e($sensorData['location'] ?? 'Ruang Dosen Prodi Teknik Elektro'); ?>
-
-                <?php if ($sensorData['connection_status'] === 'online'): ?>
-                <span class="realtime-indicator">
-                    <div class="realtime-dot"></div>
-                    ONLINE
-                </span>
-                <?php endif; ?>
             </div>
             <div class="subnav" id="waktuRealtime">
                 <i class="fas fa-clock"></i> <span
@@ -1301,10 +1294,6 @@
         <section id="analytics" style="display:none;">
             <div class="navbar">
                 <i class="fas fa-chart-bar"></i> Analisa Data Smart Energy
-                <span class="realtime-indicator">
-                    <div class="realtime-dot"></div>
-                    ANALYTICS
-                </span>
             </div>
 
 
@@ -1326,10 +1315,6 @@
         <section id="history" style="display:none;">
             <div class="navbar">
                 <i class="fas fa-history"></i> Riwayat Data Sensor & Aktivitas Sistem
-                <span class="realtime-indicator">
-                    <div class="realtime-dot"></div>
-                    HISTORY
-                </span>
             </div>
 
 
@@ -1673,10 +1658,6 @@
 
             <div class="navbar">
                 <i class="fas fa-file-alt"></i> Laporan Energi
-                <span class="realtime-indicator">
-                    <div class="realtime-dot"></div>
-                    REPORTS
-                </span>
             </div>
 
             <!-- Quick Reports -->
