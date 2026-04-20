@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <title>Smart Energy Dashboard - Server Side</title>
-    <link rel="stylesheet" href="<?php echo e(asset('css/style.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(asset('css/style.css')); ?>?v=<?php echo e(time()); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -2145,15 +2145,24 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const toggleIcon = document.getElementById('toggleIcon');
+            const mainContent = document.querySelector('.main-content');
 
             sidebar.classList.toggle('collapsed');
 
             if (sidebar.classList.contains('collapsed')) {
                 toggleIcon.classList.remove('fa-bars');
                 toggleIcon.classList.add('fa-chevron-right');
+                if(mainContent) {
+                    mainContent.style.marginLeft = '70px';
+                    mainContent.style.width = 'calc(100% - 70px)';
+                }
             } else {
                 toggleIcon.classList.remove('fa-chevron-right');
                 toggleIcon.classList.add('fa-bars');
+                if(mainContent) {
+                    mainContent.style.marginLeft = '250px';
+                    mainContent.style.width = 'calc(100% - 250px)';
+                }
             }
         }
 
@@ -3145,21 +3154,7 @@
                     }
                 });
         }
-        // ===== BASIC UI FUNCTIONS =====
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const toggleIcon = document.getElementById('toggleIcon');
-
-            sidebar.classList.toggle('collapsed');
-
-            if (sidebar.classList.contains('collapsed')) {
-                toggleIcon.classList.remove('fa-bars');
-                toggleIcon.classList.add('fa-chevron-right');
-            } else {
-                toggleIcon.classList.remove('fa-chevron-right');
-                toggleIcon.classList.add('fa-bars');
-            }
-        }
+        // Wait for DOM to load
 
         function showSection(sectionId, element) {
             // Hide all sections
@@ -3923,20 +3918,18 @@
             return downloadMonthlyReport();
         }
 
-        // Set default dates for custom report
-        document.addEventListener('DOMContentLoaded', function () {
-            const today = new Date();
-            const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    // Set default dates for custom report
+    document.addEventListener('DOMContentLoaded', function () {
+        const today = new Date();
+        const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-            const dateFromInput = document.getElementById('reportDateFrom');
-            const dateToInput = document.getElementById('reportDateTo');
+        const dateFromInput = document.getElementById('reportDateFrom');
+        const dateToInput = document.getElementById('reportDateTo');
 
-            if (dateFromInput) dateFromInput.value = getJakartaDateISO(lastWeek);
-            if (dateToInput) dateToInput.value = getJakartaDateISO(today);
-        });
-    </script>
-    <script src="<?php echo e(asset('ac-control.js')); ?>"></script>
-    <script src="<?php echo e(asset('script.js')); ?>"></script>
+        if (dateFromInput) dateFromInput.value = getJakartaDateISO(lastWeek);
+        if (dateToInput) dateToInput.value = getJakartaDateISO(today);
+    });
+</script>
 </body>
 
 </html>

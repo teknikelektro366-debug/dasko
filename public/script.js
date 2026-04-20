@@ -25,12 +25,16 @@ function toggleSidebar() {
     
     sidebar.classList.toggle('collapsed');
     
-    // Update main content margin
+    // Update main content margin and width directly
     if (sidebar.classList.contains('collapsed')) {
         mainContent.classList.add('expanded');
+        mainContent.style.marginLeft = '70px';
+        mainContent.style.width = 'calc(100% - 70px)';
         toggleIcon.className = 'fas fa-chevron-right';
     } else {
         mainContent.classList.remove('expanded');
+        mainContent.style.marginLeft = '250px';
+        mainContent.style.width = 'calc(100% - 250px)';
         toggleIcon.className = 'fas fa-bars';
     }
 }
