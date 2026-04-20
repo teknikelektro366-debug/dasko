@@ -3493,6 +3493,9 @@
                 // Initialize simple chart
                 const ctx = document.getElementById('analyticsChart');
                 if (ctx) {
+                    if (typeof analyticsChart !== 'undefined' && analyticsChart !== null) {
+                        analyticsChart.destroy();
+                    }
                     analyticsChart = new Chart(ctx, {
                         type: 'line',
                         data: {
@@ -3546,8 +3549,8 @@
                         // Update analytics cards
                         updateAnalyticsElement('currentOccupancy', Math.round((sensorData.people_count / 20) * 100) + '%');
                         updateAnalyticsElement('acStatusAnalytics', sensorData.ac_status || 'OFF');
-                        updateAnalyticsElement('tempAnalytics', (sensorData.room_temperature || 25).toFixed(1) + '°C');
-                        updateAnalyticsElement('humidityAnalytics', (sensorData.humidity || 60).toFixed(1) + '%');
+                        updateAnalyticsElement('tempAnalytics', Number(sensorData.room_temperature || 25).toFixed(1) + '°C');
+                        updateAnalyticsElement('humidityAnalytics', Number(sensorData.humidity || 60).toFixed(1) + '%');
                         updateAnalyticsElement('wifiSignalAnalytics', (sensorData.wifi_rssi || -45) + ' dBm');
 
                         // Update recommendations
@@ -3653,7 +3656,17 @@
                 throw new Error(`Gagal mengambil metadata report (${response.status})`);
             }
 
-            return response.json();
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/pdf')) {
+                return { total_parts: 1 };
+            }
+
+            try {
+                return await response.json();
+            } catch (e) {
+                console.warn('Response is not valid JSON, defaulting to 1 part');
+                return { total_parts: 1 };
+            }
         }
 
         function downloadReportByParts(baseUrl, buildFilename, totalParts) {
