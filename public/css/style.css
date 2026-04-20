@@ -15,7 +15,7 @@ body {
 /* ===== SIDEBAR STYLES ===== */
 .sidebar {
     width: 250px;
-    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    background: #0e3261;
     color: white;
     position: fixed;
     height: 100vh;
@@ -173,7 +173,7 @@ body {
 }
 
 .navbar {
-    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    background: #0e3261;
     color: white;
     padding: 15px 30px;
     font-weight: 600;
