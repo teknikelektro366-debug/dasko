@@ -794,7 +794,8 @@
         <!-- Toggle Button -->
         <div class="sidebar-toggle" onclick="toggleSidebar()">
             <i class="fas fa-bars" id="toggleIcon"></i>
-            <h3><img src="<?php echo e(asset('img/smartenergy-logo.png')); ?>" class="sidebar-text" alt="Smart Energy Logo" style="height: 30px; vertical-align: middle;"></h3>
+            <h3><img src="<?php echo e(asset('img/smartenergy-logo.png')); ?>" class="sidebar-text"
+                    alt="Smart Energy Logo" style="height: 30px; vertical-align: middle;"></h3>
         </div>
 
         <div class="sidebar-content">
@@ -2139,7 +2140,7 @@
             if (sidebar.classList.contains('collapsed')) {
                 toggleIcon.classList.remove('fa-bars');
                 toggleIcon.classList.add('fa-chevron-right');
-                
+
                 const h3Element = toggleContainer.querySelector('h3');
                 if (h3Element) {
                     h3Element.remove();
@@ -2152,7 +2153,7 @@
             } else {
                 toggleIcon.classList.remove('fa-chevron-right');
                 toggleIcon.classList.add('fa-bars');
-                
+
                 const existingH3 = toggleContainer.querySelector('h3');
                 if (!existingH3) {
                     const h3 = document.createElement('h3');
@@ -3181,16 +3182,6 @@
 
             // Initialize AC control
             initializeACControl();
-
-            // Add manual refresh button
-            const navbar = document.querySelector('.navbar');
-            if (navbar) {
-                const refreshBtn = document.createElement('button');
-                refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
-                refreshBtn.onclick = () => window.location.reload();
-                refreshBtn.style.cssText = 'margin-left: auto; padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;';
-                navbar.appendChild(refreshBtn);
-            }
         });
 
         // ===== AC CONTROL FUNCTIONS =====
