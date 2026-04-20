@@ -16,7 +16,7 @@
             align-items: center;
             gap: 5px;
             font-size: 12px;
-            color: #28a745;
+            color: #fff;
             margin-left: 10px;
         }
 
@@ -1670,9 +1670,14 @@
 
         <!-- ===== Reports Section ===== -->
         <section id="reports" style="display:none;">
-            <header>
-                <h1><i class="fas fa-file-chart-line"></i> Laporan Energi</h1>
-            </header>
+
+            <div class="navbar">
+                <i class="fas fa-file-alt"></i> Laporan Energi
+                <span class="realtime-indicator">
+                    <div class="realtime-dot"></div>
+                    REPORTS
+                </span>
+            </div>
 
             <!-- Quick Reports -->
             <div class="reports-container">
@@ -1727,7 +1732,7 @@
 
             <!-- Custom Report Generator -->
             <div class="custom-report-section">
-                <h2><i class="fas fa-download"></i> Download Laporan Kustom</h2>
+                <h2 class="report-title"><i class="fas fa-download"></i> Download Laporan Kustom</h2>
                 <div class="custom-report-form">
                     <div class="form-row">
                         <div class="form-group">
@@ -2152,14 +2157,14 @@
             if (sidebar.classList.contains('collapsed')) {
                 toggleIcon.classList.remove('fa-bars');
                 toggleIcon.classList.add('fa-chevron-right');
-                if(mainContent) {
+                if (mainContent) {
                     mainContent.style.marginLeft = '70px';
                     mainContent.style.width = 'calc(100% - 70px)';
                 }
             } else {
                 toggleIcon.classList.remove('fa-chevron-right');
                 toggleIcon.classList.add('fa-bars');
-                if(mainContent) {
+                if (mainContent) {
                     mainContent.style.marginLeft = '250px';
                     mainContent.style.width = 'calc(100% - 250px)';
                 }
@@ -3918,18 +3923,18 @@
             return downloadMonthlyReport();
         }
 
-    // Set default dates for custom report
-    document.addEventListener('DOMContentLoaded', function () {
-        const today = new Date();
-        const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        // Set default dates for custom report
+        document.addEventListener('DOMContentLoaded', function () {
+            const today = new Date();
+            const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-        const dateFromInput = document.getElementById('reportDateFrom');
-        const dateToInput = document.getElementById('reportDateTo');
+            const dateFromInput = document.getElementById('reportDateFrom');
+            const dateToInput = document.getElementById('reportDateTo');
 
-        if (dateFromInput) dateFromInput.value = getJakartaDateISO(lastWeek);
-        if (dateToInput) dateToInput.value = getJakartaDateISO(today);
-    });
-</script>
+            if (dateFromInput) dateFromInput.value = getJakartaDateISO(lastWeek);
+            if (dateToInput) dateToInput.value = getJakartaDateISO(today);
+        });
+    </script>
 </body>
 
 </html>

@@ -6,7 +6,7 @@
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     background: #f8fafc;
     color: #333;
     line-height: 1.6;
@@ -24,7 +24,7 @@ body {
     transition: all 0.3s ease;
     z-index: 1000;
     overflow-y: auto;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .sidebar.collapsed {
@@ -35,8 +35,8 @@ body {
     padding: 15px;
     text-align: center;
     cursor: pointer;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    background: rgba(255,255,255,0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-content h2 {
@@ -44,7 +44,7 @@ body {
     margin: 0;
     font-size: 1.1rem;
     font-weight: 600;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -60,7 +60,7 @@ body {
     display: flex;
     align-items: center;
     padding: 12px 20px;
-    color: rgba(255,255,255,0.9);
+    color: rgba(255, 255, 255, 0.9);
     text-decoration: none;
     transition: all 0.3s ease;
     font-size: 0.9rem;
@@ -68,7 +68,7 @@ body {
 
 .sidebar ul li a:hover,
 .sidebar ul li a.active {
-    background: rgba(255,255,255,0.15);
+    background: rgba(255, 255, 255, 0.15);
     color: white;
 }
 
@@ -84,18 +84,20 @@ body {
     bottom: 0;
     width: 100%;
     padding: 15px;
-    border-top: 1px solid rgba(255,255,255,0.1);
-    background: rgba(0,0,0,0.1);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.1);
 }
 
-.user-info, .system-status {
+.user-info,
+.system-status {
     display: flex;
     align-items: center;
     margin-bottom: 8px;
     font-size: 0.8rem;
 }
 
-.user-info i, .system-status i {
+.user-info i,
+.system-status i {
     margin-right: 8px;
     font-size: 0.9rem;
 }
@@ -165,7 +167,7 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .subnav {
@@ -205,11 +207,15 @@ body {
 }
 
 /* ===== CARDS & GRIDS ===== */
-.sensor-section, .status-section, .device-section {
+.sensor-section,
+.status-section,
+.device-section {
     margin-bottom: 30px;
 }
 
-.sensor-section h3, .status-section h3, .device-section h3 {
+.sensor-section h3,
+.status-section h3,
+.device-section h3 {
     font-size: 1.1rem;
     font-weight: 600;
     color: #374151;
@@ -241,14 +247,14 @@ body {
     background: white;
     border-radius: 12px;
     padding: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     border: 1px solid #e5e7eb;
     transition: all 0.3s ease;
 }
 
 .card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
 }
 
 /* ===== SENSOR CARDS ===== */
@@ -354,7 +360,8 @@ body {
     line-height: 1.4;
 }
 
-.daily-usage, .shutdown-info {
+.daily-usage,
+.shutdown-info {
     font-size: 0.85rem;
     color: #6b7280;
 }
@@ -469,11 +476,13 @@ body {
 }
 
 /* ===== AC & LAMP UNIT CONTROLS ===== */
-.ac-units-status, .lamp-circuits-status {
+.ac-units-status,
+.lamp-circuits-status {
     margin: 15px 0;
 }
 
-.ac-unit, .lamp-circuit {
+.ac-unit,
+.lamp-circuit {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -652,7 +661,7 @@ body {
     background: white;
     border-radius: 12px;
     padding: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     border: 1px solid #e5e7eb;
     text-align: center;
 }
@@ -711,12 +720,12 @@ body {
     border-radius: 12px;
     padding: 25px;
     margin: 30px 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .custom-report-section h2 {
     margin-bottom: 20px;
-    color: #374151;
+    color: #fff;
 }
 
 .form-row {
@@ -762,7 +771,7 @@ body {
     border-radius: 12px;
     padding: 25px;
     margin: 30px 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .quick-downloads h2 {
@@ -899,7 +908,7 @@ body {
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     border: 1px solid #e5e7eb;
 }
 
@@ -1031,7 +1040,7 @@ body {
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     border-left: 4px solid;
 }
 
@@ -1095,7 +1104,7 @@ body {
     background: white;
     border-radius: 12px;
     padding: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     border: 1px solid #e5e7eb;
 }
 
@@ -1158,7 +1167,7 @@ body {
     padding: 20px;
     border-radius: 12px;
     margin-top: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 /* ===== RESPONSIVE DESIGN ===== */
@@ -1166,25 +1175,25 @@ body {
     .sidebar {
         width: 70px;
     }
-    
+
     .sidebar .sidebar-text {
         display: none;
     }
-    
+
     .main-content {
         margin-left: 70px;
     }
-    
+
     .sensor-grid,
     .status-grid,
     .device-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .form-row {
         grid-template-columns: 1fr;
     }
-    
+
     .reports-container,
     .devices-grid,
     .settings-container {
@@ -1355,7 +1364,7 @@ body.light-mode .main-content {
 body.light-mode .card {
     background: #f9fafb;
     border: 1px solid #e5e7eb;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     color: #1f2937;
 }
 
@@ -1446,7 +1455,7 @@ body.light-mode .setting-item label {
     right: 20px;
     padding: 15px 20px;
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 10000;
     display: flex;
     align-items: center;
@@ -1484,7 +1493,7 @@ body.light-mode .setting-item label {
 }
 
 .notification button:hover {
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.2);
 }
 
 /* ===== UPDATING ANIMATION ===== */
@@ -1547,7 +1556,7 @@ body.light-mode .setting-item label {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.3);
+    background: rgba(0, 0, 0, 0.3);
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -1633,8 +1642,13 @@ body.light-mode .setting-item label {
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.8; }
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
 }
 
 /* ===== CONNECTION STATUS STYLES ===== */
@@ -1644,8 +1658,14 @@ body.light-mode .setting-item label {
 }
 
 @keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0.5; }
+    0%,
+    50% {
+        opacity: 1;
+    }
+    51%,
+    100% {
+        opacity: 0.5;
+    }
 }
 
 /* ===== ENHANCED HOVER EFFECTS ===== */
@@ -1671,13 +1691,18 @@ body.light-mode .setting-item label {
 }
 
 .sidebar ul li a::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+    );
     transition: left 0.5s;
 }
 
@@ -1693,7 +1718,7 @@ body.light-mode .setting-item label {
 }
 
 .loading::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 50%;
     left: 50%;
@@ -1707,8 +1732,12 @@ body.light-mode .setting-item label {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* ===== ENHANCED BUTTON STATES ===== */
@@ -1724,7 +1753,11 @@ button:active {
 
 /* ===== SMOOTH TRANSITIONS ===== */
 * {
-    transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
+    transition:
+        color 0.3s ease,
+        background-color 0.3s ease,
+        border-color 0.3s ease,
+        opacity 0.3s ease;
 }
 
 /* ===== FOCUS STYLES ===== */
