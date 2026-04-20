@@ -1727,7 +1727,7 @@
 
             <!-- Custom Report Generator -->
             <div class="custom-report-section">
-                <h2><i class="fas fa-cogs"></i> Generator Laporan Kustom</h2>
+                <h2><i class="fas fa-download"></i> Download Laporan Kustom</h2>
                 <div class="custom-report-form">
                     <div class="form-row">
                         <div class="form-group">
@@ -1751,6 +1751,13 @@
                                 <option value="dispenser">Dispenser</option>
                                 <option value="kettle">Teko Listrik</option>
                                 <option value="coffee">Mesin Kopi</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Jenis Laporan:</label>
+                            <select id="reportType">
+                                <option value="konsumsi">Laporan Konsumsi Energi</option>
+                                <option value="efisiensi">Laporan Evaluasi Tingkat Efisiensi Energi</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -3834,6 +3841,7 @@
                 const dateFrom = document.getElementById('reportDateFrom').value;
                 const dateTo = document.getElementById('reportDateTo').value;
                 const deviceType = document.getElementById('reportDeviceType').value;
+                const reportType = document.getElementById('reportType').value;
                 const format = document.getElementById('reportFormat').value;
 
                 if (!dateFrom || !dateTo) {
@@ -3846,14 +3854,26 @@
                     return false;
                 }
 
-                let baseUrl = `/api/reports/custom?date_from=${dateFrom}&date_to=${dateTo}&format=${format}`;
+                let baseUrl = '';
+
+                if (reportType === 'efisiensi') {
+                    baseUrl = `/api/reports/pdf/efficiency?date_from=${dateFrom}&date_to=${dateTo}`;
+                    if (format !== 'pdf') {
+                        baseUrl += `&format=${format}`;
+                    }
+                } else {
+                    baseUrl = `/api/reports/custom?date_from=${dateFrom}&date_to=${dateTo}&format=${format}`;
+                }
+
                 if (deviceType) {
                     baseUrl += `&device_type=${deviceType}`;
                 }
 
+                const prefixName = reportType === 'efisiensi' ? 'laporan_efisiensi' : 'laporan_konsumsi';
+
                 if (format !== 'pdf') {
                     console.log('Downloading custom report from:', baseUrl);
-                    triggerFileDownload(baseUrl, `laporan_kustom_${dateFrom.replace(/-/g, '_')}.${format}`);
+                    triggerFileDownload(baseUrl, `${prefixName}_${dateFrom.replace(/-/g, '_')}.${format}`);
                     setTimeout(() => {
                         alert('Download laporan kustom dimulai...');
                     }, 100);
@@ -3866,7 +3886,7 @@
                 if (totalParts <= 1) {
                     const url = `${baseUrl}&part=1`;
                     console.log('Downloading custom report from:', url);
-                    triggerFileDownload(url, `laporan_kustom_${dateFrom.replace(/-/g, '_')}.pdf`);
+                    triggerFileDownload(url, `${prefixName}_${dateFrom.replace(/-/g, '_')}.pdf`);
                     setTimeout(() => {
                         alert('Download laporan kustom dimulai...');
                     }, 100);
@@ -3876,7 +3896,7 @@
                 console.log(`Downloading custom report in ${totalParts} parts`);
                 downloadReportByParts(
                     baseUrl,
-                    (part, parts) => `laporan_kustom_${dateFrom.replace(/-/g, '_')}_part_${part}_of_${parts}.pdf`,
+                    (part, parts) => `${prefixName}_${dateFrom.replace(/-/g, '_')}_part_${part}_of_${parts}.pdf`,
                     totalParts
                 );
 
