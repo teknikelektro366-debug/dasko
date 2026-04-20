@@ -32,11 +32,15 @@ body {
 }
 
 .sidebar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 15px;
     text-align: center;
+    gap: 1rem;
     cursor: pointer;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.2);
 }
 
 .sidebar-content h2 {
@@ -108,6 +112,15 @@ body {
 
 .sidebar-text {
     transition: opacity 0.3s ease;
+}
+
+.sidebar-toggle h3 {
+    margin: 0;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar.collapsed .sidebar-toggle h3 {
+    display: none;
 }
 
 .sidebar.collapsed .sidebar-text {

@@ -794,10 +794,10 @@
         <!-- Toggle Button -->
         <div class="sidebar-toggle" onclick="toggleSidebar()">
             <i class="fas fa-bars" id="toggleIcon"></i>
+            <h3><img src="<?php echo e(asset('img/smartenergy-logo.png')); ?>" class="sidebar-text" alt="Smart Energy Logo" style="height: 30px; vertical-align: middle;"></h3>
         </div>
 
         <div class="sidebar-content">
-            <h2><i class="fas fa-home"></i> <span class="sidebar-text">Smart Energy</span></h2>
             <ul>
                 <li><a href="#" onclick="showSection('Kontrol', this)" class="active" title="Monitoring"><i
                             class="fas fa-desktop"></i> <span class="sidebar-text">Monitoring</span></a></li>
@@ -2132,12 +2132,19 @@
             const sidebar = document.getElementById('sidebar');
             const toggleIcon = document.getElementById('toggleIcon');
             const mainContent = document.querySelector('.main-content');
+            const toggleContainer = document.querySelector('.sidebar-toggle');
 
             sidebar.classList.toggle('collapsed');
 
             if (sidebar.classList.contains('collapsed')) {
                 toggleIcon.classList.remove('fa-bars');
                 toggleIcon.classList.add('fa-chevron-right');
+                
+                const h3Element = toggleContainer.querySelector('h3');
+                if (h3Element) {
+                    h3Element.remove();
+                }
+
                 if (mainContent) {
                     mainContent.style.marginLeft = '70px';
                     mainContent.style.width = 'calc(100% - 70px)';
@@ -2145,6 +2152,14 @@
             } else {
                 toggleIcon.classList.remove('fa-chevron-right');
                 toggleIcon.classList.add('fa-bars');
+                
+                const existingH3 = toggleContainer.querySelector('h3');
+                if (!existingH3) {
+                    const h3 = document.createElement('h3');
+                    h3.innerHTML = '<img src="<?php echo e(asset('img/smartenergy-logo.png')); ?>" class="sidebar-text" alt="Smart Energy Logo" style="height: 30px; vertical-align: middle;">';
+                    toggleContainer.appendChild(h3);
+                }
+
                 if (mainContent) {
                     mainContent.style.marginLeft = '250px';
                     mainContent.style.width = 'calc(100% - 250px)';
