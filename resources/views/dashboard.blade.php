@@ -154,6 +154,37 @@
             margin-bottom: 12px;
         }
 
+        .analytics-chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .analytics-chart-header .title {
+            margin-bottom: 0;
+        }
+
+        .chart-download-btn {
+            border: 1px solid #60a5fa;
+            background: rgba(37, 99, 235, 0.18);
+            color: #dbeafe;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .chart-download-btn:hover {
+            background: rgba(37, 99, 235, 0.32);
+        }
+
         .analytics-chart-box {
             position: relative;
             width: 100%;
@@ -1333,35 +1364,60 @@
                 <h3><i class="fas fa-chart-line"></i> Visualisasi Data</h3>
                 <div class="analytics-chart-grid">
                     <div class="card sensor-card analytics-chart-card">
-                        <div class="title">Grafik Jumlah Orang Hari Ini</div>
+                        <div class="analytics-chart-header">
+                            <div class="title">Grafik Jumlah Orang Hari Ini</div>
+                            <button type="button" class="chart-download-btn" onclick="downloadAnalyticsChartReport('people')">
+                                <i class="fas fa-download"></i> PDF
+                            </button>
+                        </div>
                         <div class="analytics-chart-box">
                             <canvas id="peopleTodayChart"></canvas>
                         </div>
                         <div class="data-timestamp">Data per jam hari ini</div>
                     </div>
                     <div class="card sensor-card analytics-chart-card">
-                        <div class="title">Grafik Suhu AC Hari Ini</div>
+                        <div class="analytics-chart-header">
+                            <div class="title">Grafik Suhu AC Hari Ini</div>
+                            <button type="button" class="chart-download-btn" onclick="downloadAnalyticsChartReport('ac_temperature')">
+                                <i class="fas fa-download"></i> PDF
+                            </button>
+                        </div>
                         <div class="analytics-chart-box">
                             <canvas id="acTemperatureTodayChart"></canvas>
                         </div>
                         <div class="data-timestamp">Data per jam hari ini</div>
                     </div>
                     <div class="card sensor-card analytics-chart-card">
-                        <div class="title">Grafik Kelembapan Hari Ini</div>
+                        <div class="analytics-chart-header">
+                            <div class="title">Grafik Kelembapan Hari Ini</div>
+                            <button type="button" class="chart-download-btn" onclick="downloadAnalyticsChartReport('humidity')">
+                                <i class="fas fa-download"></i> PDF
+                            </button>
+                        </div>
                         <div class="analytics-chart-box">
                             <canvas id="humidityTodayChart"></canvas>
                         </div>
                         <div class="data-timestamp">Data per jam hari ini</div>
                     </div>
                     <div class="card sensor-card analytics-chart-card">
-                        <div class="title">Grafik Cahaya Hari Ini</div>
+                        <div class="analytics-chart-header">
+                            <div class="title">Grafik Cahaya Hari Ini</div>
+                            <button type="button" class="chart-download-btn" onclick="downloadAnalyticsChartReport('light')">
+                                <i class="fas fa-download"></i> PDF
+                            </button>
+                        </div>
                         <div class="analytics-chart-box">
                             <canvas id="lightTodayChart"></canvas>
                         </div>
                         <div class="data-timestamp">Data per jam hari ini</div>
                     </div>
                     <div class="card sensor-card analytics-chart-card">
-                        <div class="title">Grafik Suhu Ruangan Hari Ini</div>
+                        <div class="analytics-chart-header">
+                            <div class="title">Grafik Suhu Ruangan Hari Ini</div>
+                            <button type="button" class="chart-download-btn" onclick="downloadAnalyticsChartReport('room_temperature')">
+                                <i class="fas fa-download"></i> PDF
+                            </button>
+                        </div>
                         <div class="analytics-chart-box">
                             <canvas id="roomTemperatureTodayChart"></canvas>
                         </div>
@@ -3744,6 +3800,11 @@
                 minimumFractionDigits: decimals,
                 maximumFractionDigits: decimals
             });
+        }
+
+        function downloadAnalyticsChartReport(type) {
+            const url = `/api/reports/pdf/analytics-chart?type=${encodeURIComponent(type)}`;
+            triggerFileDownload(url);
         }
 
         function updateAnalyticsData() {
