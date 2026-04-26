@@ -367,7 +367,220 @@ class PdfReportController extends Controller
         }
     }
 
+    /**
+     * Generate Analytics Chart PDF Report
+     * Route: /api/reports/pdf/analytics-chart?type=people
+     */
+    public function analyticsChartReport(Request $request)
+    {
+        try {
+            $type = (string) $request->input('type', 'people');
+            $configs = $this->analyticsChartConfigs();
+
+            if (!array_key_exists($type, $configs)) {
+                return response()->json([
+                    'error' => 'Tipe grafik tidak valid',
+                    'allowed_types' => array_keys($configs),
+                ], 422);
+            }
+
+            $config = $configs[$type];
+            $now = Carbon::now('Asia/Jakarta');
+            $startDate = $now->copy()->startOfDay();
+            $endDate = $now->copy()->endOfHour();
+            $lastHour = (int) $now->format('G');
+
+            $data = SensorData::whereBetween('created_at', [$startDate, $endDate])
+                ->orderBy('created_at')
+                ->get();
+
+            $grouped = $data->groupBy(function ($item) {
+                return $item->created_at->format('H:00');
+            });
+
+            $rows = collect(range(0, $lastHour))->map(function ($hour) use ($grouped, $config) {
+                $time = str_pad((string) $hour, 2, '0', STR_PAD_LEFT) . ':00';
+                $group = $grouped->get($time);
+                $value = null;
+                $records = 0;
+
+                if ($group && $group->count() > 0) {
+                    $records = $group->count();
+                    $average = $group->avg($config['field']);
+                    $value = $average === null ? null : round((float) $average, $config['decimals']);
+                }
+
+                return [
+                    'time' => $time,
+                    'value' => $value,
+                    'records' => $records,
+                ];
+            });
+
+            $numericValues = $rows
+                ->pluck('value')
+                ->filter(function ($value) {
+                    return is_numeric($value);
+                })
+                ->values();
+
+            $summary = [
+                'total_records' => $data->count(),
+                'filled_hours' => $numericValues->count(),
+                'empty_hours' => $rows->count() - $numericValues->count(),
+                'average' => $numericValues->count() > 0 ? round((float) $numericValues->avg(), $config['decimals']) : null,
+                'min' => $numericValues->count() > 0 ? round((float) $numericValues->min(), $config['decimals']) : null,
+                'max' => $numericValues->count() > 0 ? round((float) $numericValues->max(), $config['decimals']) : null,
+            ];
+
+            $chart = $this->buildAnalyticsSvgPath($rows, $config);
+
+            $pdfData = [
+                'config' => $config,
+                'rows' => $rows,
+                'summary' => $summary,
+                'chart' => $chart,
+                'date' => $now,
+                'period' => '00:00 - ' . str_pad((string) $lastHour, 2, '0', STR_PAD_LEFT) . ':00 WIB',
+            ];
+
+            $filename = 'laporan_' . $config['slug'] . '_' . $now->format('Y_m_d') . '.pdf';
+
+            return $this->downloadPdfWithFallback('reports.pdf.analytics-chart', $pdfData, $filename);
+        } catch (\Throwable $e) {
+            Log::error('PDF Analytics Chart Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json(['error' => 'Gagal generate PDF grafik: ' . $e->getMessage()], 500);
+        }
+    }
+
     // --- Private Calculation Methods (Sudah Sinkron Nama Field) ---
+
+    private function analyticsChartConfigs(): array
+    {
+        return [
+            'people' => [
+                'title' => 'Grafik Jumlah Orang Hari Ini',
+                'label' => 'Jumlah Orang',
+                'field' => 'people_count',
+                'unit' => ' orang',
+                'color' => '#2563EB',
+                'slug' => 'jumlah_orang_hari_ini',
+                'decimals' => 0,
+            ],
+            'ac_temperature' => [
+                'title' => 'Grafik Suhu AC Hari Ini',
+                'label' => 'Suhu AC',
+                'field' => 'set_temperature',
+                'unit' => '°C',
+                'color' => '#0891B2',
+                'slug' => 'suhu_ac_hari_ini',
+                'decimals' => 0,
+            ],
+            'humidity' => [
+                'title' => 'Grafik Kelembapan Hari Ini',
+                'label' => 'Kelembapan',
+                'field' => 'humidity',
+                'unit' => '%',
+                'color' => '#16A34A',
+                'slug' => 'kelembapan_hari_ini',
+                'decimals' => 1,
+            ],
+            'light' => [
+                'title' => 'Grafik Cahaya Hari Ini',
+                'label' => 'Cahaya',
+                'field' => 'light_level',
+                'unit' => ' lux',
+                'color' => '#F59E0B',
+                'slug' => 'cahaya_hari_ini',
+                'decimals' => 0,
+            ],
+            'room_temperature' => [
+                'title' => 'Grafik Suhu Ruangan Hari Ini',
+                'label' => 'Suhu Ruangan',
+                'field' => 'room_temperature',
+                'unit' => '°C',
+                'color' => '#DC2626',
+                'slug' => 'suhu_ruangan_hari_ini',
+                'decimals' => 1,
+            ],
+        ];
+    }
+
+    private function buildAnalyticsSvgPath(Collection $rows, array $config): array
+    {
+        $width = 700;
+        $height = 260;
+        $paddingLeft = 52;
+        $paddingRight = 18;
+        $paddingTop = 18;
+        $paddingBottom = 42;
+        $plotWidth = $width - $paddingLeft - $paddingRight;
+        $plotHeight = $height - $paddingTop - $paddingBottom;
+
+        $values = $rows->pluck('value')->filter(function ($value) {
+            return is_numeric($value);
+        });
+
+        $min = $values->count() > 0 ? (float) $values->min() : 0.0;
+        $max = $values->count() > 0 ? (float) $values->max() : 1.0;
+
+        if ($min === $max) {
+            $min = max(0, $min - 1);
+            $max = $max + 1;
+        }
+
+        if ($min > 0 && in_array($config['field'], ['people_count', 'light_level', 'humidity'], true)) {
+            $min = 0;
+        }
+
+        $range = max(1, $max - $min);
+        $count = max(1, $rows->count() - 1);
+        $path = '';
+        $started = false;
+        $points = [];
+
+        foreach ($rows->values() as $index => $row) {
+            $x = $paddingLeft + (($plotWidth / $count) * $index);
+            $value = $row['value'];
+
+            if (!is_numeric($value)) {
+                $started = false;
+                $points[] = ['x' => $x, 'y' => null, 'value' => null, 'time' => $row['time']];
+                continue;
+            }
+
+            $y = $paddingTop + (($max - (float) $value) / $range * $plotHeight);
+            $path .= ($started ? ' L ' : ' M ') . round($x, 2) . ' ' . round($y, 2);
+            $started = true;
+            $points[] = ['x' => $x, 'y' => $y, 'value' => $value, 'time' => $row['time']];
+        }
+
+        $ticks = [];
+        for ($i = 0; $i <= 4; $i++) {
+            $value = $min + (($range / 4) * $i);
+            $ticks[] = [
+                'value' => round($value, $config['decimals']),
+                'y' => $paddingTop + (($max - $value) / $range * $plotHeight),
+            ];
+        }
+
+        return [
+            'width' => $width,
+            'height' => $height,
+            'padding_left' => $paddingLeft,
+            'padding_bottom' => $paddingBottom,
+            'plot_width' => $plotWidth,
+            'plot_height' => $plotHeight,
+            'path' => trim($path),
+            'points' => $points,
+            'ticks' => array_reverse($ticks),
+            'min' => $min,
+            'max' => $max,
+        ];
+    }
 
     private function calculateDailySummary($data, $date)
     {
