@@ -146,6 +146,52 @@
             gap: 20px;
         }
 
+        .analytics-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .analytics-section-header h3 {
+            margin-bottom: 0;
+        }
+
+        .analytics-date-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .analytics-date-control label {
+            color: #d1d5db;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .analytics-date-control input {
+            border: 1px solid #60a5fa;
+            background: rgba(15, 23, 42, 0.65);
+            color: #f9fafb;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 13px;
+            color-scheme: dark;
+        }
+
+        body.light-mode .analytics-date-control label {
+            color: #374151;
+        }
+
+        body.light-mode .analytics-date-control input {
+            background: #ffffff;
+            color: #111827;
+            color-scheme: light;
+        }
+
         .analytics-chart-card {
             min-height: 0;
         }
@@ -1361,7 +1407,13 @@
 
             <!-- Chart Section -->
             <div class="sensor-section">
-                <h3><i class="fas fa-chart-line"></i> Visualisasi Data</h3>
+                <div class="analytics-section-header">
+                    <h3><i class="fas fa-chart-line"></i> Visualisasi Data</h3>
+                    <div class="analytics-date-control">
+                        <label for="analyticsDateFilter"><i class="fas fa-calendar-alt"></i> Pilih Hari</label>
+                        <input type="date" id="analyticsDateFilter" onchange="handleAnalyticsDateChange(this.value)">
+                    </div>
+                </div>
                 <div class="analytics-chart-grid">
                     <div class="card sensor-card analytics-chart-card">
                         <div class="analytics-chart-header">
@@ -3603,9 +3655,11 @@
         // ===== ANALYTICS FUNCTIONS =====
         let analyticsCharts = {};
         let analyticsUpdateInterval = null;
+        let selectedAnalyticsDate = getTodayDateString();
 
         function initAnalytics() {
             try {
+                initializeAnalyticsDateFilter();
                 loadAnalyticsCharts();
                 updateAnalyticsData();
 
@@ -3623,20 +3677,56 @@
             }
         }
 
+        function initializeAnalyticsDateFilter() {
+            const dateInput = document.getElementById('analyticsDateFilter');
+            if (!dateInput) {
+                return;
+            }
+
+            const today = getTodayDateString();
+            dateInput.max = today;
+
+            if (!dateInput.value) {
+                dateInput.value = selectedAnalyticsDate || today;
+            }
+
+            selectedAnalyticsDate = dateInput.value || today;
+        }
+
+        function handleAnalyticsDateChange(value) {
+            selectedAnalyticsDate = value || getTodayDateString();
+            loadAnalyticsCharts();
+        }
+
+        function getTodayDateString() {
+            const now = new Date();
+            const parts = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Jakarta',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).formatToParts(now);
+
+            const values = parts.reduce((result, part) => {
+                result[part.type] = part.value;
+                return result;
+            }, {});
+
+            return `${values.year}-${values.month}-${values.day}`;
+        }
+
         function loadAnalyticsCharts() {
-            fetch('/api/sensor/chart?period=today')
+            const chartDate = selectedAnalyticsDate || getTodayDateString();
+
+            fetch(`/api/sensor/chart?period=today&date=${encodeURIComponent(chartDate)}`)
                 .then(response => response.json())
                 .then(data => {
                     if (!data.success || !Array.isArray(data.data)) {
                         return;
                     }
 
-                    const currentHour = new Date().toLocaleString('id-ID', {
-                        timeZone: 'Asia/Jakarta',
-                        hour: '2-digit',
-                        hour12: false
-                    });
-                    const lastHour = Math.min(Number(currentHour), 23);
+                    const isToday = chartDate === getTodayDateString();
+                    const lastHour = isToday ? getCurrentJakartaHour() : 23;
                     const labels = Array.from({ length: lastHour + 1 }, (_, hour) => `${String(hour).padStart(2, '0')}:00`);
                     const rowsByTime = data.data.reduce((rows, item) => {
                         rows[item.time] = item;
@@ -3700,10 +3790,41 @@
 
                         renderAnalyticsChart(config, labels, values);
                     });
+
+                    updateAnalyticsDateLabels(chartDate);
                 })
                 .catch(error => {
                     console.error('Error loading analytics charts:', error);
                 });
+        }
+
+        function getCurrentJakartaHour() {
+            const currentHour = new Date().toLocaleString('id-ID', {
+                timeZone: 'Asia/Jakarta',
+                hour: '2-digit',
+                hour12: false
+            });
+
+            return Math.min(Number(currentHour), 23);
+        }
+
+        function updateAnalyticsDateLabels(dateValue) {
+            const dateLabel = formatAnalyticsDateLabel(dateValue);
+            document.querySelectorAll('#analytics .data-timestamp').forEach(element => {
+                element.textContent = `Data per jam ${dateLabel}`;
+            });
+        }
+
+        function formatAnalyticsDateLabel(dateValue) {
+            const [year, month, day] = dateValue.split('-').map(Number);
+            const date = new Date(Date.UTC(year, month - 1, day));
+
+            return new Intl.DateTimeFormat('id-ID', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+                timeZone: 'UTC'
+            }).format(date);
         }
 
         function renderAnalyticsChart(config, labels, values) {
@@ -3803,7 +3924,8 @@
         }
 
         function downloadAnalyticsChartReport(type) {
-            const url = `/api/reports/pdf/analytics-chart?type=${encodeURIComponent(type)}`;
+            const chartDate = selectedAnalyticsDate || getTodayDateString();
+            const url = `/api/reports/pdf/analytics-chart?type=${encodeURIComponent(type)}&date=${encodeURIComponent(chartDate)}`;
             triggerFileDownload(url);
         }
 
