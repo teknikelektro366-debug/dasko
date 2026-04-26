@@ -161,7 +161,7 @@
     </div>
 
     <div class="chart-card">
-        <h3 class="chart-title">{{ $config['label'] }} per Jam Hari Ini</h3>
+        <h3 class="chart-title">{{ $config['label'] }} per Jam</h3>
         <p class="chart-note">Grafik menampilkan nilai rata-rata per jam dari tabel sensor_data.</p>
 
         @if(!empty($chart_image))

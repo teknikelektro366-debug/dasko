@@ -465,7 +465,7 @@ class PdfReportController extends Controller
     {
         return [
             'people' => [
-                'title' => 'Grafik Jumlah Orang Hari Ini',
+                'title' => 'Grafik Jumlah Orang',
                 'label' => 'Jumlah Orang',
                 'field' => 'people_count',
                 'unit' => ' orang',
@@ -474,7 +474,7 @@ class PdfReportController extends Controller
                 'decimals' => 0,
             ],
             'ac_temperature' => [
-                'title' => 'Grafik Suhu AC Hari Ini',
+                'title' => 'Grafik Suhu AC',
                 'label' => 'Suhu AC',
                 'field' => 'set_temperature',
                 'unit' => '°C',
@@ -483,7 +483,7 @@ class PdfReportController extends Controller
                 'decimals' => 0,
             ],
             'humidity' => [
-                'title' => 'Grafik Kelembapan Hari Ini',
+                'title' => 'Grafik Kelembapan',
                 'label' => 'Kelembapan',
                 'field' => 'humidity',
                 'unit' => '%',
@@ -492,7 +492,7 @@ class PdfReportController extends Controller
                 'decimals' => 1,
             ],
             'light' => [
-                'title' => 'Grafik Cahaya Hari Ini',
+                'title' => 'Grafik Cahaya',
                 'label' => 'Cahaya',
                 'field' => 'light_level',
                 'unit' => ' lux',
@@ -501,7 +501,7 @@ class PdfReportController extends Controller
                 'decimals' => 0,
             ],
             'room_temperature' => [
-                'title' => 'Grafik Suhu Ruangan Hari Ini',
+                'title' => 'Grafik Suhu Ruangan',
                 'label' => 'Suhu Ruangan',
                 'field' => 'room_temperature',
                 'unit' => '°C',

@@ -1417,7 +1417,7 @@
                 <div class="analytics-chart-grid">
                     <div class="card sensor-card analytics-chart-card">
                         <div class="analytics-chart-header">
-                            <div class="title">Grafik Jumlah Orang Hari Ini</div>
+                            <div class="title">Grafik Jumlah Orang</div>
                             <button type="button" class="chart-download-btn" onclick="downloadAnalyticsChartReport('people')">
                                 <i class="fas fa-download"></i> PDF
                             </button>
@@ -1429,7 +1429,7 @@
                     </div>
                     <div class="card sensor-card analytics-chart-card">
                         <div class="analytics-chart-header">
-                            <div class="title">Grafik Suhu AC Hari Ini</div>
+                            <div class="title">Grafik Suhu AC</div>
                             <button type="button" class="chart-download-btn" onclick="downloadAnalyticsChartReport('ac_temperature')">
                                 <i class="fas fa-download"></i> PDF
                             </button>
@@ -1441,7 +1441,7 @@
                     </div>
                     <div class="card sensor-card analytics-chart-card">
                         <div class="analytics-chart-header">
-                            <div class="title">Grafik Kelembapan Hari Ini</div>
+                            <div class="title">Grafik Kelembapan</div>
                             <button type="button" class="chart-download-btn" onclick="downloadAnalyticsChartReport('humidity')">
                                 <i class="fas fa-download"></i> PDF
                             </button>
@@ -1453,7 +1453,7 @@
                     </div>
                     <div class="card sensor-card analytics-chart-card">
                         <div class="analytics-chart-header">
-                            <div class="title">Grafik Cahaya Hari Ini</div>
+                            <div class="title">Grafik Cahaya</div>
                             <button type="button" class="chart-download-btn" onclick="downloadAnalyticsChartReport('light')">
                                 <i class="fas fa-download"></i> PDF
                             </button>
@@ -1465,7 +1465,7 @@
                     </div>
                     <div class="card sensor-card analytics-chart-card">
                         <div class="analytics-chart-header">
-                            <div class="title">Grafik Suhu Ruangan Hari Ini</div>
+                            <div class="title">Grafik Suhu Ruangan</div>
                             <button type="button" class="chart-download-btn" onclick="downloadAnalyticsChartReport('room_temperature')">
                                 <i class="fas fa-download"></i> PDF
                             </button>
