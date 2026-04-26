@@ -71,46 +71,11 @@
             color: #6B7280;
             font-size: 10px;
         }
-        .bar-chart {
+        .line-chart-image {
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 8px;
-        }
-        .bar-chart td {
-            border-bottom: none;
-            padding: 4px 0;
-            vertical-align: middle;
-        }
-        .bar-time {
-            width: 46px;
-            color: #374151;
-            font-size: 9px;
-        }
-        .bar-track-cell {
-            width: 560px;
-        }
-        .bar-track {
-            height: 16px;
-            background: #EEF2FF;
-            border: 1px solid #D1D5DB;
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        .bar-fill {
-            height: 16px;
-            background: {{ $config['color'] }};
-        }
-        .bar-value {
-            width: 86px;
-            padding-left: 8px !important;
-            color: #111827;
-            font-size: 9px;
-            white-space: nowrap;
-        }
-        .bar-empty {
-            color: #9CA3AF;
-            font-size: 9px;
-            font-style: italic;
+            height: auto;
+            display: block;
+            border: 1px solid #E5E7EB;
         }
         .chart-placeholder {
             padding: 32px 12px;
@@ -199,41 +164,8 @@
         <h3 class="chart-title">{{ $config['label'] }} per Jam Hari Ini</h3>
         <p class="chart-note">Grafik menampilkan nilai rata-rata per jam dari tabel sensor_data.</p>
 
-        @if($summary['filled_hours'] > 0)
-            @php
-                $maxValue = (float) ($summary['max'] ?? 0);
-            @endphp
-            <table class="bar-chart">
-                <tbody>
-                    @foreach($rows as $row)
-                        @php
-                            $hasValue = $row['value'] !== null;
-                            $percent = ($hasValue && $maxValue > 0)
-                                ? max(1, min(100, ((float) $row['value'] / $maxValue) * 100))
-                                : 0;
-                        @endphp
-                        <tr>
-                            <td class="bar-time">{{ $row['time'] }}</td>
-                            <td class="bar-track-cell">
-                                @if($hasValue)
-                                    <div class="bar-track">
-                                        <div class="bar-fill" style="width: {{ number_format($percent, 2, '.', '') }}%;"></div>
-                                    </div>
-                                @else
-                                    <span class="bar-empty">Tidak ada data</span>
-                                @endif
-                            </td>
-                            <td class="bar-value">
-                                @if($hasValue)
-                                    {{ number_format((float) $row['value'], $config['decimals']) }}{{ $config['unit'] }}
-                                @else
-                                    -
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+        @if(!empty($chart_image))
+            <img class="line-chart-image" src="{{ $chart_image }}" alt="{{ $config['label'] }} per jam">
         @else
             <div class="chart-placeholder">Tidak ada data grafik untuk hari ini.</div>
         @endif
