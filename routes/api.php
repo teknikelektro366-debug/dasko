@@ -88,6 +88,7 @@ Route::prefix('reports')->group(function () {
     Route::get('/pdf/weekly', [\App\Http\Controllers\PdfReportController::class, 'weeklyReport']);
     Route::get('/pdf/monthly', [\App\Http\Controllers\PdfReportController::class, 'monthlyReport']);
     Route::get('/pdf/efficiency', [\App\Http\Controllers\PdfReportController::class, 'efficiencyReport']);
+    Route::get('/pdf/analytics-chart', [\App\Http\Controllers\PdfReportController::class, 'analyticsChartReport']);
     
     // Custom Report Route
     Route::get('/custom', [\App\Http\Controllers\PdfReportController::class, 'customReport']);
