@@ -386,9 +386,12 @@ class PdfReportController extends Controller
 
             $config = $configs[$type];
             $now = Carbon::now('Asia/Jakarta');
-            $startDate = $now->copy()->startOfDay();
-            $endDate = $now->copy()->endOfHour();
-            $lastHour = (int) $now->format('G');
+            $dateInput = (string) $request->input('date', $now->format('Y-m-d'));
+            $reportDate = Carbon::createFromFormat('Y-m-d', $dateInput, 'Asia/Jakarta');
+            $isToday = $reportDate->isSameDay($now);
+            $lastHour = $isToday ? (int) $now->format('G') : 23;
+            $startDate = $reportDate->copy()->startOfDay();
+            $endDate = $reportDate->copy()->setTime($lastHour, 59, 59);
 
             $data = SensorData::whereBetween('created_at', [$startDate, $endDate])
                 ->orderBy('created_at')
@@ -433,18 +436,18 @@ class PdfReportController extends Controller
                 'max' => $numericValues->count() > 0 ? round((float) $numericValues->max(), $config['decimals']) : null,
             ];
 
-            $chart = $this->buildAnalyticsSvgPath($rows, $config);
+            $chartImage = $this->buildAnalyticsLineChartImage($rows, $config);
 
             $pdfData = [
                 'config' => $config,
                 'rows' => $rows,
                 'summary' => $summary,
-                'chart' => $chart,
-                'date' => $now,
+                'chart_image' => $chartImage,
+                'date' => $reportDate,
                 'period' => '00:00 - ' . str_pad((string) $lastHour, 2, '0', STR_PAD_LEFT) . ':00 WIB',
             ];
 
-            $filename = 'laporan_' . $config['slug'] . '_' . $now->format('Y_m_d') . '.pdf';
+            $filename = 'laporan_' . $config['slug'] . '_' . $reportDate->format('Y_m_d') . '.pdf';
 
             return $this->downloadPdfWithFallback('reports.pdf.analytics-chart', $pdfData, $filename);
         } catch (\Throwable $e) {
@@ -507,6 +510,161 @@ class PdfReportController extends Controller
                 'decimals' => 1,
             ],
         ];
+    }
+
+    private function buildAnalyticsLineChartImage(Collection $rows, array $config): ?string
+    {
+        if (!extension_loaded('gd')) {
+            return null;
+        }
+
+        $values = $rows->pluck('value')->filter(function ($value) {
+            return is_numeric($value);
+        });
+
+        if ($values->count() === 0) {
+            return null;
+        }
+
+        $width = 1100;
+        $height = 430;
+        $left = 92;
+        $right = 34;
+        $top = 34;
+        $bottom = 78;
+        $plotWidth = $width - $left - $right;
+        $plotHeight = $height - $top - $bottom;
+
+        $min = (float) $values->min();
+        $max = (float) $values->max();
+
+        if (in_array($config['field'], ['people_count', 'light_level', 'humidity'], true)) {
+            $min = 0.0;
+        }
+
+        if ($min === $max) {
+            $min = max(0, $min - 1);
+            $max = $max + 1;
+        }
+
+        $range = max(1, $max - $min);
+        $count = max(1, $rows->count() - 1);
+
+        $image = imagecreatetruecolor($width, $height);
+        imageantialias($image, true);
+
+        $white = imagecolorallocate($image, 255, 255, 255);
+        $axis = imagecolorallocate($image, 156, 163, 175);
+        $grid = imagecolorallocate($image, 229, 231, 235);
+        $text = imagecolorallocate($image, 75, 85, 99);
+        $muted = imagecolorallocate($image, 156, 163, 175);
+        $line = $this->allocateHexColor($image, $config['color']);
+
+        imagefilledrectangle($image, 0, 0, $width, $height, $white);
+
+        for ($i = 0; $i <= 4; $i++) {
+            $tickValue = $min + (($range / 4) * $i);
+            $y = (int) round($top + (($max - $tickValue) / $range * $plotHeight));
+
+            imageline($image, $left, $y, $width - $right, $y, $grid);
+            imagestring($image, 2, 8, $y - 7, $this->formatAnalyticsChartNumber($tickValue, $config) . $config['unit'], $text);
+        }
+
+        imageline($image, $left, $top, $left, $height - $bottom, $axis);
+        imageline($image, $left, $height - $bottom, $width - $right, $height - $bottom, $axis);
+
+        $points = [];
+        foreach ($rows->values() as $index => $row) {
+            $x = (int) round($left + (($plotWidth / $count) * $index));
+            $value = $row['value'];
+
+            if (!is_numeric($value)) {
+                $points[] = ['x' => $x, 'y' => null, 'value' => null, 'time' => $row['time']];
+                continue;
+            }
+
+            $y = (int) round($top + (($max - (float) $value) / $range * $plotHeight));
+            $points[] = ['x' => $x, 'y' => $y, 'value' => (float) $value, 'time' => $row['time']];
+        }
+
+        $previous = null;
+        foreach ($points as $point) {
+            if ($point['y'] === null) {
+                continue;
+            }
+
+            if ($previous !== null) {
+                $this->drawThickLine($image, $previous['x'], $previous['y'], $point['x'], $point['y'], $line, 4);
+            }
+
+            $previous = $point;
+        }
+
+        foreach ($points as $point) {
+            if ($point['y'] === null) {
+                continue;
+            }
+
+            imagefilledellipse($image, $point['x'], $point['y'], 11, 11, $white);
+            imageellipse($image, $point['x'], $point['y'], 11, 11, $line);
+            imagefilledellipse($image, $point['x'], $point['y'], 6, 6, $line);
+        }
+
+        foreach ($points as $index => $point) {
+            $label = $point['time'];
+            $x = max($left - 10, min($width - $right - 28, $point['x'] - 14));
+            imagestring($image, 2, $x, $height - 48, $label, $text);
+
+            if ($point['value'] === null && ($index % 2 === 0)) {
+                imagestring($image, 1, $point['x'] - 5, $height - 31, '-', $muted);
+            }
+        }
+
+        imagestring($image, 3, $left, 10, $config['label'] . ' per jam', $text);
+        imagestring($image, 2, $width - 230, 12, 'Sumber: tabel sensor_data', $muted);
+
+        ob_start();
+        imagepng($image);
+        $png = ob_get_clean();
+        imagedestroy($image);
+
+        if ($png === false) {
+            return null;
+        }
+
+        return 'data:image/png;base64,' . base64_encode($png);
+    }
+
+    private function allocateHexColor($image, string $hex, int $mixWithWhitePercent = 0): int
+    {
+        $hex = ltrim($hex, '#');
+        $red = hexdec(substr($hex, 0, 2));
+        $green = hexdec(substr($hex, 2, 2));
+        $blue = hexdec(substr($hex, 4, 2));
+
+        if ($mixWithWhitePercent > 0) {
+            $ratio = min(100, max(0, $mixWithWhitePercent)) / 100;
+            $red = (int) round($red + ((255 - $red) * $ratio));
+            $green = (int) round($green + ((255 - $green) * $ratio));
+            $blue = (int) round($blue + ((255 - $blue) * $ratio));
+        }
+
+        return imagecolorallocate($image, $red, $green, $blue);
+    }
+
+    private function drawThickLine($image, int $x1, int $y1, int $x2, int $y2, int $color, int $thickness): void
+    {
+        $half = max(1, (int) floor($thickness / 2));
+
+        for ($offset = -$half; $offset <= $half; $offset++) {
+            imageline($image, $x1, $y1 + $offset, $x2, $y2 + $offset, $color);
+            imageline($image, $x1 + $offset, $y1, $x2 + $offset, $y2, $color);
+        }
+    }
+
+    private function formatAnalyticsChartNumber(float $value, array $config): string
+    {
+        return number_format($value, $config['decimals'], '.', '');
     }
 
     private function buildAnalyticsSvgPath(Collection $rows, array $config): array
