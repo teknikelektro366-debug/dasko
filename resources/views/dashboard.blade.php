@@ -44,7 +44,7 @@
 
         .data-timestamp {
             font-size: 11px;
-            color: #666;
+            color: #d1d5db;
             margin-top: 5px;
         }
 
@@ -140,6 +140,36 @@
             gap: 8px;
         }
 
+        .analytics-chart-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .analytics-chart-card {
+            min-height: 0;
+        }
+
+        .analytics-chart-card .title {
+            margin-bottom: 12px;
+        }
+
+        .analytics-chart-box {
+            position: relative;
+            width: 100%;
+            height: 280px;
+        }
+
+        .analytics-chart-card canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        body.light-mode .data-timestamp {
+            color: #6b7280;
+        }
+
         .insights-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -172,13 +202,13 @@
 
         .insight-content h4 {
             margin: 0 0 10px 0;
-            color: #333;
+            color: #f9fafb;
             font-size: 16px;
         }
 
         .insight-content p {
             margin: 0;
-            color: #666;
+            color: #d1d5db;
             line-height: 1.5;
             font-size: 14px;
         }
@@ -204,7 +234,7 @@
             justify-content: center;
             gap: 8px;
             margin-bottom: 15px;
-            color: #666;
+            color: #d1d5db;
             font-size: 14px;
             font-weight: 600;
         }
@@ -393,18 +423,18 @@
 
         .info-card h4 {
             margin: 0 0 10px 0;
-            color: #333;
+            color: #f9fafb;
         }
 
         .info-card p {
             margin: 0 0 10px 0;
-            color: #666;
+            color: #d1d5db;
         }
 
         .info-card ul {
             margin: 0;
             padding-left: 20px;
-            color: #666;
+            color: #d1d5db;
         }
 
         .current-control-status {
@@ -523,7 +553,7 @@
         .error-row {
             text-align: center;
             padding: 30px;
-            color: #666;
+            color: #d1d5db;
             font-style: italic;
         }
 
@@ -1301,11 +1331,41 @@
             <!-- Chart Section -->
             <div class="sensor-section">
                 <h3><i class="fas fa-chart-line"></i> Visualisasi Data</h3>
-                <div class="sensor-grid">
-                    <div class="card sensor-card" style="grid-column: span 4; height: 400px;">
-                        <div class="title">Grafik Okupansi vs AC Usage</div>
-                        <canvas id="analyticsChart" style="width: 100%; height: 300px;"></canvas>
-                        <div class="data-timestamp">Data 24 jam terakhir</div>
+                <div class="analytics-chart-grid">
+                    <div class="card sensor-card analytics-chart-card">
+                        <div class="title">Grafik Jumlah Orang Hari Ini</div>
+                        <div class="analytics-chart-box">
+                            <canvas id="peopleTodayChart"></canvas>
+                        </div>
+                        <div class="data-timestamp">Data per jam hari ini</div>
+                    </div>
+                    <div class="card sensor-card analytics-chart-card">
+                        <div class="title">Grafik Suhu AC Hari Ini</div>
+                        <div class="analytics-chart-box">
+                            <canvas id="acTemperatureTodayChart"></canvas>
+                        </div>
+                        <div class="data-timestamp">Data per jam hari ini</div>
+                    </div>
+                    <div class="card sensor-card analytics-chart-card">
+                        <div class="title">Grafik Kelembapan Hari Ini</div>
+                        <div class="analytics-chart-box">
+                            <canvas id="humidityTodayChart"></canvas>
+                        </div>
+                        <div class="data-timestamp">Data per jam hari ini</div>
+                    </div>
+                    <div class="card sensor-card analytics-chart-card">
+                        <div class="title">Grafik Cahaya Hari Ini</div>
+                        <div class="analytics-chart-box">
+                            <canvas id="lightTodayChart"></canvas>
+                        </div>
+                        <div class="data-timestamp">Data per jam hari ini</div>
+                    </div>
+                    <div class="card sensor-card analytics-chart-card">
+                        <div class="title">Grafik Suhu Ruangan Hari Ini</div>
+                        <div class="analytics-chart-box">
+                            <canvas id="roomTemperatureTodayChart"></canvas>
+                        </div>
+                        <div class="data-timestamp">Data per jam hari ini</div>
                     </div>
                 </div>
             </div>
@@ -3137,7 +3197,7 @@
                             const ctx = canvas.getContext('2d');
                             ctx.clearRect(0, 0, canvas.width, canvas.height);
                             ctx.font = '16px Arial';
-                            ctx.fillStyle = '#666';
+                            ctx.fillStyle = '#d1d5db';
                             ctx.textAlign = 'center';
                             ctx.fillText('Tidak ada data untuk ditampilkan', canvas.width / 2, canvas.height / 2);
                         }
@@ -3485,57 +3545,205 @@
         });
 
         // ===== ANALYTICS FUNCTIONS =====
-        let analyticsChart = null;
+        let analyticsCharts = {};
         let analyticsUpdateInterval = null;
 
         function initAnalytics() {
             try {
-                // Initialize simple chart
-                const ctx = document.getElementById('analyticsChart');
-                if (ctx) {
-                    if (typeof analyticsChart !== 'undefined' && analyticsChart !== null) {
-                        analyticsChart.destroy();
-                    }
-                    analyticsChart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: ['6h ago', '5h ago', '4h ago', '3h ago', '2h ago', '1h ago', 'Now'],
-                            datasets: [{
-                                label: 'Jumlah Orang',
-                                data: [0, 2, 5, 3, 1, 0, 0],
-                                borderColor: '#007bff',
-                                backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                                tension: 0.4,
-                                fill: true
-                            }, {
-                                label: 'AC Status (0=OFF, 1=ON)',
-                                data: [0, 1, 1, 1, 1, 0, 0],
-                                borderColor: '#dc3545',
-                                backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                                tension: 0.4,
-                                fill: false
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    max: 20
-                                }
-                            }
-                        }
-                    });
+                loadAnalyticsCharts();
+                updateAnalyticsData();
+
+                if (analyticsUpdateInterval) {
+                    clearInterval(analyticsUpdateInterval);
                 }
 
-                // Start real-time updates
-                updateAnalyticsData();
-                analyticsUpdateInterval = setInterval(updateAnalyticsData, 5000);
+                analyticsUpdateInterval = setInterval(() => {
+                    loadAnalyticsCharts();
+                    updateAnalyticsData();
+                }, 30000);
 
             } catch (error) {
                 console.error('Error initializing analytics:', error);
             }
+        }
+
+        function loadAnalyticsCharts() {
+            fetch('/api/sensor/chart?period=today')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success || !Array.isArray(data.data)) {
+                        return;
+                    }
+
+                    const currentHour = new Date().toLocaleString('id-ID', {
+                        timeZone: 'Asia/Jakarta',
+                        hour: '2-digit',
+                        hour12: false
+                    });
+                    const lastHour = Math.min(Number(currentHour), 23);
+                    const labels = Array.from({ length: lastHour + 1 }, (_, hour) => `${String(hour).padStart(2, '0')}:00`);
+                    const rowsByTime = data.data.reduce((rows, item) => {
+                        rows[item.time] = item;
+                        return rows;
+                    }, {});
+
+                    const chartConfigs = [
+                        {
+                            id: 'peopleTodayChart',
+                            label: 'Jumlah Orang',
+                            field: 'people_count',
+                            unit: ' orang',
+                            color: '#2563eb',
+                            beginAtZero: true,
+                            decimals: 0
+                        },
+                        {
+                            id: 'acTemperatureTodayChart',
+                            label: 'Suhu AC',
+                            field: 'ac_temperature',
+                            unit: '°C',
+                            color: '#0891b2',
+                            beginAtZero: false,
+                            decimals: 0
+                        },
+                        {
+                            id: 'humidityTodayChart',
+                            label: 'Kelembapan',
+                            field: 'humidity',
+                            unit: '%',
+                            color: '#16a34a',
+                            beginAtZero: true,
+                            max: 100,
+                            decimals: 1
+                        },
+                        {
+                            id: 'lightTodayChart',
+                            label: 'Cahaya',
+                            field: 'light_level',
+                            unit: ' lux',
+                            color: '#f59e0b',
+                            beginAtZero: true,
+                            decimals: 0
+                        },
+                        {
+                            id: 'roomTemperatureTodayChart',
+                            label: 'Suhu Ruangan',
+                            field: 'room_temperature',
+                            unit: '°C',
+                            color: '#dc2626',
+                            beginAtZero: false,
+                            decimals: 1
+                        }
+                    ];
+
+                    chartConfigs.forEach(config => {
+                        const values = labels.map(label => {
+                            const value = rowsByTime[label]?.[config.field];
+                            return value === null || value === undefined ? null : Number(value);
+                        });
+
+                        renderAnalyticsChart(config, labels, values);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading analytics charts:', error);
+                });
+        }
+
+        function renderAnalyticsChart(config, labels, values) {
+            const canvas = document.getElementById(config.id);
+            if (!canvas) {
+                return;
+            }
+
+            if (analyticsCharts[config.id]) {
+                analyticsCharts[config.id].data.labels = labels;
+                analyticsCharts[config.id].data.datasets[0].data = values;
+                analyticsCharts[config.id].update();
+                return;
+            }
+
+            analyticsCharts[config.id] = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: config.label,
+                        data: values,
+                        borderColor: config.color,
+                        backgroundColor: `${config.color}26`,
+                        tension: 0.35,
+                        fill: true,
+                        spanGaps: true,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    const value = context.parsed.y;
+                                    return value === null ? 'Tidak ada data' : `${config.label}: ${formatChartValue(value, config)}${config.unit}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: config.beginAtZero,
+                            max: config.max,
+                            ticks: {
+                                color: '#e5e7eb',
+                                precision: config.decimals === 0 ? 0 : undefined,
+                                callback: function (value) {
+                                    return `${formatChartValue(value, config)}${config.unit}`;
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(229, 231, 235, 0.15)'
+                            },
+                            border: {
+                                color: 'rgba(229, 231, 235, 0.3)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#e5e7eb',
+                                maxRotation: 0,
+                                autoSkip: false,
+                                callback: function (value) {
+                                    return this.getLabelForValue(value);
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(229, 231, 235, 0.08)'
+                            },
+                            border: {
+                                color: 'rgba(229, 231, 235, 0.3)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function formatChartValue(value, config) {
+            const decimals = config.decimals ?? 1;
+            return Number(value).toLocaleString('id-ID', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
         }
 
         function updateAnalyticsData() {

@@ -10,6 +10,8 @@ class SensorData extends Model
 {
     use HasFactory;
 
+    protected $table = 'sensor_data';
+
     protected $fillable = [
         'device_id',
         'location',

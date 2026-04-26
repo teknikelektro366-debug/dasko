@@ -294,28 +294,42 @@ class SensorDataController extends Controller
     }
 
     /**
-     * Get data untuk chart (24 jam terakhir)
+     * Get data untuk chart (24 jam terakhir atau hari ini)
      */
     public function chartData(Request $request): JsonResponse
     {
         try {
-            $hours = $request->input('hours', 24);
+            $period = $request->input('period');
+            $hours = $request->route('hours', $request->input('hours', 24));
             $hours = min(max($hours, 1), 168); // Batasi 1-168 jam (1 minggu)
 
-            $data = SensorData::where('created_at', '>=', now()->subHours($hours))
-                             ->orderBy('created_at')
-                             ->get();
+            $query = SensorData::query();
+
+            if ($period === 'today') {
+                $query->whereBetween('created_at', [now()->startOfDay(), now()->endOfDay()]);
+            } else {
+                $query->where('created_at', '>=', now()->subHours($hours));
+            }
+
+            $data = $query->orderBy('created_at')->get();
 
             // Group data per jam untuk chart
             $chartData = $data->groupBy(function($item) {
                 return $item->created_at->format('H:00');
             })->map(function($group) {
+                $roundAvg = function ($field, $precision = 1) use ($group) {
+                    $average = $group->avg($field);
+                    return $average === null ? null : round($average, $precision);
+                };
+
                 return [
                     'time' => $group->first()->created_at->format('H:00'),
-                    'people_count' => round($group->avg('people_count'), 1),
-                    'temperature' => round($group->avg('room_temperature'), 1),
-                    'humidity' => round($group->avg('humidity'), 1),
-                    'light_level' => round($group->avg('light_level'), 0),
+                    'people_count' => $roundAvg('people_count', 0),
+                    'ac_temperature' => $roundAvg('set_temperature', 0),
+                    'room_temperature' => $roundAvg('room_temperature'),
+                    'temperature' => $roundAvg('room_temperature'),
+                    'humidity' => $roundAvg('humidity'),
+                    'light_level' => $roundAvg('light_level', 0),
                     'ac_on' => $group->where('ac_status', '!=', 'OFF')->count() > 0
                 ];
             })->values();
@@ -323,7 +337,7 @@ class SensorDataController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $chartData,
-                'period' => $hours . ' hours',
+                'period' => $period === 'today' ? 'today' : $hours . ' hours',
                 'total_records' => $data->count()
             ]);
 
