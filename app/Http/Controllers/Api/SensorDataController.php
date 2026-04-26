@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\SensorData;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -300,13 +301,21 @@ class SensorDataController extends Controller
     {
         try {
             $period = $request->input('period');
+            $dateInput = $request->input('date');
             $hours = $request->route('hours', $request->input('hours', 24));
             $hours = min(max($hours, 1), 168); // Batasi 1-168 jam (1 minggu)
 
             $query = SensorData::query();
 
-            if ($period === 'today') {
-                $query->whereBetween('created_at', [now()->startOfDay(), now()->endOfDay()]);
+            if ($period === 'today' || $dateInput) {
+                $date = $dateInput
+                    ? Carbon::createFromFormat('Y-m-d', (string) $dateInput, 'Asia/Jakarta')
+                    : now('Asia/Jakarta');
+
+                $query->whereBetween('created_at', [
+                    $date->copy()->startOfDay(),
+                    $date->copy()->endOfDay(),
+                ]);
             } else {
                 $query->where('created_at', '>=', now()->subHours($hours));
             }
@@ -337,7 +346,8 @@ class SensorDataController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $chartData,
-                'period' => $period === 'today' ? 'today' : $hours . ' hours',
+                'period' => ($period === 'today' || $dateInput) ? 'date' : $hours . ' hours',
+                'date' => isset($date) ? $date->format('Y-m-d') : null,
                 'total_records' => $data->count()
             ]);
 
