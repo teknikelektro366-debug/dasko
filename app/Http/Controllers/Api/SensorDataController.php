@@ -27,7 +27,7 @@ class SensorDataController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Sensor data retrieved successfully',
-                'data' => $data->items(),
+                'data' => $this->normalizeLampStatusForRows($data->items()),
                 'pagination' => [
                     'current_page' => $data->currentPage(),
                     'last_page' => $data->lastPage(),
@@ -237,6 +237,7 @@ class SensorDataController extends Controller
                     'room_temperature' => $latestData->room_temperature,
                     'humidity' => $latestData->humidity,
                     'light_level' => $latestData->light_level,
+                    'lamp_status' => $this->lampStatusFromPeopleCount($latestData->people_count),
                     'proximity_in' => $latestData->proximity_in,
                     'proximity_out' => $latestData->proximity_out,
                     'wifi_rssi' => $latestData->wifi_rssi,
@@ -428,7 +429,7 @@ class SensorDataController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $data->items(),
+                'data' => $this->normalizeLampStatusForRows($data->items()),
                 'pagination' => [
                     'current_page' => $data->currentPage(),
                     'last_page' => $data->lastPage(),
@@ -493,5 +494,18 @@ class SensorDataController extends Controller
                 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
             ], 500);
         }
+    }
+
+    private function lampStatusFromPeopleCount($peopleCount): string
+    {
+        return (int) $peopleCount > 0 ? 'ON' : 'OFF';
+    }
+
+    private function normalizeLampStatusForRows(array $rows): array
+    {
+        return array_map(function ($row) {
+            $row->lamp_status = $this->lampStatusFromPeopleCount($row->people_count);
+            return $row;
+        }, $rows);
     }
 }

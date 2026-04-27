@@ -2581,6 +2581,7 @@
                                         }) : '--';
 
                                     const proximityStatus = `IN: ${item.proximity_in ? 'ON' : 'OFF'} | OUT: ${item.proximity_out ? 'ON' : 'OFF'}`;
+                                    const lampStatus = Number(item.people_count || 0) > 0 ? 'ON' : 'OFF';
 
                                     // API mengirim data terbaru dulu, jadi bandingkan dengan record yang lebih lama.
                                     let masuk = '--';
@@ -2614,7 +2615,7 @@
                                             <td>${item.room_temperature ? item.room_temperature : '--'}</td>
                                             <td>${item.humidity ? item.humidity : '--'}</td>
                                             <td>${item.light_level || '--'} lux</td>
-                                            <td><span class="lamp-status ${item.lamp_status === 'ON' ? 'status-on' : 'status-off'}">${item.lamp_status || 'OFF'}</span></td>
+                                            <td><span class="lamp-status ${lampStatus === 'ON' ? 'status-on' : 'status-off'}">${lampStatus}</span></td>
                                             <td><span class="ac-status ${item.ac_status === 'OFF' ? 'status-off' : 'status-on'}">${item.ac_status || 'OFF'}</span></td>
                                             <td>${item.set_temperature || '--'}°C</td>
                                             <td><small>${proximityStatus}</small></td>
