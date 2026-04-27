@@ -98,7 +98,9 @@ class SensorDataController extends Controller
 
             $deviceId = $request->input('device_id', 'ESP32_Smart_Energy');
             $location = $request->input('location', 'Lab Teknik Tegangan Tinggi');
-            $peopleCount = min((int) $request->input('people_count'), 25);
+            $peopleCount = $this->isNightResetTime()
+                ? 0
+                : min((int) $request->input('people_count'), 25);
             $lampStatus = $peopleCount > 0 ? 'ON' : 'OFF';
             $setTemperature = $this->targetTemperatureFromPeopleCount($peopleCount);
             $acStatus = $this->normalizeAcStatusFromPeopleCount(
@@ -236,16 +238,16 @@ class SensorDataController extends Controller
                     'id' => $latestData->id,
                     'device_id' => $latestData->device_id,
                     'location' => $latestData->location,
-                    'people_count' => $latestData->people_count,
+                    'people_count' => $this->currentPeopleCount($latestData->people_count),
                     'ac_status' => $this->normalizeAcStatusFromPeopleCount(
-                        $latestData->people_count,
+                        $this->currentPeopleCount($latestData->people_count),
                         $latestData->ac_status
                     ),
-                    'set_temperature' => $this->targetTemperatureFromPeopleCount($latestData->people_count),
+                    'set_temperature' => $this->targetTemperatureFromPeopleCount($this->currentPeopleCount($latestData->people_count)),
                     'room_temperature' => $latestData->room_temperature,
                     'humidity' => $latestData->humidity,
                     'light_level' => $latestData->light_level,
-                    'lamp_status' => $this->lampStatusFromPeopleCount($latestData->people_count),
+                    'lamp_status' => $this->lampStatusFromPeopleCount($this->currentPeopleCount($latestData->people_count)),
                     'proximity_in' => $latestData->proximity_in,
                     'proximity_out' => $latestData->proximity_out,
                     'wifi_rssi' => $latestData->wifi_rssi,
@@ -511,6 +513,17 @@ class SensorDataController extends Controller
     private function lampStatusFromPeopleCount($peopleCount): string
     {
         return (int) $peopleCount > 0 ? 'ON' : 'OFF';
+    }
+
+    private function currentPeopleCount($peopleCount): int
+    {
+        return $this->isNightResetTime() ? 0 : min((int) $peopleCount, 25);
+    }
+
+    private function isNightResetTime(): bool
+    {
+        $hour = now('Asia/Jakarta')->hour;
+        return $hour >= 18 || $hour < 5;
     }
 
     private function targetTemperatureFromPeopleCount($peopleCount): ?int

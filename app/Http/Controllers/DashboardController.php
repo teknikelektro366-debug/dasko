@@ -206,7 +206,7 @@ class DashboardController extends Controller
 
             $dataAgeMinutes = $latestData->created_at->diffInMinutes(now());
             $connectionStatus = $dataAgeMinutes <= 2 ? 'online' : 'offline';
-            $peopleCount = min((int) ($latestData->people_count ?? 0), 25);
+            $peopleCount = $this->currentPeopleCount($latestData->people_count ?? 0);
 
             return [
                 'id' => $latestData->id,
@@ -255,6 +255,17 @@ class DashboardController extends Controller
         }
 
         return 18;
+    }
+
+    private function currentPeopleCount($peopleCount): int
+    {
+        return $this->isNightResetTime() ? 0 : min((int) $peopleCount, 25);
+    }
+
+    private function isNightResetTime(): bool
+    {
+        $hour = now('Asia/Jakarta')->hour;
+        return $hour >= 18 || $hour < 5;
     }
 
     private function acStatusFromPeopleCount(int $peopleCount): string
