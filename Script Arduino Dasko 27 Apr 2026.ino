@@ -113,6 +113,8 @@ const char* rootCACertificate =
 #define AUTO_SHUTDOWN_MINUTE  0   // Menit 0
 #define AUTO_STARTUP_HOUR     6   // Jam 6 pagi (06:00)
 #define AUTO_STARTUP_MINUTE   0   // Menit 0
+#define NIGHT_RESET_START_HOUR 18  // Jam 6 sore
+#define NIGHT_RESET_END_HOUR   5   // Sampai sebelum jam 5 subuh
 #define TIMEZONE_OFFSET_HOURS 7   // WIB (UTC+7)
 
 // NTP Server configuration
@@ -128,6 +130,8 @@ bool autoStartupTriggered = false;
 bool systemAutoShutdown = false;  // Flag to track if system is in auto shutdown state
 unsigned long lastTimeCheck = 0;
 unsigned long lastAutoShutdownLog = 0;
+unsigned long lastNightResetCheck = 0;
+unsigned long lastNightResetSend = 0;
 
 // ================= ENHANCED PROXY DETECTION VARIABLES =================
 struct ProxyDetectionState {
@@ -280,6 +284,8 @@ void performAutoStartup();
 String getCurrentTimeString();
 bool isAutoShutdownTime();
 bool isAutoStartupTime();
+bool isNightResetTime();
+bool enforceNightReset();
 void sendHeartbeat();  // Heartbeat saja, bukan data utama
 
 void IRAM_ATTR proximityInInterrupt();
@@ -2362,6 +2368,7 @@ void setup() {
   Serial.println("Location: Ruang Prodi Dosen Teknik Elektro - UNJA");
   Serial.println("Auto Shutdown: " + String(autoShutdownEnabled ? "ENABLED" : "DISABLED (SAFE MODE)"));
   Serial.println("Auto Startup: " + String(autoStartupEnabled ? "ENABLED" : "DISABLED (SAFE MODE)"));
+  Serial.println("Night Reset: ENABLED (18:00-04:59 WIB -> people=0, AC/lamp OFF)");
   Serial.println("Watchdog Timer: 60 seconds (Extended for stability)");
   Serial.println("Memory Monitoring: ACTIVE");
   Serial.println("System Mode: ANTI-RESTART PROTECTION");
@@ -2460,6 +2467,11 @@ void loop() {
   
   // Always read sensors for immediate response
   readSensors();
+  if (enforceNightReset()) {
+    esp_task_wdt_reset();
+    yield();
+    return;
+  }
   detectPeople();
   
   // Handle interrupt-triggered updates immediately
@@ -2974,6 +2986,57 @@ bool isAutoShutdownTime() {
   return (timeinfo.tm_hour == AUTO_SHUTDOWN_HOUR && 
           timeinfo.tm_min >= AUTO_SHUTDOWN_MINUTE && 
           timeinfo.tm_min < AUTO_SHUTDOWN_MINUTE + 1);
+}
+
+bool isNightResetTime() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    return false;
+  }
+
+  return timeinfo.tm_hour >= NIGHT_RESET_START_HOUR || timeinfo.tm_hour < NIGHT_RESET_END_HOUR;
+}
+
+bool enforceNightReset() {
+  unsigned long now = millis();
+  if (now - lastNightResetCheck < 1000) {
+    return isNightResetTime();
+  }
+  lastNightResetCheck = now;
+
+  if (!isNightResetTime()) {
+    return false;
+  }
+
+  bool changed = jumlahOrang != 0 || currentData.setTemp != 0 || lastAC1 || lastAC2 || lastLamp1;
+
+  jumlahOrang = 0;
+  roomEmptyTimerActive = false;
+  emptyRoomStartTime = now;
+  updateSensorData();
+
+  String acStatus = currentData.acStatus;
+  int setTemp = currentData.setTemp;
+  String lampStatus = currentData.lampStatus;
+  kontrolAC(acStatus, setTemp);
+  kontrolLampu(lampStatus);
+  currentData.acStatus = acStatus;
+  currentData.setTemp = setTemp;
+  currentData.lampStatus = lampStatus;
+  lastJumlahOrang = jumlahOrang;
+  forceFullUpdate = true;
+
+  if (changed) {
+    Serial.println("🌙 NIGHT RESET ACTIVE (" + getCurrentTimeString() + ") - people=0, AC OFF, lamp OFF");
+    updateTFT(acStatus, setTemp, currentData.suhuRuang);
+  }
+
+  if (WiFi.status() == WL_CONNECTED && (changed || now - lastNightResetSend > 600000) && canSendUpdate()) {
+    sendDataToAPI("NIGHT_RESET_18_05 - Force room empty, AC/lamp OFF");
+    lastNightResetSend = millis();
+  }
+
+  return true;
 }
 
 void performAutoStartup() {
