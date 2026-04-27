@@ -99,11 +99,11 @@ const char* rootCACertificate =
 #define RELAY_LAMP1       25  // Relay untuk lampu (menggunakan NC untuk dual fungsi)
 // #define RELAY_LAMP2       26  // Tidak digunakan - hanya 1 jalur lampure
 #define MAX_PEOPLE 20
-#define PERSON_COOLDOWN 1500  // 1.5 detik cooldown antar orang (cukup untuk satu orang selesai lewat)
-#define DEBOUNCE_DELAY 80     // 80ms debounce untuk filter noise elektronik
-#define MIN_PRESENCE_TIME 220 // Objek harus terdeteksi minimal 220ms → filter gerakan pintu yang cepat
-#define DOOR_FILTER_TIME 180  // Durasi di bawah ini dianggap gerakan pintu/noise, bukan orang
-#define SEQUENCE_TIMEOUT 3500 // Maks waktu antar sensor IN/OUT untuk dianggap satu orang lewat
+#define PERSON_COOLDOWN 700   // Cooldown lebih cepat, tetap menahan double count satu orang
+#define DEBOUNCE_DELAY 20      // Debounce cepat untuk response proximity tanpa noise singkat
+#define MIN_PRESENCE_TIME 90   // Objek harus stabil minimal 90ms agar valid sebagai orang
+#define DOOR_FILTER_TIME 60    // Durasi di bawah ini dianggap noise/pantulan sensor
+#define SEQUENCE_TIMEOUT 1800  // Maks waktu antar sensor IN/OUT untuk dianggap satu orang lewat
 
 // ================= LIGHT CONTROL THRESHOLDS =================
 #define LUX_THRESHOLD     800  // Threshold cahaya untuk kontrol otomatis (diubah dari 600 ke 800)
@@ -251,6 +251,7 @@ bool makeHTTPRequest(const char* url, const char* method, const char* payload, S
 void checkACControlAPI();
 void kontrolAC(String &acStatus, int &setTemp);
 void kontrolLampu(String &lampStatus);
+void syncDeviceControlsAfterPeopleChange(String reason);
 void detectPeople();
 void detectPeopleSequenced();
 void readSensors();
@@ -287,7 +288,7 @@ void IRAM_ATTR proximityOutInterrupt();
 // ================= INTERRUPT HANDLERS =================
 void IRAM_ATTR proximityInInterrupt() {
   unsigned long now = millis();
-  if (now - lastInterruptTime > 30) { // Faster interrupt response
+  if (now - lastInterruptTime > 10) { // Faster interrupt response
     interruptTriggered = true;
     lastInterruptTime = now;
   }
@@ -295,7 +296,7 @@ void IRAM_ATTR proximityInInterrupt() {
 
 void IRAM_ATTR proximityOutInterrupt() {
   unsigned long now = millis();
-  if (now - lastInterruptTime > 30) { // Faster interrupt response
+  if (now - lastInterruptTime > 10) { // Faster interrupt response
     interruptTriggered = true;
     lastInterruptTime = now;
   }
@@ -936,7 +937,7 @@ void detectPeople() {
         roomEmptyTimerActive = false;
 
         Serial.println("🚶 → MASUK TERKONFIRMASI! (presence=" + String(presenceDuration) + "ms) Count: " + String(jumlahOrang));
-        updateSensorData();
+        syncDeviceControlsAfterPeopleChange("ENTRY_CONFIRMED");
 
         if (WiFi.status() == WL_CONNECTED) {
           String reason = "ENTRY_CONFIRMED - Person " + String(jumlahOrang) +
@@ -987,7 +988,7 @@ void detectPeople() {
           }
 
           Serial.println("🚶 ← KELUAR TERKONFIRMASI! (presence=" + String(presenceDuration) + "ms) Count: " + String(jumlahOrang));
-          updateSensorData();
+          syncDeviceControlsAfterPeopleChange("EXIT_CONFIRMED");
 
           if (WiFi.status() == WL_CONNECTED) {
             String reason = "EXIT_CONFIRMED - Person left (presence " + String(presenceDuration) +
@@ -1137,7 +1138,7 @@ void detectPeopleSequenced() {
           }
 
           Serial.println("KELUAR TERKONFIRMASI: OUT->IN. Count: " + String(jumlahOrang));
-          updateSensorData();
+          syncDeviceControlsAfterPeopleChange("EXIT_CONFIRMED_OUT_IN");
 
           if (WiFi.status() == WL_CONNECTED) {
             String reason = "EXIT_CONFIRMED - Person left by OUT-IN sequence, remaining: " +
@@ -1174,7 +1175,7 @@ void detectPeopleSequenced() {
           roomEmptyTimerActive = false;
 
           Serial.println("MASUK TERKONFIRMASI: IN->OUT. Count: " + String(jumlahOrang));
-          updateSensorData();
+          syncDeviceControlsAfterPeopleChange("ENTRY_CONFIRMED_IN_OUT");
 
           if (WiFi.status() == WL_CONNECTED) {
             String reason = "ENTRY_CONFIRMED - Person " + String(jumlahOrang) +
@@ -1620,6 +1621,29 @@ void kontrolLampu(String &lampStatus) {
   currentData.lamp1 = lampON;
   currentData.lamp2 = false;  // Tidak digunakan
   currentData.lampStatus = lampStatus;
+}
+
+void syncDeviceControlsAfterPeopleChange(String reason) {
+  updateSensorData();
+
+  String lampStatus = currentData.lampStatus;
+  kontrolLampu(lampStatus);
+  currentData.lampStatus = lampStatus;
+
+  String acStatus = currentData.acStatus;
+  int setTemp = currentData.setTemp;
+  kontrolAC(acStatus, setTemp);
+  currentData.acStatus = acStatus;
+  currentData.setTemp = setTemp;
+
+  forceFullUpdate = true;
+  updateTFT(acStatus, setTemp, currentData.suhuRuang);
+  lastJumlahOrang = jumlahOrang;
+
+  Serial.println("🔄 DEVICE SYNC AFTER PEOPLE CHANGE: " + reason);
+  Serial.println("   People: " + String(jumlahOrang));
+  Serial.println("   Lamp  : " + normalizeLampStatus());
+  Serial.println("   AC    : " + normalizeACStatus());
 }
 
 // ================= UPDATE SENSOR DATA =================
@@ -2589,14 +2613,12 @@ void loop() {
       Serial.println("➕ Manual add person");
       jumlahOrang++;
       jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
-      updateSensorData();
-      forceFullUpdate = true;
+      syncDeviceControlsAfterPeopleChange("MANUAL_ADD");
     }
     else if (command == "sub") {
       Serial.println("➖ Manual subtract person");
       if (jumlahOrang > 0) jumlahOrang--;
-      updateSensorData();
-      forceFullUpdate = true;
+      syncDeviceControlsAfterPeopleChange("MANUAL_SUB");
     }
     else if (command == "manual") {
       autoMode = false;
@@ -2733,15 +2755,13 @@ void loop() {
           jumlahOrang++;
           jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
           Serial.println("🚶 → IN DETECTED! Count: " + String(jumlahOrang));
-          updateSensorData();
-          forceFullUpdate = true;
+          syncDeviceControlsAfterPeopleChange("SIMPLE_TEST_IN");
         }
         
         if (currentOut && !lastTestOut && jumlahOrang > 0) {
           jumlahOrang--;
           Serial.println("🚶 ← OUT DETECTED! Count: " + String(jumlahOrang));
-          updateSensorData();
-          forceFullUpdate = true;
+          syncDeviceControlsAfterPeopleChange("SIMPLE_TEST_OUT");
         }
         
         lastTestIn = currentIn;
@@ -2753,19 +2773,8 @@ void loop() {
     }
   }
   
-  // ANTI-RESTART: Delay yang lebih aman untuk mencegah overload CPU
-  static unsigned long lastLoopTime = 0;
-  unsigned long loopDuration = millis() - lastLoopTime;
-  lastLoopTime = millis();
-  
-  // Adaptive delay berdasarkan durasi loop
-  if (loopDuration < 10) {
-    delay(50); // Loop terlalu cepat, beri jeda lebih lama
-  } else if (loopDuration < 50) {
-    delay(20); // Loop normal
-  } else {
-    delay(5);  // Loop sudah lambat, delay minimal
-  }
+  // Jaga loop tetap responsif untuk proximity tanpa menahan polling sensor.
+  yield();
   
   // Reset watchdog sebelum akhir loop
   esp_task_wdt_reset();
