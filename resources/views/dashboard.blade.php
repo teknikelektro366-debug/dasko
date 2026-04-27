@@ -2573,8 +2573,6 @@
 
                         if (data.data && Array.isArray(data.data) && data.data.length > 0) {
                             let html = '';
-                            let previousPeopleCount = null;
-
                             data.data.forEach((item, index) => {
                                 try {
                                     const timestamp = item.created_at ?
@@ -2584,25 +2582,26 @@
 
                                     const proximityStatus = `IN: ${item.proximity_in ? 'ON' : 'OFF'} | OUT: ${item.proximity_out ? 'ON' : 'OFF'}`;
 
-                                    // Hitung orang masuk dan keluar
+                                    // API mengirim data terbaru dulu, jadi bandingkan dengan record yang lebih lama.
                                     let masuk = '--';
                                     let keluar = '--';
+                                    const previousRecord = data.data[index + 1];
 
-                                    if (previousPeopleCount !== null) {
-                                        const diff = item.people_count - previousPeopleCount;
+                                    if (previousRecord) {
+                                        const currentPeopleCount = Number(item.people_count || 0);
+                                        const previousPeopleCount = Number(previousRecord.people_count || 0);
+                                        const diff = currentPeopleCount - previousPeopleCount;
                                         if (diff > 0) {
                                             masuk = `<span style="color: #28a745; font-weight: bold;">+${diff}</span>`;
                                             keluar = '0';
                                         } else if (diff < 0) {
                                             masuk = '0';
-                                            keluar = `<span style="color: #dc3545; font-weight: bold;">${Math.abs(diff)}</span>`;
+                                            keluar = `<span style="color: #dc3545; font-weight: bold;">-${Math.abs(diff)}</span>`;
                                         } else {
                                             masuk = '0';
                                             keluar = '0';
                                         }
                                     }
-
-                                    previousPeopleCount = item.people_count;
 
                                     html += `
                                         <tr>
@@ -2856,25 +2855,29 @@
                 .then(data => {
                     if (data.success && data.data.length > 0) {
                         let html = '';
-                        let lastPeopleCount = -1;
                         let totalMovement = 0;
 
                         data.data.forEach((item, index) => {
-                            // Only show records where people count changed
-                            if (item.people_count !== lastPeopleCount) {
+                            const previousRecord = data.data[index + 1];
+                            const currentPeopleCount = Number(item.people_count || 0);
+                            const previousPeopleCount = previousRecord ? Number(previousRecord.people_count || 0) : null;
+                            const change = previousPeopleCount === null ? 0 : currentPeopleCount - previousPeopleCount;
+
+                            // Only show records where people count changed, plus the oldest baseline record.
+                            if (change !== 0 || previousPeopleCount === null) {
                                 const timestamp = new Date(item.created_at).toLocaleString('id-ID', {
                                     timeZone: 'Asia/Jakarta'
                                 });
-                                const change = lastPeopleCount === -1 ? 0 : item.people_count - lastPeopleCount;
+                                const changeText = change > 0 ? `+${change}` : change < 0 ? `-${Math.abs(change)}` : '0';
                                 const changeIcon = change > 0 ? '↑' : change < 0 ? '↓' : '=';
                                 const changeClass = change > 0 ? 'increase' : change < 0 ? 'decrease' : 'same';
 
                                 let acResponse = 'Tidak ada perubahan';
-                                if (item.people_count === 0) {
+                                if (currentPeopleCount === 0) {
                                     acResponse = 'AC OFF';
-                                } else if (item.people_count <= 5) {
+                                } else if (currentPeopleCount <= 5) {
                                     acResponse = '1 AC ON (25°C)';
-                                } else if (item.people_count <= 10) {
+                                } else if (currentPeopleCount <= 10) {
                                     acResponse = '1 AC ON (22°C)';
                                 } else {
                                     acResponse = '2 AC ON (20°C)';
@@ -2882,27 +2885,26 @@
 
                                 let keterangan = '';
                                 if (change > 0) {
-                                    keterangan = `${change} orang masuk ruangan`;
+                                    keterangan = `+${change} orang masuk ruangan`;
                                     totalMovement += change;
                                 } else if (change < 0) {
-                                    keterangan = `${Math.abs(change)} orang keluar ruangan`;
+                                    keterangan = `-${Math.abs(change)} orang keluar ruangan`;
                                     totalMovement += Math.abs(change);
-                                } else if (lastPeopleCount === -1) {
+                                } else if (previousPeopleCount === null) {
                                     keterangan = 'Data awal sistem';
                                 }
 
                                 html += `
                                     <tr>
                                         <td>${timestamp}</td>
-                                        <td><span class="people-count">${item.people_count}</span></td>
-                                        <td><span class="change-indicator ${changeClass}">${changeIcon} ${Math.abs(change)}</span></td>
+                                        <td><span class="people-count">${currentPeopleCount}</span></td>
+                                        <td><span class="change-indicator ${changeClass}">${changeIcon} ${changeText}</span></td>
                                         <td>${item.proximity_in ? 'AKTIF' : 'OFF'}</td>
                                         <td>${item.proximity_out ? 'AKTIF' : 'OFF'}</td>
                                         <td><span class="ac-response">${acResponse}</span></td>
                                         <td><small>${keterangan}</small></td>
                                     </tr>
                                 `;
-                                lastPeopleCount = item.people_count;
                             }
                         });
 
