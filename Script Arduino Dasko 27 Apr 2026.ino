@@ -1585,64 +1585,22 @@ void kontrolAC(String &acStatus, int &setTemp) {
 
 // ================= LAMP CONTROL (DUAL FUNCTION) =================
 void kontrolLampu(String &lampStatus) {
-  bool lampON = false;
-  
-  // ALGORITMA BERDASARKAN JUMLAH ORANG DI RUANGAN (SAMA SEPERTI AC):
-  // 1. Jika ada orang di ruangan (jumlahOrang > 0) → Lampu SELALU NYALA
-  // 2. Jika tidak ada orang (jumlahOrang = 0) → Lampu mati
-  // 3. Auto shutdown setelah 5 menit kosong
-  
-  if (autoMode && !manualOverride) {
-    // Mode otomatis berdasarkan occupancy dan LDR (Lux)
-    if (jumlahOrang > 0) {
-      // Ada orang, implementasi Hysteresis dengan LDR agar lampu tidak berkedip
-      if (lastLamp1) {
-        // Lampu sedang nyala, matikan jika jauh lebih terang dari threshold (misal siang hari sangat cerah)
-        if (currentData.lightLevel > LUX_THRESHOLD + 200) {
-          lampON = false;
-          lampStatus = "AUTO OFF (SANGAT TERANG)";
-        } else {
-          lampON = true;
-          lampStatus = "AUTO ON (" + String(jumlahOrang) + " orang)";
-        }
-      } else {
-        // Lampu sedang mati, hidupkan HANYA jika ruangan lebih gelap dari threshold
-        if (currentData.lightLevel < LUX_THRESHOLD) {
-          lampON = true;
-          lampStatus = "AUTO ON (GELAP)";
-          Serial.println("💡 Auto ON: " + String(jumlahOrang) + " orang, Cahaya " + String(currentData.lightLevel) + " lux");
-        } else {
-          lampON = false;
-          lampStatus = "AUTO OFF (TERANG)";
-        }
-      }
-    } else {
-      // Tidak ada orang di ruangan → Lampu mati
-      lampON = false;
-      lampStatus = "AUTO OFF (KOSONG)";
-    }
-    
-    // Auto shutdown setelah 5 menit kosong
-    if (jumlahOrang == 0 && roomEmptyTimerActive) {
-      unsigned long emptyDuration = millis() - emptyRoomStartTime;
-      if (emptyDuration >= EMPTY_ROOM_TIMEOUT) {
-        lampON = false;
-        lampStatus = "AUTO OFF (5 MIN KOSONG)";
-        Serial.println("⏰ AUTO SHUTDOWN: Ruangan kosong > 5 menit - Lampu dimatikan otomatis");
-      }
-    }
-  }
-  else {
-    // Mode manual - relay tidak aktif, kontrol sepenuhnya dari saklar fisik
-    lampStatus = "MANUAL MODE";
-  }
+  jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
+
+  // Validasi utama lampu:
+  // - jumlahOrang > 0  => lampu wajib ON
+  // - jumlahOrang == 0 => lampu wajib OFF
+  // LDR tidak lagi dipakai sebagai syarat mematikan lampu saat ruangan berisi orang.
+  bool lampON = jumlahOrang > 0;
+  lampStatus = lampON
+    ? "AUTO ON (" + String(jumlahOrang) + " orang)"
+    : "AUTO OFF (KOSONG)";
   
   // Update relay hanya jika ada perubahan
   if (lampON != lastLamp1 || lampStatus != lastLampStatus) {
     Serial.println("💡 Lamp Control Change: " + lampStatus);
     Serial.println("   Jumlah orang: " + String(jumlahOrang));
-    Serial.println("   Light level: " + String(currentData.lightLevel) + " lux");
-    Serial.println("   Threshold: 800 lux");
+    Serial.println("   Rule: jumlahOrang > 0 = LAMPU ON, jumlahOrang = 0 = LAMPU OFF");
     
     // LOGIKA NC RELAY:
     // LOW = NC tersambung = Lampu bisa nyala (otomatis atau manual)
@@ -2216,7 +2174,7 @@ void setup() {
   // Initialize relay untuk NC (Normally Closed)
   // HIGH = NC terputus = Lampu padam paksa
   // LOW = NC tersambung = Lampu bisa dikontrol manual/otomatis
-  digitalWrite(RELAY_LAMP1, HIGH);  // Start dengan kontrol otomatis aktif
+  digitalWrite(RELAY_LAMP1, HIGH);  // Start OFF; kontrolLampu() akan ON jika jumlahOrang > 0
   
   attachInterrupt(digitalPinToInterrupt(PROXIMITY_PIN_IN), proximityInInterrupt, CHANGE);
   attachInterrupt(digitalPinToInterrupt(PROXIMITY_PIN_OUT), proximityOutInterrupt, CHANGE);
