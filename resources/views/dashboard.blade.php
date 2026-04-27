@@ -2091,7 +2091,7 @@
                             <span class="toggle-slider"></span>
                         </div>
                     </div>
-                    <p>Lampu menyala otomatis saat intensitas cahaya rendah/gelap atau hujan</p>
+                    <p>Lampu menyala otomatis saat jumlah orang di ruangan lebih dari 0</p>
                 </div>
 
                 <div class="automation-rule">

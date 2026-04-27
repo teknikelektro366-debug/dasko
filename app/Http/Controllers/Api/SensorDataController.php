@@ -98,18 +98,20 @@ class SensorDataController extends Controller
 
             $deviceId = $request->input('device_id', 'ESP32_Smart_Energy');
             $location = $request->input('location', 'Lab Teknik Tegangan Tinggi');
+            $peopleCount = (int) $request->input('people_count');
+            $lampStatus = $peopleCount > 0 ? 'ON' : 'OFF';
 
             // ALWAYS CREATE NEW RECORD - Setiap data dari ESP32 disimpan sebagai record baru
             $dataToCreate = [
                 'device_id' => $deviceId,
                 'location' => $location,
-                'people_count' => $request->input('people_count'),
+                'people_count' => $peopleCount,
                 'ac_status' => $request->input('ac_status'),
                 'set_temperature' => $request->input('set_temperature'),
                 'room_temperature' => $request->input('room_temperature'),
                 'humidity' => $request->input('humidity'),
                 'light_level' => $request->input('light_level', 0),
-                'lamp_status' => $request->input('lamp_status', 'OFF'),
+                'lamp_status' => $lampStatus,
                 'proximity_in' => $request->input('proximity_in', false),
                 'proximity_out' => $request->input('proximity_out', false),
                 'wifi_rssi' => $request->input('wifi_rssi'),
