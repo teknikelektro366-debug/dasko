@@ -98,7 +98,7 @@ const char* rootCACertificate =
 #define LDR_ENABLED       true // Set true jika sensor LDR terpasang, false = selalu 0 lux
 #define RELAY_LAMP1       25  // Relay untuk lampu (menggunakan NC untuk dual fungsi)
 // #define RELAY_LAMP2       26  // Tidak digunakan - hanya 1 jalur lampure
-#define MAX_PEOPLE 20
+#define MAX_PEOPLE 25
 #define PERSON_COOLDOWN 180   // Cepat realtime, masih menahan double count dari orang yang sama
 #define DEBOUNCE_DELAY 8      // Debounce sangat singkat untuk response proximity cepat
 #define MIN_PRESENCE_TIME 35  // Objek stabil 35ms sudah valid sebagai orang
@@ -862,7 +862,9 @@ void detectPeople() {
   if (now - lastDebug > 8000) {
     Serial.print("📊 People: ");
     Serial.print(jumlahOrang);
-    Serial.print("/20 | MASUK:");
+    Serial.print("/");
+    Serial.print(MAX_PEOPLE);
+    Serial.print(" | MASUK:");
     Serial.print(sensorData.objectInDetected ? "DETECTED" : "CLEAR");
     Serial.print(" | KELUAR:");
     Serial.print(sensorData.objectOutDetected ? "DETECTED" : "CLEAR");
@@ -930,20 +932,26 @@ void detectPeople() {
       unsigned long presenceDuration = now - inFirstDetected;
       if (presenceDuration >= MIN_PRESENCE_TIME && (now - lastInTrigger) >= PERSON_COOLDOWN) {
         // ✅ Konfirmasi: INI ORANG, bukan pintu
-        jumlahOrang++;
-        lastPersonDetected = now;
-        lastInTrigger = now;
-        inWaiting = false;
-        roomEmptyTimerActive = false;
+        if (jumlahOrang >= MAX_PEOPLE) {
+          Serial.println("⚠️ ENTRY ignored - room capacity already at " + String(MAX_PEOPLE));
+          inWaiting = false;
+          lastInTrigger = now;
+        } else {
+          jumlahOrang++;
+          lastPersonDetected = now;
+          lastInTrigger = now;
+          inWaiting = false;
+          roomEmptyTimerActive = false;
 
-        Serial.println("🚶 → MASUK TERKONFIRMASI! (presence=" + String(presenceDuration) + "ms) Count: " + String(jumlahOrang));
-        syncDeviceControlsAfterPeopleChange("ENTRY_CONFIRMED");
+          Serial.println("🚶 → MASUK TERKONFIRMASI! (presence=" + String(presenceDuration) + "ms) Count: " + String(jumlahOrang));
+          syncDeviceControlsAfterPeopleChange("ENTRY_CONFIRMED");
 
-        if (WiFi.status() == WL_CONNECTED) {
-          String reason = "ENTRY_CONFIRMED - Person " + String(jumlahOrang) +
-                          " entered (presence " + String(presenceDuration) + "ms) - Proximity IN";
-          sendDataToAPI(reason);
-          Serial.println("📤 ✅ TERCATAT: Orang masuk #" + String(jumlahOrang));
+          if (WiFi.status() == WL_CONNECTED) {
+            String reason = "ENTRY_CONFIRMED - Person " + String(jumlahOrang) +
+                            " entered (presence " + String(presenceDuration) + "ms) - Proximity IN";
+            sendDataToAPI(reason);
+            Serial.println("📤 ✅ TERCATAT: Orang masuk #" + String(jumlahOrang));
+          }
         }
       }
       // Belum memenuhi syarat → lanjut tunggu
@@ -1045,7 +1053,9 @@ void detectPeopleSequenced() {
   if (now - lastDebug > 8000) {
     Serial.print("People: ");
     Serial.print(jumlahOrang);
-    Serial.print("/20 | IN:");
+    Serial.print("/");
+    Serial.print(MAX_PEOPLE);
+    Serial.print(" | IN:");
     Serial.print(sensorData.objectInDetected ? "DETECTED" : "CLEAR");
     Serial.print(" | OUT:");
     Serial.print(sensorData.objectOutDetected ? "DETECTED" : "CLEAR");
@@ -1168,19 +1178,25 @@ void detectPeopleSequenced() {
           sequenceState = 0;
           sequenceCompleted = true;
         } else {
-          jumlahOrang++;
-          lastPersonDetected = now;
-          sequenceState = 0;
-          sequenceCompleted = true;
-          roomEmptyTimerActive = false;
+          if (jumlahOrang >= MAX_PEOPLE) {
+            Serial.println("ENTRY ignored - room capacity already at " + String(MAX_PEOPLE));
+            sequenceState = 0;
+            sequenceCompleted = true;
+          } else {
+            jumlahOrang++;
+            lastPersonDetected = now;
+            sequenceState = 0;
+            sequenceCompleted = true;
+            roomEmptyTimerActive = false;
 
-          Serial.println("MASUK TERKONFIRMASI: IN->OUT. Count: " + String(jumlahOrang));
-          syncDeviceControlsAfterPeopleChange("ENTRY_CONFIRMED_IN_OUT");
+            Serial.println("MASUK TERKONFIRMASI: IN->OUT. Count: " + String(jumlahOrang));
+            syncDeviceControlsAfterPeopleChange("ENTRY_CONFIRMED_IN_OUT");
 
-          if (WiFi.status() == WL_CONNECTED) {
-            String reason = "ENTRY_CONFIRMED - Person " + String(jumlahOrang) +
-                            " entered by IN-OUT sequence - E18-D80NK";
-            sendDataToAPI(reason);
+            if (WiFi.status() == WL_CONNECTED) {
+              String reason = "ENTRY_CONFIRMED - Person " + String(jumlahOrang) +
+                              " entered by IN-OUT sequence - E18-D80NK";
+              sendDataToAPI(reason);
+            }
           }
         }
       } else if (sequenceState == 0) {
@@ -1524,12 +1540,12 @@ void kontrolAC(String &acStatus, int &setTemp) {
     acStatus = "2 AC ON (" + String(jumlahOrang) + " orang)";
   }
   else {
-    // 16+ orang → 2 AC MAX, suhu 16°C
+    // 16-25 orang → 2 AC MAX, suhu 18°C
     ac1ON = true;
     ac2ON = true;
-    targetTemp1 = 16;
-    targetTemp2 = 16;
-    setTemp = 16;
+    targetTemp1 = 18;
+    targetTemp2 = 18;
+    setTemp = 18;
     acStatus = "2 AC MAX (" + String(jumlahOrang) + " orang)";
   }
   
@@ -2044,11 +2060,19 @@ void sendDataToAPI(String reason) {
   currentData.proximity2  = sensorData.objectOutDetected;
   currentData.jumlahOrang = jumlahOrang;
 
+  // Pastikan target suhu AC selalu sinkron dengan jumlah orang terbaru
+  // sebelum payload dikirim. Ini mencegah set_temperature tertahan di nilai lama.
+  String syncedACStatus = currentData.acStatus;
+  int syncedSetTemp = currentData.setTemp;
+  kontrolAC(syncedACStatus, syncedSetTemp);
+  currentData.acStatus = syncedACStatus;
+  currentData.setTemp = syncedSetTemp;
+
   // ── Normalisasi nilai agar sesuai validasi API ──
   String apiACStatus   = normalizeACStatus();          // "ON" / "OFF" / "AC 1+2"
   String apiLampStatus = normalizeLampStatus();         // "ON" / "OFF"
   int    apiLightLevel = constrain((int)currentData.lightLevel, 0, 1000); // max 1000
-  int    apiPeopleCount = constrain((int)currentData.jumlahOrang, 0, 100);// max 100
+  int    apiPeopleCount = constrain((int)currentData.jumlahOrang, 0, MAX_PEOPLE);
 
   // ── Validasi suhu & humidity (range API: suhu -10~60, humidity 0-100) ──
   float apiTemp = currentData.suhuRuang;
@@ -2613,7 +2637,11 @@ void loop() {
     }
     else if (command == "add") {
       Serial.println("➕ Manual add person");
-      jumlahOrang++;
+      if (jumlahOrang < MAX_PEOPLE) {
+        jumlahOrang++;
+      } else {
+        Serial.println("⚠️ Test mode IN ignored - room capacity already at " + String(MAX_PEOPLE));
+      }
       jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
       syncDeviceControlsAfterPeopleChange("MANUAL_ADD");
     }
@@ -2754,7 +2782,11 @@ void loop() {
         
         // Simple immediate counting
         if (currentIn && !lastTestIn) {
-          jumlahOrang++;
+          if (jumlahOrang < MAX_PEOPLE) {
+            jumlahOrang++;
+          } else {
+            Serial.println("⚠️ Simple test IN ignored - room capacity already at " + String(MAX_PEOPLE));
+          }
           jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
           Serial.println("🚶 → IN DETECTED! Count: " + String(jumlahOrang));
           syncDeviceControlsAfterPeopleChange("SIMPLE_TEST_IN");
