@@ -15,8 +15,8 @@
 TFT_eSPI tft;
 
 // ================= HOSTING WEB CONFIGURATION WITH SSL =================
-const char* ssid = "LAB TEKNIK TEGANGAN TINGGI";
-const char* password = "LABTTT2026";
+const char* ssid = "Elektro";
+const char* password = "PakManab2026";
 const char* hostingDomain = "dasko.fst.unja.ac.id";
 const char* apiURL = "https://dasko.fst.unja.ac.id/api/sensor/data";
 const char* acControlURL = "https://dasko.fst.unja.ac.id/api/ac/control";
