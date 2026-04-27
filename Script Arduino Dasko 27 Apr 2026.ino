@@ -72,17 +72,17 @@ const char* rootCACertificate =
 #define PREFER_HTTP true
 
 #define PROXY_DETECTION_ENABLED true
-#define PROXY_RETRY_ATTEMPTS 3
-#define PROXY_TIMEOUT_MS 5000
-#define PROXY_DETECTION_INTERVAL 30000  // Check every 30 seconds
+#define PROXY_RETRY_ATTEMPTS 1
+#define PROXY_TIMEOUT_MS 1200
+#define PROXY_DETECTION_INTERVAL 120000  // Check every 2 minutes, jangan ganggu loop sensor
 
 // Enhanced detection thresholds
 #define TEMP_CHANGE_THRESHOLD 0.1      // Lebih sensitif untuk suhu
 #define HUMIDITY_CHANGE_THRESHOLD 0.5  // Lebih sensitif untuk kelembaban
 #define LIGHT_CHANGE_THRESHOLD 20      // Lebih sensitif untuk cahaya
 #define MAX_TIME_WITHOUT_UPDATE 300000 // 5 menit untuk heartbeat saja
-#define MIN_UPDATE_INTERVAL 1000       // 1 detik minimum antar update
-#define AC_CONTROL_CHECK_INTERVAL 5000 // Check every 5 seconds
+#define MIN_UPDATE_INTERVAL 200        // Kirim update penting secepat mungkin tanpa spam berlebihan
+#define AC_CONTROL_CHECK_INTERVAL 10000 // Check API AC lebih jarang agar sensor tetap responsif
 #define HEARTBEAT_INTERVAL 300000      // Heartbeat setiap 5 menit (bukan data utama)
 
 #define DEVICE_ID "UNJA_Prodi_Elektro"
@@ -99,11 +99,11 @@ const char* rootCACertificate =
 #define RELAY_LAMP1       25  // Relay untuk lampu (menggunakan NC untuk dual fungsi)
 // #define RELAY_LAMP2       26  // Tidak digunakan - hanya 1 jalur lampure
 #define MAX_PEOPLE 20
-#define PERSON_COOLDOWN 700   // Cooldown lebih cepat, tetap menahan double count satu orang
-#define DEBOUNCE_DELAY 20      // Debounce cepat untuk response proximity tanpa noise singkat
-#define MIN_PRESENCE_TIME 90   // Objek harus stabil minimal 90ms agar valid sebagai orang
-#define DOOR_FILTER_TIME 60    // Durasi di bawah ini dianggap noise/pantulan sensor
-#define SEQUENCE_TIMEOUT 1800  // Maks waktu antar sensor IN/OUT untuk dianggap satu orang lewat
+#define PERSON_COOLDOWN 180   // Cepat realtime, masih menahan double count dari orang yang sama
+#define DEBOUNCE_DELAY 8      // Debounce sangat singkat untuk response proximity cepat
+#define MIN_PRESENCE_TIME 35  // Objek stabil 35ms sudah valid sebagai orang
+#define DOOR_FILTER_TIME 20   // Pulsa lebih pendek dari ini dianggap noise/pantulan
+#define SEQUENCE_TIMEOUT 700  // Timeout pendek jika mode sequence dipakai lagi
 
 // ================= LIGHT CONTROL THRESHOLDS =================
 #define LUX_THRESHOLD     800  // Threshold cahaya untuk kontrol otomatis (diubah dari 600 ke 800)
@@ -164,7 +164,7 @@ unsigned long emptyRoomStartTime = 0;
 bool roomEmptyTimerActive = false;
 bool testMode = false; // Add test mode flag
 
-#define EMPTY_ROOM_TIMEOUT 300000  // 5 menit dalam milidetik
+#define EMPTY_ROOM_TIMEOUT 30000  // 30 detik kosong, tidak menunggu 5 menit
 
 volatile bool interruptTriggered = false;
 volatile unsigned long lastInterruptTime = 0;
@@ -331,7 +331,7 @@ void setupSSL(WiFiClientSecure &client) {
     return;
   #endif
   
-  client.setTimeout(15000); // 15 seconds
+  client.setTimeout(3000); // Jangan tahan loop terlalu lama saat SSL lambat
   Serial.println("✅ SSL Configuration completed");
 }
 
@@ -359,7 +359,7 @@ bool testSSLConnection() {
     testClient.println();
     
     String response = "";
-    unsigned long timeout = millis() + 5000;
+    unsigned long timeout = millis() + 1500;
     
     while (testClient.connected() && millis() < timeout) {
       if (testClient.available()) {
@@ -638,7 +638,7 @@ bool makeHTTPSRequest(const char* url, const char* method, const char* payload, 
     Serial.println("⚠️ HTTPS connection attempt " + String(retryCount) + "/" + String(maxRetries) + " failed");
     
     if (retryCount < maxRetries) {
-      int delayTime = proxyState.isProxyDetected ? 1000 : 500; // Reduced delays
+      int delayTime = proxyState.isProxyDetected ? 250 : 150; // Delay retry pendek agar sensor tetap responsif
       delay(delayTime);
     }
   }
@@ -1483,13 +1483,13 @@ void kontrolAC(String &acStatus, int &setTemp) {
   int targetTemp2 = 22;
   
   // KONTROL AC BERDASARKAN JUMLAH ORANG DI RUANGAN
-  // Cek apakah ruangan kosong lebih dari 5 menit
+  // Cek apakah ruangan kosong lebih dari 30 detik
   if (jumlahOrang == 0 && roomEmptyTimerActive) {
     unsigned long emptyDuration = millis() - emptyRoomStartTime;
     if (emptyDuration >= EMPTY_ROOM_TIMEOUT) {
-      acStatus = "AUTO OFF (5 MIN KOSONG)";
+      acStatus = "AUTO OFF (30s KOSONG)";
       setTemp = 0;
-      Serial.println("⏰ AUTO SHUTDOWN: Ruangan kosong > 5 menit - AC dimatikan otomatis");
+      Serial.println("⏰ AUTO SHUTDOWN: Ruangan kosong > 30 detik - AC dimatikan otomatis");
     } else {
       acStatus = "AC OFF (KOSONG)";
       setTemp = 0;
@@ -2292,8 +2292,8 @@ void setup() {
   Serial.println("Expected behavior for immediate counting:");
   Serial.println("- Sensors read HIGH (1) when clear");
   Serial.println("- Sensors read LOW (0) when object detected");
-  Serial.println("- Every detection is counted immediately");
-  Serial.println("- Only cooldown prevents double counting (200ms)");
+  Serial.println("- Every stable detection is counted immediately");
+  Serial.println("- Only cooldown prevents double counting (180ms)");
   Serial.println("- IN sensor = +1 person");
   Serial.println("- OUT sensor = -1 person (if count > 0)");
   Serial.println("==============================");
@@ -2436,7 +2436,7 @@ void loop() {
   
   // Always read sensors for immediate response
   readSensors();
-  detectPeopleSequenced();
+  detectPeople();
   
   // Handle interrupt-triggered updates immediately
   if (interruptTriggered) {
@@ -2481,8 +2481,10 @@ void loop() {
   // Reset watchdog after sensor operations
   esp_task_wdt_reset();
   
-  // Enhanced proxy detection check
-  checkProxyDetection();
+  // Proxy detection bisa blocking; jalankan hanya saat pintu tidak sedang aktif.
+  if (!sensorData.objectInDetected && !sensorData.objectOutDetected) {
+    checkProxyDetection();
+  }
   
   // Enhanced AC control check with SSL and proxy support
   static unsigned long lastACCheck = 0;
@@ -2508,9 +2510,9 @@ void loop() {
     sendHeartbeat();
   }
   
-  // AC control check (every 5 seconds) - berdasarkan jumlah orang
+  // AC control check berkala - berdasarkan jumlah orang
   static unsigned long lastACControlCheck = 0;
-  if (millis() - lastACControlCheck > 5000) {
+  if (millis() - lastACControlCheck > AC_CONTROL_CHECK_INTERVAL) {
     String acStatus = currentData.acStatus;
     int setTemp = currentData.setTemp;
     kontrolAC(acStatus, setTemp);
@@ -3018,7 +3020,7 @@ bool makeHTTPRequest(const char* url, const char* method, const char* payload, S
   
   Serial.println("🔄 HTTP FALLBACK - Making request to: " + String(url));
   
-  http.setTimeout(10000); // 10 seconds timeout
+  http.setTimeout(1500); // Timeout pendek agar sensor proximity tidak terasa lambat
   
   if (!http.begin(client, url)) {
     Serial.println("❌ HTTP fallback connection failed");
