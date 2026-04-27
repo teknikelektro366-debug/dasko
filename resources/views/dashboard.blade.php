@@ -1047,7 +1047,7 @@
                             <i class="fas fa-users"></i>
                         </div>
                         <div class="title">Jumlah Orang di Ruangan</div>
-                        <div class="value"><?php echo e($sensorData['people_count'] ?? 0); ?></div>
+                        <div class="value" id="peopleCountMainValue"><?php echo e($sensorData['people_count'] ?? 0); ?></div>
                         <div class="data-timestamp">
                             <?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?>
                         </div>
@@ -1098,7 +1098,7 @@
                             <i class="fas fa-snowflake"></i>
                         </div>
                         <div class="title">Status AC</div>
-                        <div class="value"><?php echo e($sensorData['ac_status'] ?? 'OFF'); ?></div>
+                        <div class="value" id="acStatusMainValue"><?php echo e($sensorData['ac_status'] ?? 'OFF'); ?></div>
                         <div class="data-timestamp">
                             <?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?>
                         </div>
@@ -1109,7 +1109,7 @@
                             <i class="fas fa-temperature-low"></i>
                         </div>
                         <div class="title">Set Temperature AC</div>
-                        <div class="value">
+                        <div class="value" id="acSetTempMainValue">
                             <?php if ($sensorData['set_temperature']): ?>
                             <?php    echo e($sensorData['set_temperature']); ?>°C
                             <?php else: ?>
@@ -2145,50 +2145,36 @@
                                 <tr>
                                     <td>0</td>
                                     <td>--</td>
-                                    <td>Mode Gradual</td>
-                                    <td>28°C (15 menit)</td>
-                                    <td>Tidak ada orang → naikkan suhu bertahap ke suhu ruang, lalu mati</td>
-                                </tr>
-                                <tr>
-                                    <td>1 - 4</td>
-                                    <td>--</td>
                                     <td>AC Mati</td>
                                     <td>--</td>
-                                    <td>Di bawah threshold → AC tidak perlu menyala</td>
+                                    <td>Ruangan kosong → AC OFF</td>
                                 </tr>
                                 <tr>
-                                    <td>5 - 10</td>
-                                    <td>30.0 - 32.0</td>
+                                    <td>1 - 5</td>
+                                    <td>--</td>
                                     <td>1 AC</td>
-                                    <td>25°C</td>
-                                    <td>Beban ringan → hanya satu AC</td>
+                                    <td>22°C</td>
+                                    <td>Okupansi rendah → satu AC aktif</td>
                                 </tr>
                                 <tr>
-                                    <td>5 - 10</td>
-                                    <td>32.1 - 35.0</td>
+                                    <td>6 - 10</td>
+                                    <td>--</td>
                                     <td>1 AC</td>
-                                    <td>26°C</td>
-                                    <td>Suhu luar tinggi → setpoint lebih longgar</td>
+                                    <td>20°C</td>
+                                    <td>Okupansi sedang → target suhu diturunkan</td>
                                 </tr>
                                 <tr>
-                                    <td>10 - 13</td>
-                                    <td>30.0 - 32.0</td>
-                                    <td>2 AC</td>
-                                    <td>24°C</td>
-                                    <td>Beban meningkat → aktifkan kedua AC</td>
-                                </tr>
-                                <tr>
-                                    <td>10 - 20</td>
-                                    <td>32.1 - 35.0</td>
-                                    <td>2 AC</td>
-                                    <td>25°C</td>
-                                    <td>Kondisi luar panas → pendinginan lebih ringan</td>
-                                </tr>
-                                <tr>
-                                    <td>21+</td>
+                                    <td>11 - 15</td>
                                     <td>--</td>
                                     <td>2 AC</td>
-                                    <td>23°C</td>
+                                    <td>20°C</td>
+                                    <td>Okupansi tinggi → kedua AC aktif</td>
+                                </tr>
+                                <tr>
+                                    <td>16 - 25</td>
+                                    <td>--</td>
+                                    <td>2 AC MAX</td>
+                                    <td>18°C</td>
                                     <td>Beban maksimal → pendinginan agresif</td>
                                 </tr>
                             </tbody>
@@ -2353,6 +2339,46 @@
             });
             element.classList.add('active');
         }
+
+        function targetTemperatureFromPeopleCount(peopleCount) {
+            const count = Math.min(Number(peopleCount || 0), 25);
+            if (count <= 0) return null;
+            if (count <= 5) return 22;
+            if (count <= 15) return 20;
+            return 18;
+        }
+
+        function updateMainDashboardCards() {
+            fetch('/api/sensor/latest', {
+                cache: 'no-store',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => response.json())
+                .then(payload => {
+                    if (!payload.success || !payload.data) return;
+
+                    const data = payload.data;
+                    const peopleCount = Math.min(Number(data.people_count || 0), 25);
+                    const targetTemp = data.set_temperature ?? targetTemperatureFromPeopleCount(peopleCount);
+
+                    const peopleEl = document.getElementById('peopleCountMainValue');
+                    const acStatusEl = document.getElementById('acStatusMainValue');
+                    const acTempEl = document.getElementById('acSetTempMainValue');
+
+                    if (peopleEl) peopleEl.textContent = peopleCount;
+                    if (acStatusEl) acStatusEl.textContent = data.ac_status || 'OFF';
+                    if (acTempEl) acTempEl.textContent = targetTemp ? `${targetTemp}°C` : '--°C';
+                })
+                .catch(error => console.error('Error updating dashboard cards:', error));
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            updateMainDashboardCards();
+            setInterval(updateMainDashboardCards, 3000);
+        });
 
         // ===== HISTORY FUNCTIONS =====
         let historyChart = null;
@@ -2771,6 +2797,14 @@
                 });
         }
 
+        function getTargetTemperatureFromPeople(peopleCount) {
+            const count = Math.min(Number(peopleCount || 0), 25);
+            if (count <= 0) return null;
+            if (count <= 5) return 22;
+            if (count <= 15) return 20;
+            return 18;
+        }
+
         function loadACActivityFromSensorData() {
             const tbody = document.getElementById('ac-activity-body');
 
@@ -2780,13 +2814,16 @@
                     if (data.success && data.data.length > 0) {
                         let html = '';
                         let lastACStatus = '';
+                        let lastSetTemperature = null;
                         let acEvents = 0;
                         let tempSum = 0;
                         let tempCount = 0;
 
                         data.data.forEach((item, index) => {
-                            // Only show records where AC status changed
-                            if (item.ac_status !== lastACStatus) {
+                            const setTemperature = getTargetTemperatureFromPeople(item.people_count);
+
+                            // Tampilkan record saat status AC atau target suhu berubah
+                            if (item.ac_status !== lastACStatus || setTemperature !== lastSetTemperature) {
                                 const timestamp = new Date(item.created_at).toLocaleString('id-ID', {
                                     timeZone: 'Asia/Jakarta'
                                 });
@@ -2799,15 +2836,17 @@
                                     keterangan = '1 AC aktif untuk 1-5 orang';
                                 } else if (item.people_count <= 10) {
                                     keterangan = '1 AC aktif untuk 6-10 orang';
+                                } else if (item.people_count <= 15) {
+                                    keterangan = '2 AC aktif untuk 11-15 orang';
                                 } else {
-                                    keterangan = '2 AC aktif untuk 11+ orang';
+                                    keterangan = '2 AC MAX untuk 16-25 orang';
                                 }
 
                                 html += `
                                     <tr>
                                         <td>${timestamp}</td>
                                         <td><span class="ac-status ${item.ac_status === 'OFF' ? 'status-off' : 'status-on'}">${item.ac_status}</span></td>
-                                        <td>${item.set_temperature || '--'}°C</td>
+                                        <td>${setTemperature || '--'}°C</td>
                                         <td>${item.people_count || 0}</td>
                                         <td>${item.room_temperature ? item.room_temperature.toFixed(1) : '--'}°C</td>
                                         <td><span class="mode-badge">${mode}</span></td>
@@ -2815,10 +2854,11 @@
                                     </tr>
                                 `;
                                 lastACStatus = item.ac_status;
+                                lastSetTemperature = setTemperature;
                                 acEvents++;
 
-                                if (item.set_temperature) {
-                                    tempSum += item.set_temperature;
+                                if (setTemperature) {
+                                    tempSum += setTemperature;
                                     tempCount++;
                                 }
                             }
@@ -2877,11 +2917,13 @@
                                 if (currentPeopleCount === 0) {
                                     acResponse = 'AC OFF';
                                 } else if (currentPeopleCount <= 5) {
-                                    acResponse = '1 AC ON (25°C)';
-                                } else if (currentPeopleCount <= 10) {
                                     acResponse = '1 AC ON (22°C)';
-                                } else {
+                                } else if (currentPeopleCount <= 10) {
+                                    acResponse = '1 AC ON (20°C)';
+                                } else if (currentPeopleCount <= 15) {
                                     acResponse = '2 AC ON (20°C)';
+                                } else {
+                                    acResponse = '2 AC MAX (18°C)';
                                 }
 
                                 let keterangan = '';
@@ -3941,7 +3983,7 @@
                         const sensorData = data.data;
 
                         // Update analytics cards
-                        updateAnalyticsElement('currentOccupancy', Math.round((sensorData.people_count / 20) * 100) + '%');
+                        updateAnalyticsElement('currentOccupancy', Math.round((Math.min(sensorData.people_count || 0, 25) / 25) * 100) + '%');
                         updateAnalyticsElement('acStatusAnalytics', sensorData.ac_status || 'OFF');
                         updateAnalyticsElement('tempAnalytics', Number(sensorData.room_temperature || 25).toFixed(1) + '°C');
                         updateAnalyticsElement('humidityAnalytics', Number(sensorData.humidity || 60).toFixed(1) + '%');
@@ -3976,7 +4018,7 @@
             } else if (sensorData.people_count > 0 && sensorData.ac_status === 'OFF') {
                 recommendation = "💡 Ruangan berisi " + sensorData.people_count + " orang. Pertimbangkan menyalakan AC untuk kenyamanan.";
             } else if (sensorData.people_count > 15) {
-                recommendation = "🔥 Okupansi tinggi (" + sensorData.people_count + "/20). Sistem AC bekerja maksimal dengan 2 unit aktif.";
+                recommendation = "🔥 Okupansi tinggi (" + sensorData.people_count + "/25). Sistem AC bekerja maksimal dengan 2 unit aktif.";
             } else if (sensorData.people_count > 0) {
                 recommendation = "✅ Penggunaan AC optimal sesuai okupansi " + sensorData.people_count + " orang.";
             }
@@ -3984,13 +4026,13 @@
             updateAnalyticsElement('efficiencyRecommendation', recommendation);
 
             // Update usage pattern
-            let usagePattern = "Okupansi saat ini: " + sensorData.people_count + "/20 (" + Math.round((sensorData.people_count / 20) * 100) + "%). ";
+            let usagePattern = "Okupansi saat ini: " + sensorData.people_count + "/25 (" + Math.round((Math.min(sensorData.people_count || 0, 25) / 25) * 100) + "%). ";
             if (sensorData.people_count === 0) {
                 usagePattern += "Ruangan kosong - mode hemat energi aktif.";
             } else if (sensorData.people_count <= 5) {
                 usagePattern += "Okupansi rendah - 1 AC unit optimal.";
             } else if (sensorData.people_count <= 10) {
-                usagePattern += "Okupansi sedang - 1 AC unit dengan suhu 22°C.";
+                usagePattern += "Okupansi sedang - 1 AC unit dengan suhu 20°C.";
             } else {
                 usagePattern += "Okupansi tinggi - 2 AC unit untuk kenyamanan maksimal.";
             }

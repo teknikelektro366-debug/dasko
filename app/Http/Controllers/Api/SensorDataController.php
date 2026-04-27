@@ -73,9 +73,9 @@ class SensorDataController extends Controller
             $validator = Validator::make($request->all(), [
                 'device_id' => 'string|max:255',
                 'location' => 'string|max:255',
-                'people_count' => 'required|integer|min:0|max:100',
+                'people_count' => 'required|integer|min:0|max:25',
                 'ac_status' => 'required|string|max:50',
-                'set_temperature' => 'nullable|integer|max:30',
+                'set_temperature' => 'nullable|integer|min:0|max:30',
                 'room_temperature' => 'nullable|numeric|min:-10|max:60',
                 'humidity' => 'nullable|numeric|min:0|max:100',
                 'light_level' => 'nullable|integer|min:0|max:1000',
@@ -98,16 +98,21 @@ class SensorDataController extends Controller
 
             $deviceId = $request->input('device_id', 'ESP32_Smart_Energy');
             $location = $request->input('location', 'Lab Teknik Tegangan Tinggi');
-            $peopleCount = (int) $request->input('people_count');
+            $peopleCount = min((int) $request->input('people_count'), 25);
             $lampStatus = $peopleCount > 0 ? 'ON' : 'OFF';
+            $setTemperature = $this->targetTemperatureFromPeopleCount($peopleCount);
+            $acStatus = $this->normalizeAcStatusFromPeopleCount(
+                $peopleCount,
+                $request->input('ac_status')
+            );
 
             // ALWAYS CREATE NEW RECORD - Setiap data dari ESP32 disimpan sebagai record baru
             $dataToCreate = [
                 'device_id' => $deviceId,
                 'location' => $location,
                 'people_count' => $peopleCount,
-                'ac_status' => $request->input('ac_status'),
-                'set_temperature' => $request->input('set_temperature'),
+                'ac_status' => $acStatus,
+                'set_temperature' => $setTemperature,
                 'room_temperature' => $request->input('room_temperature'),
                 'humidity' => $request->input('humidity'),
                 'light_level' => $request->input('light_level', 0),
@@ -232,8 +237,11 @@ class SensorDataController extends Controller
                     'device_id' => $latestData->device_id,
                     'location' => $latestData->location,
                     'people_count' => $latestData->people_count,
-                    'ac_status' => $latestData->ac_status,
-                    'set_temperature' => $latestData->set_temperature,
+                    'ac_status' => $this->normalizeAcStatusFromPeopleCount(
+                        $latestData->people_count,
+                        $latestData->ac_status
+                    ),
+                    'set_temperature' => $this->targetTemperatureFromPeopleCount($latestData->people_count),
                     'room_temperature' => $latestData->room_temperature,
                     'humidity' => $latestData->humidity,
                     'light_level' => $latestData->light_level,
@@ -333,11 +341,15 @@ class SensorDataController extends Controller
                     $average = $group->avg($field);
                     return $average === null ? null : round($average, $precision);
                 };
+                $targetTemperatureAverage = $group
+                    ->map(fn ($item) => $this->targetTemperatureFromPeopleCount($item->people_count))
+                    ->filter(fn ($value) => $value !== null)
+                    ->avg();
 
                 return [
                     'time' => $group->first()->created_at->format('H:00'),
                     'people_count' => $roundAvg('people_count', 0),
-                    'ac_temperature' => $roundAvg('set_temperature', 0),
+                    'ac_temperature' => $targetTemperatureAverage === null ? null : round($targetTemperatureAverage, 0),
                     'room_temperature' => $roundAvg('room_temperature'),
                     'temperature' => $roundAvg('room_temperature'),
                     'humidity' => $roundAvg('humidity'),
@@ -501,10 +513,46 @@ class SensorDataController extends Controller
         return (int) $peopleCount > 0 ? 'ON' : 'OFF';
     }
 
+    private function targetTemperatureFromPeopleCount($peopleCount): ?int
+    {
+        $peopleCount = (int) $peopleCount;
+
+        if ($peopleCount <= 0) {
+            return null;
+        }
+
+        if ($peopleCount <= 5) {
+            return 22;
+        }
+
+        if ($peopleCount <= 15) {
+            return 20;
+        }
+
+        return 18;
+    }
+
+    private function normalizeAcStatusFromPeopleCount($peopleCount, ?string $currentStatus = null): string
+    {
+        $peopleCount = (int) $peopleCount;
+
+        if ($peopleCount <= 0) {
+            return 'OFF';
+        }
+
+        if ($peopleCount <= 10) {
+            return 'ON';
+        }
+
+        return 'AC 1+2';
+    }
+
     private function normalizeLampStatusForRows(array $rows): array
     {
         return array_map(function ($row) {
             $row->lamp_status = $this->lampStatusFromPeopleCount($row->people_count);
+            $row->ac_status = $this->normalizeAcStatusFromPeopleCount($row->people_count, $row->ac_status);
+            $row->set_temperature = $this->targetTemperatureFromPeopleCount($row->people_count);
             return $row;
         }, $rows);
     }

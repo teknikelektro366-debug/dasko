@@ -144,7 +144,7 @@
 
             <div class="form-group">
                 <label>Jumlah Orang</label>
-                <input type="number" name="people_count" min="0" max="100" value="0" required>
+                <input type="number" name="people_count" min="0" max="25" value="0" required>
             </div>
 
             <button type="submit" class="btn">💾 Simpan Data</button>
@@ -168,7 +168,7 @@
             const date = formData.get('date');
             const hour = formData.get('hour');
             const timestamp = `${date} ${hour}:00:00`;
-            const peopleCount = parseInt(formData.get('people_count'));
+            const peopleCount = Math.min(parseInt(formData.get('people_count')), 25);
 
             // Logika Lampu: Ada orang = ON, Tidak ada = OFF
             const lampStatus = peopleCount > 0 ? 'ON' : 'OFF';
@@ -178,17 +178,17 @@
             let setTemperature = null;
 
             if (peopleCount >= 1 && peopleCount <= 5) {
-                acStatus = '1 AC ON';
-                setTemperature = 25;
-            } else if (peopleCount >= 6 && peopleCount <= 9) {
-                acStatus = '2 AC ON';
-                setTemperature = 25;
-            } else if (peopleCount >= 10 && peopleCount <= 15) {
-                acStatus = '2 AC ON';
+                acStatus = 'ON';
                 setTemperature = 22;
-            } else if (peopleCount >= 16) {
-                acStatus = '2 AC ON';
+            } else if (peopleCount >= 6 && peopleCount <= 10) {
+                acStatus = 'ON';
                 setTemperature = 20;
+            } else if (peopleCount >= 11 && peopleCount <= 15) {
+                acStatus = 'AC 1+2';
+                setTemperature = 20;
+            } else if (peopleCount >= 16) {
+                acStatus = 'AC 1+2';
+                setTemperature = 18;
             }
 
             const data = {

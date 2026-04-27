@@ -253,7 +253,7 @@
                         <input type="number" 
                                name="people_${item.hour}" 
                                min="0" 
-                               max="50" 
+                               max="25"
                                value="${item.people}" 
                                required>
                     </td>
@@ -288,7 +288,7 @@
             for (let i = 0; i < hourlyPattern.length; i++) {
                 const item = hourlyPattern[i];
                 const peopleInput = document.querySelector(`input[name="people_${item.hour}"]`);
-                const peopleCount = parseInt(peopleInput.value);
+                const peopleCount = Math.min(parseInt(peopleInput.value), 25);
 
                 const timestamp = `${selectedDate} ${item.hour}:00:00`;
 
@@ -300,17 +300,17 @@
                 let setTemperature = null;
 
                 if (peopleCount >= 1 && peopleCount <= 5) {
-                    acStatus = '1 AC ON';
-                    setTemperature = 25;
-                } else if (peopleCount >= 6 && peopleCount <= 9) {
-                    acStatus = '2 AC ON';
-                    setTemperature = 25;
-                } else if (peopleCount >= 10 && peopleCount <= 15) {
-                    acStatus = '2 AC ON';
+                    acStatus = 'ON';
                     setTemperature = 22;
-                } else if (peopleCount >= 16) {
-                    acStatus = '2 AC ON';
+                } else if (peopleCount >= 6 && peopleCount <= 10) {
+                    acStatus = 'ON';
                     setTemperature = 20;
+                } else if (peopleCount >= 11 && peopleCount <= 15) {
+                    acStatus = 'AC 1+2';
+                    setTemperature = 20;
+                } else if (peopleCount >= 16) {
+                    acStatus = 'AC 1+2';
+                    setTemperature = 18;
                 }
 
                 const data = {

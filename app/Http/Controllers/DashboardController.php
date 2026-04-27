@@ -180,7 +180,7 @@ class DashboardController extends Controller
 
     private function getLatestSensorData()
     {
-        return Cache::remember('latest_sensor_data', 30, function () {
+        return Cache::remember('dashboard_latest_sensor_data', 3, function () {
             $latestData = SensorData::latest()->first();
             
             if (!$latestData) {
@@ -206,15 +206,16 @@ class DashboardController extends Controller
 
             $dataAgeMinutes = $latestData->created_at->diffInMinutes(now());
             $connectionStatus = $dataAgeMinutes <= 2 ? 'online' : 'offline';
+            $peopleCount = min((int) ($latestData->people_count ?? 0), 25);
 
             return [
                 'id' => $latestData->id,
                 'temperature' => $latestData->room_temperature ?? 27.0,
                 'humidity' => $latestData->humidity ?? 65.0,
                 'light_intensity' => $latestData->light_level ?? 500,
-                'people_count' => $latestData->people_count ?? 0,
-                'ac_status' => $latestData->ac_status ?? 'OFF',
-                'set_temperature' => $latestData->set_temperature,
+                'people_count' => $peopleCount,
+                'ac_status' => $this->acStatusFromPeopleCount($peopleCount),
+                'set_temperature' => $this->targetTemperatureFromPeopleCount($peopleCount),
                 'lamp_status' => $latestData->lamp_status ?? 'OFF',
                 'proximity_in' => $latestData->proximity_in ?? false,
                 'proximity_out' => $latestData->proximity_out ?? false,
@@ -237,6 +238,36 @@ class DashboardController extends Controller
                 'wifi_quality' => $this->getWifiQuality($latestData->wifi_rssi)
             ];
         });
+    }
+
+    private function targetTemperatureFromPeopleCount(int $peopleCount): ?int
+    {
+        if ($peopleCount <= 0) {
+            return null;
+        }
+
+        if ($peopleCount <= 5) {
+            return 22;
+        }
+
+        if ($peopleCount <= 15) {
+            return 20;
+        }
+
+        return 18;
+    }
+
+    private function acStatusFromPeopleCount(int $peopleCount): string
+    {
+        if ($peopleCount <= 0) {
+            return 'OFF';
+        }
+
+        if ($peopleCount <= 10) {
+            return 'ON';
+        }
+
+        return 'AC 1+2';
     }
 
     private function getWorkingHoursStatus()

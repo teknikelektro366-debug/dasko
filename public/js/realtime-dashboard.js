@@ -217,7 +217,8 @@ class RealtimeDashboard {
         
         // Update AC status
         this.updateSensorCard('acCard', 'acStatusValue', sensorData.ac_status, '', 'acTimestamp', timeString);
-        this.updateSensorCard('acTempCard', 'acTempValue', sensorData.set_temperature || '--', sensorData.set_temperature ? '°C' : '', 'acTempTimestamp', timeString);
+        const targetTemperature = this.getTargetTemperature(sensorData.people_count, sensorData.set_temperature);
+        this.updateSensorCard('acTempCard', 'acTempValue', targetTemperature || '--', targetTemperature ? '°C' : '', 'acTempTimestamp', timeString);
         
         // Update proximity sensors
         this.updateElement('proximityIn', 'IN: ' + (sensorData.proximity_in ? 'AKTIF' : 'OFF'));
@@ -243,6 +244,24 @@ class RealtimeDashboard {
         
         // Trigger custom event
         this.dispatchUpdateEvent(sensorData);
+    }
+
+    getTargetTemperature(peopleCount, reportedTemperature = null) {
+        const count = Math.min(Number(peopleCount || 0), 25);
+
+        if (count <= 0) {
+            return null;
+        }
+
+        if (count <= 5) {
+            return 22;
+        }
+
+        if (count <= 15) {
+            return 20;
+        }
+
+        return 18;
     }
     
     updateSensorCard(cardId, valueId, value, unit, timestampId, timestamp) {
