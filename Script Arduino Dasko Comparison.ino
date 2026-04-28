@@ -103,6 +103,7 @@ const char* rootCACertificate =
 #define DEBOUNCE_DELAY 80     // 80ms debounce untuk filter noise elektronik
 #define MIN_PRESENCE_TIME 220 // Objek harus terdeteksi minimal 220ms → filter gerakan pintu yang cepat
 #define DOOR_FILTER_TIME 180  // Durasi di bawah ini dianggap gerakan pintu/noise, bukan orang
+#define SEQUENCE_TIMEOUT 3500 // Maks waktu antar sensor IN/OUT untuk dianggap satu orang lewat
 
 // ================= LIGHT CONTROL THRESHOLDS =================
 #define LUX_THRESHOLD     800  // Threshold cahaya untuk kontrol otomatis (diubah dari 600 ke 800)
@@ -251,6 +252,7 @@ void checkACControlAPI();
 void kontrolAC(String &acStatus, int &setTemp);
 void kontrolLampu(String &lampStatus);
 void detectPeople();
+void detectPeopleSequenced();
 void readSensors();
 void drawUI();
 void updateTFT(String acStatus, int setSuhu, float suhuRuang);
@@ -815,7 +817,7 @@ void readSensors() {
   if (now - lastProximityDebug > 5000) {
     Serial.println("🔍 ENHANCED PROXIMITY DEBUG (SSL + Proxy):");
     Serial.println("   GPIO 32 (MASUK): " + String(currentInState ? "HIGH" : "LOW") + " | Detected: " + String(!currentInState ? "YES" : "NO"));
-    Serial.println("   GPIO 33 (KELUAR): " + String(currentOutState ? "HIGH" : "LOW") + " | Detected: " + String(!currentOutState ? "YES" : "NO"));
+    Serial.println("   GPIO 14 (KELUAR): " + String(currentOutState ? "HIGH" : "LOW") + " | Detected: " + String(!currentOutState ? "YES" : "NO"));
     Serial.println("   💡 Lamp Status: " + String(lastLamp1 ? "ON" : "OFF"));
     Serial.println("   🔒 SSL Status: " + String(sslStatus.lastConnectionSuccess ? "OK" : "FAIL"));
     Serial.println("   🌐 Proxy Status: " + String(proxyState.isProxyDetected ? "DETECTED" : "DIRECT"));
@@ -1031,6 +1033,173 @@ void detectPeople() {
   }
 
   lastInDetected  = sensorData.objectInDetected;
+  lastOutDetected = sensorData.objectOutDetected;
+  jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
+}
+
+void detectPeopleSequenced() {
+  unsigned long now = millis();
+
+  static unsigned long lastDebug = 0;
+  if (now - lastDebug > 8000) {
+    Serial.print("People: ");
+    Serial.print(jumlahOrang);
+    Serial.print("/20 | IN:");
+    Serial.print(sensorData.objectInDetected ? "DETECTED" : "CLEAR");
+    Serial.print(" | OUT:");
+    Serial.print(sensorData.objectOutDetected ? "DETECTED" : "CLEAR");
+    Serial.print(" | WiFi: ");
+    Serial.println(WiFi.status() == WL_CONNECTED ? "OK" : "FAIL");
+    lastDebug = now;
+  }
+
+  static bool lastInDetected = false;
+  static bool lastOutDetected = false;
+  static bool inWaiting = false;
+  static bool outWaiting = false;
+  static unsigned long inFirstDetected = 0;
+  static unsigned long outFirstDetected = 0;
+  static byte sequenceState = 0; // 0 idle, 1 IN first, 2 OUT first
+  static unsigned long sequenceStart = 0;
+
+  bool inStableEvent = false;
+  bool outStableEvent = false;
+
+  if (sequenceState != 0 && (now - sequenceStart) > SEQUENCE_TIMEOUT) {
+    Serial.println("Sequence timeout - second sensor did not follow, ignored");
+    sequenceState = 0;
+  }
+
+  if (sensorData.objectInDetected && !lastInDetected) {
+    inFirstDetected = now;
+    inWaiting = true;
+    Serial.println("IN edge - waiting stable");
+  }
+
+  if (sensorData.objectOutDetected && !lastOutDetected) {
+    outFirstDetected = now;
+    outWaiting = true;
+    Serial.println("OUT edge - waiting stable");
+  }
+
+  if (inWaiting) {
+    if (sensorData.objectInDetected) {
+      if ((now - inFirstDetected) >= MIN_PRESENCE_TIME) {
+        inStableEvent = true;
+        inWaiting = false;
+      }
+    } else {
+      unsigned long duration = now - inFirstDetected;
+      inWaiting = false;
+      if (duration < DOOR_FILTER_TIME) {
+        Serial.println("IN ignored - short noise " + String(duration) + "ms");
+      }
+    }
+  }
+
+  if (outWaiting) {
+    if (sensorData.objectOutDetected) {
+      if ((now - outFirstDetected) >= MIN_PRESENCE_TIME) {
+        outStableEvent = true;
+        outWaiting = false;
+      }
+    } else {
+      unsigned long duration = now - outFirstDetected;
+      outWaiting = false;
+      if (duration < DOOR_FILTER_TIME) {
+        Serial.println("OUT ignored - short noise " + String(duration) + "ms");
+      }
+    }
+  }
+
+  bool cooldownReady = testMode || (now - lastPersonDetected) >= PERSON_COOLDOWN;
+  bool sequenceCompleted = false;
+
+  if (inStableEvent && outStableEvent && sequenceState == 0) {
+    Serial.println("IN and OUT stable at the same time - direction unclear, ignored");
+  } else {
+    if (inStableEvent) {
+      if (sequenceState == 2) {
+        if (!cooldownReady) {
+          Serial.println("OUT-IN ignored - still in person cooldown");
+          sequenceState = 0;
+          sequenceCompleted = true;
+        } else if (jumlahOrang > 0) {
+          jumlahOrang--;
+          lastPersonDetected = now;
+          sequenceState = 0;
+          sequenceCompleted = true;
+
+          if (jumlahOrang == 0) {
+            emptyRoomStartTime = millis();
+            roomEmptyTimerActive = true;
+            Serial.println("Empty room timer started");
+          }
+
+          Serial.println("KELUAR TERKONFIRMASI: OUT->IN. Count: " + String(jumlahOrang));
+          updateSensorData();
+
+          if (WiFi.status() == WL_CONNECTED) {
+            String reason = "EXIT_CONFIRMED - Person left by OUT-IN sequence, remaining: " +
+                            String(jumlahOrang) + " - E18-D80NK";
+            sendDataToAPI(reason);
+          }
+        } else {
+          sequenceState = 0;
+          sequenceCompleted = true;
+          static unsigned long lastFalseExitWarning = 0;
+          if (now - lastFalseExitWarning > 3000) {
+            Serial.println("EXIT ignored - count already 0");
+            lastFalseExitWarning = now;
+          }
+        }
+      } else if (sequenceState == 0) {
+        sequenceState = 1;
+        sequenceStart = now;
+        Serial.println("Sequence start: IN valid, waiting OUT");
+      }
+    }
+
+    if (outStableEvent && !sequenceCompleted) {
+      if (sequenceState == 1) {
+        if (!cooldownReady) {
+          Serial.println("IN-OUT ignored - still in person cooldown");
+          sequenceState = 0;
+          sequenceCompleted = true;
+        } else {
+          jumlahOrang++;
+          lastPersonDetected = now;
+          sequenceState = 0;
+          sequenceCompleted = true;
+          roomEmptyTimerActive = false;
+
+          Serial.println("MASUK TERKONFIRMASI: IN->OUT. Count: " + String(jumlahOrang));
+          updateSensorData();
+
+          if (WiFi.status() == WL_CONNECTED) {
+            String reason = "ENTRY_CONFIRMED - Person " + String(jumlahOrang) +
+                            " entered by IN-OUT sequence - E18-D80NK";
+            sendDataToAPI(reason);
+          }
+        }
+      } else if (sequenceState == 0) {
+        sequenceState = 2;
+        sequenceStart = now;
+        Serial.println("Sequence start: OUT valid, waiting IN");
+      }
+    }
+  }
+
+  if (sensorData.objectInDetected != lastInDetected) {
+    Serial.println("IN: " + String(lastInDetected ? "DETECTED" : "CLEAR") +
+                   " -> " + String(sensorData.objectInDetected ? "DETECTED" : "CLEAR"));
+  }
+  if (sensorData.objectOutDetected != lastOutDetected) {
+    Serial.println("OUT: " + String(lastOutDetected ? "DETECTED" : "CLEAR") +
+                   " -> " + String(sensorData.objectOutDetected ? "DETECTED" : "CLEAR"));
+  }
+
+  lastInDetected = sensorData.objectInDetected;
   lastOutDetected = sensorData.objectOutDetected;
   jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
 }
@@ -2090,34 +2259,34 @@ void setup() {
   Serial.println("\n=== TESTING PROXIMITY SENSORS ===");
   Serial.println("Calibrating proximity sensors...");
   Serial.println("Please ensure no objects are near the sensors");
-  
+
   // Calibration phase - read baseline values
   int inHighCount = 0;
   int outHighCount = 0;
   int totalReadings = 50;
-  
+
   for (int i = 0; i < totalReadings; i++) {
     bool inState = digitalRead(PROXIMITY_PIN_IN);
     bool outState = digitalRead(PROXIMITY_PIN_OUT);
-    
+
     if (inState) inHighCount++;
     if (outState) outHighCount++;
-    
+
     delay(50);
   }
-  
+
   Serial.println("Calibration results:");
-  Serial.println("- IN sensor HIGH readings: " + String(inHighCount) + "/" + String(totalReadings) + 
+  Serial.println("- IN sensor HIGH readings: " + String(inHighCount) + "/" + String(totalReadings) +
                  " (" + String((inHighCount * 100) / totalReadings) + "%)");
-  Serial.println("- OUT sensor HIGH readings: " + String(outHighCount) + "/" + String(totalReadings) + 
+  Serial.println("- OUT sensor HIGH readings: " + String(outHighCount) + "/" + String(totalReadings) +
                  " (" + String((outHighCount * 100) / totalReadings) + "%)");
-  
+
   if (inHighCount < totalReadings * 0.8) {
     Serial.println("⚠️ IN sensor may have wiring issues - expected mostly HIGH when clear");
   } else {
     Serial.println("✓ IN sensor baseline OK");
   }
-  
+
   if (outHighCount < totalReadings * 0.8) {
     Serial.println("⚠️ OUT sensor may have wiring issues - expected mostly HIGH when clear");
   } else {
@@ -2131,9 +2300,9 @@ void setup() {
     bool inState = digitalRead(PROXIMITY_PIN_IN);
     bool outState = digitalRead(PROXIMITY_PIN_OUT);
     
-    Serial.println("Test " + String(i+1) + "/50: IN=" + String(inState) + 
-                   " OUT=" + String(outState) + 
-                   " | Objects: IN=" + String(!inState ? "DETECTED" : "CLEAR") + 
+    Serial.println("Test " + String(i+1) + "/50: IN=" + String(inState) +
+                   " OUT=" + String(outState) +
+                   " | Objects: IN=" + String(!inState ? "DETECTED" : "CLEAR") +
                    " OUT=" + String(!outState ? "DETECTED" : "CLEAR"));
     delay(100);
   }
@@ -2194,10 +2363,10 @@ void setup() {
   Serial.println("Free Heap: " + String(ESP.getFreeHeap()) + " bytes");
   Serial.println("\nEnhanced Pin Configuration:");
   Serial.println("- PROXIMITY_IN: GPIO 32 (Enhanced with SSL logging)");
-  Serial.println("- PROXIMITY_OUT: GPIO 33 (Enhanced with SSL logging)");
+  Serial.println("- PROXIMITY_OUT: GPIO 14 (Enhanced with SSL logging)");
   Serial.println("- DHT22: GPIO 13 (Enhanced error handling)");
-  Serial.println("- LDR: GPIO 35 (Enhanced mapping)");
-  Serial.println("- IR LED: GPIO 15 (Enhanced IR control)");
+  Serial.println("- LDR: GPIO 34 (Enhanced mapping)");
+  Serial.println("- IR LED: GPIO 4 (Enhanced IR control)");
   Serial.println("- RELAY LAMP: GPIO 25 (Enhanced NC control)");
   Serial.println("\nEnhanced Features:");
   Serial.println("- 🔒 SSL/HTTPS: Secure communication with hosting");
@@ -2285,7 +2454,7 @@ void loop() {
   
   // Always read sensors for immediate response
   readSensors();
-  detectPeople();
+  detectPeopleSequenced();
   
   // Handle interrupt-triggered updates immediately
   if (interruptTriggered) {
@@ -2581,7 +2750,7 @@ void loop() {
       unsigned long testStart = millis();
       while (millis() - testStart < 30000) {
         readSensors();
-        detectPeople();
+        detectPeopleSequenced();
         delay(50);
       }
       Serial.println("   Sequence test completed");
