@@ -99,10 +99,10 @@ const char* rootCACertificate =
 #define RELAY_LAMP1       25  // Relay untuk lampu (menggunakan NC untuk dual fungsi)
 // #define RELAY_LAMP2       26  // Tidak digunakan - hanya 1 jalur lampure
 #define MAX_PEOPLE 25
-#define PERSON_COOLDOWN 180   // Cepat realtime, masih menahan double count dari orang yang sama
-#define DEBOUNCE_DELAY 8      // Debounce sangat singkat untuk response proximity cepat
-#define MIN_PRESENCE_TIME 35  // Objek stabil 35ms sudah valid sebagai orang
-#define DOOR_FILTER_TIME 20   // Pulsa lebih pendek dari ini dianggap noise/pantulan
+#define PERSON_COOLDOWN 1500  // 1.5 detik cooldown antar orang (cukup untuk satu orang selesai lewat)
+#define DEBOUNCE_DELAY 80     // 80ms debounce untuk filter noise elektronik
+#define MIN_PRESENCE_TIME 220 // Objek harus terdeteksi minimal 220ms -> filter gerakan pintu yang cepat
+#define DOOR_FILTER_TIME 180  // Durasi di bawah ini dianggap gerakan pintu/noise, bukan orang
 
 // ================= LIGHT CONTROL THRESHOLDS =================
 #define LUX_THRESHOLD     800  // Threshold cahaya untuk kontrol otomatis (diubah dari 600 ke 800)
@@ -292,7 +292,7 @@ void IRAM_ATTR proximityOutInterrupt();
 // ================= INTERRUPT HANDLERS =================
 void IRAM_ATTR proximityInInterrupt() {
   unsigned long now = millis();
-  if (now - lastInterruptTime > 10) { // Faster interrupt response
+  if (now - lastInterruptTime > 30) { // Faster interrupt response
     interruptTriggered = true;
     lastInterruptTime = now;
   }
@@ -300,7 +300,7 @@ void IRAM_ATTR proximityInInterrupt() {
 
 void IRAM_ATTR proximityOutInterrupt() {
   unsigned long now = millis();
-  if (now - lastInterruptTime > 10) { // Faster interrupt response
+  if (now - lastInterruptTime > 30) { // Faster interrupt response
     interruptTriggered = true;
     lastInterruptTime = now;
   }
@@ -936,26 +936,20 @@ void detectPeople() {
       unsigned long presenceDuration = now - inFirstDetected;
       if (presenceDuration >= MIN_PRESENCE_TIME && (now - lastInTrigger) >= PERSON_COOLDOWN) {
         // ✅ Konfirmasi: INI ORANG, bukan pintu
-        if (jumlahOrang >= MAX_PEOPLE) {
-          Serial.println("⚠️ ENTRY ignored - room capacity already at " + String(MAX_PEOPLE));
-          inWaiting = false;
-          lastInTrigger = now;
-        } else {
-          jumlahOrang++;
-          lastPersonDetected = now;
-          lastInTrigger = now;
-          inWaiting = false;
-          roomEmptyTimerActive = false;
+        jumlahOrang++;
+        lastPersonDetected = now;
+        lastInTrigger = now;
+        inWaiting = false;
+        roomEmptyTimerActive = false;
 
-          Serial.println("🚶 → MASUK TERKONFIRMASI! (presence=" + String(presenceDuration) + "ms) Count: " + String(jumlahOrang));
-          syncDeviceControlsAfterPeopleChange("ENTRY_CONFIRMED");
+        Serial.println("🚶 → MASUK TERKONFIRMASI! (presence=" + String(presenceDuration) + "ms) Count: " + String(jumlahOrang));
+        updateSensorData();
 
-          if (WiFi.status() == WL_CONNECTED) {
-            String reason = "ENTRY_CONFIRMED - Person " + String(jumlahOrang) +
-                            " entered (presence " + String(presenceDuration) + "ms) - Proximity IN";
-            sendDataToAPI(reason);
-            Serial.println("📤 ✅ TERCATAT: Orang masuk #" + String(jumlahOrang));
-          }
+        if (WiFi.status() == WL_CONNECTED) {
+          String reason = "ENTRY_CONFIRMED - Person " + String(jumlahOrang) +
+                          " entered (presence " + String(presenceDuration) + "ms) - Proximity IN";
+          sendDataToAPI(reason);
+          Serial.println("📤 ✅ TERCATAT: Orang masuk #" + String(jumlahOrang));
         }
       }
       // Belum memenuhi syarat → lanjut tunggu
@@ -1000,7 +994,7 @@ void detectPeople() {
           }
 
           Serial.println("🚶 ← KELUAR TERKONFIRMASI! (presence=" + String(presenceDuration) + "ms) Count: " + String(jumlahOrang));
-          syncDeviceControlsAfterPeopleChange("EXIT_CONFIRMED");
+          updateSensorData();
 
           if (WiFi.status() == WL_CONNECTED) {
             String reason = "EXIT_CONFIRMED - Person left (presence " + String(presenceDuration) +
