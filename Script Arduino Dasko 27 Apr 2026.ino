@@ -273,6 +273,8 @@ void checkProxyDetection();
 bool detectProxy();
 void handleProxyConnection();
 void testHostingConnectivity();
+int targetSetTemperatureFromPeopleCount(int peopleCount);
+String apiACStatusFromPeopleCount(int peopleCount);
 
 // Auto shutdown functions
 void initializeTime();
@@ -1853,6 +1855,38 @@ void readLDRRealtime() {
 }
 
 // ================= API FIELD NORMALIZER =================
+int targetSetTemperatureFromPeopleCount(int peopleCount) {
+  int count = constrain(peopleCount, 0, MAX_PEOPLE);
+
+  if (count <= 0) {
+    return 0;
+  }
+
+  if (count <= 5) {
+    return 22;
+  }
+
+  if (count <= 15) {
+    return 20;
+  }
+
+  return 18;
+}
+
+String apiACStatusFromPeopleCount(int peopleCount) {
+  int count = constrain(peopleCount, 0, MAX_PEOPLE);
+
+  if (count <= 0) {
+    return "OFF";
+  }
+
+  if (count <= 10) {
+    return "ON";
+  }
+
+  return "AC 1+2";
+}
+
 // ac_status: API hanya terima "ON", "OFF", "AC 1+2"
 // Derivasi dari state hardware (lastAC1, lastAC2) agar tidak parsing string
 String normalizeACStatus() {
@@ -1896,6 +1930,8 @@ void sendDataToAPI(String reason) {
   String apiLampStatus = normalizeLampStatus();         // "ON" / "OFF"
   int    apiLightLevel = constrain((int)currentData.lightLevel, 0, 1000); // max 1000
   int    apiPeopleCount = constrain((int)currentData.jumlahOrang, 0, MAX_PEOPLE);
+  int    apiSetTemp = targetSetTemperatureFromPeopleCount(apiPeopleCount);
+  apiACStatus = apiACStatusFromPeopleCount(apiPeopleCount);
 
   // ── Validasi suhu & humidity (range API: suhu -10~60, humidity 0-100) ──
   float apiTemp = currentData.suhuRuang;
@@ -1914,9 +1950,9 @@ void sendDataToAPI(String reason) {
   doc["people_count"] = apiPeopleCount;  // integer, 0-100, WAJIB
   doc["ac_status"]    = apiACStatus;     // "ON"/"OFF"/"AC 1+2", WAJIB
   // Optional sensor
-  if (currentData.setTemp > 0) {
+  if (apiSetTemp > 0) {
     // Kirim set_temperature hanya saat AC ON (null saat OFF, sesuai DB default null)
-    doc["set_temperature"] = constrain((int)currentData.setTemp, 16, 30);
+    doc["set_temperature"] = constrain(apiSetTemp, 16, 30);
   }
   doc["room_temperature"] = round(apiTemp * 100.0) / 100.0;   // decimal(5,2)
   doc["humidity"]         = round(apiHumidity * 100.0) / 100.0; // decimal(5,2)
@@ -1932,10 +1968,12 @@ void sendDataToAPI(String reason) {
   serializeJson(doc, jsonString);
 
   // ── Log ke Serial ──
+  String apiSetTempLabel = apiSetTemp > 0 ? String(apiSetTemp) + "°C" : "OFF";
   Serial.println("📤 Kirim ke API...");
   Serial.println("   Reason  : " + reason);
   Serial.println("   AC      : " + apiACStatus + " | Lamp: " + apiLampStatus +
                  " | People: " + String(apiPeopleCount));
+  Serial.println("   Set AC  : " + apiSetTempLabel);
   Serial.println("   Temp    : " + String(apiTemp, 1) + "°C | Hum: " +
                  String(apiHumidity, 1) + "% | Light: " + String(apiLightLevel) + " lux");
   Serial.println("   Payload : " + jsonString);
