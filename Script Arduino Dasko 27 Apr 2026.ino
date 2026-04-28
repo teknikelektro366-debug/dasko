@@ -103,7 +103,6 @@ const char* rootCACertificate =
 #define DEBOUNCE_DELAY 8      // Debounce sangat singkat untuk response proximity cepat
 #define MIN_PRESENCE_TIME 35  // Objek stabil 35ms sudah valid sebagai orang
 #define DOOR_FILTER_TIME 20   // Pulsa lebih pendek dari ini dianggap noise/pantulan
-#define SEQUENCE_TIMEOUT 700  // Timeout pendek jika mode sequence dipakai lagi
 
 // ================= LIGHT CONTROL THRESHOLDS =================
 #define LUX_THRESHOLD     800  // Threshold cahaya untuk kontrol otomatis (diubah dari 600 ke 800)
@@ -257,7 +256,6 @@ void kontrolAC(String &acStatus, int &setTemp);
 void kontrolLampu(String &lampStatus);
 void syncDeviceControlsAfterPeopleChange(String reason);
 void detectPeople();
-void detectPeopleSequenced();
 void readSensors();
 void drawUI();
 void updateTFT(String acStatus, int setSuhu, float suhuRuang);
@@ -1048,181 +1046,6 @@ void detectPeople() {
   }
 
   lastInDetected  = sensorData.objectInDetected;
-  lastOutDetected = sensorData.objectOutDetected;
-  jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
-}
-
-void detectPeopleSequenced() {
-  unsigned long now = millis();
-
-  static unsigned long lastDebug = 0;
-  if (now - lastDebug > 8000) {
-    Serial.print("People: ");
-    Serial.print(jumlahOrang);
-    Serial.print("/");
-    Serial.print(MAX_PEOPLE);
-    Serial.print(" | IN:");
-    Serial.print(sensorData.objectInDetected ? "DETECTED" : "CLEAR");
-    Serial.print(" | OUT:");
-    Serial.print(sensorData.objectOutDetected ? "DETECTED" : "CLEAR");
-    Serial.print(" | WiFi: ");
-    Serial.println(WiFi.status() == WL_CONNECTED ? "OK" : "FAIL");
-    lastDebug = now;
-  }
-
-  static bool lastInDetected = false;
-  static bool lastOutDetected = false;
-  static bool inWaiting = false;
-  static bool outWaiting = false;
-  static unsigned long inFirstDetected = 0;
-  static unsigned long outFirstDetected = 0;
-  static byte sequenceState = 0; // 0 idle, 1 IN first, 2 OUT first
-  static unsigned long sequenceStart = 0;
-
-  bool inStableEvent = false;
-  bool outStableEvent = false;
-
-  if (sequenceState != 0 && (now - sequenceStart) > SEQUENCE_TIMEOUT) {
-    Serial.println("Sequence timeout - second sensor did not follow, ignored");
-    sequenceState = 0;
-  }
-
-  if (sensorData.objectInDetected && !lastInDetected) {
-    inFirstDetected = now;
-    inWaiting = true;
-    Serial.println("IN edge - waiting stable");
-  }
-
-  if (sensorData.objectOutDetected && !lastOutDetected) {
-    outFirstDetected = now;
-    outWaiting = true;
-    Serial.println("OUT edge - waiting stable");
-  }
-
-  if (inWaiting) {
-    if (sensorData.objectInDetected) {
-      if ((now - inFirstDetected) >= MIN_PRESENCE_TIME) {
-        inStableEvent = true;
-        inWaiting = false;
-      }
-    } else {
-      unsigned long duration = now - inFirstDetected;
-      inWaiting = false;
-      if (duration < DOOR_FILTER_TIME) {
-        Serial.println("IN ignored - short noise " + String(duration) + "ms");
-      }
-    }
-  }
-
-  if (outWaiting) {
-    if (sensorData.objectOutDetected) {
-      if ((now - outFirstDetected) >= MIN_PRESENCE_TIME) {
-        outStableEvent = true;
-        outWaiting = false;
-      }
-    } else {
-      unsigned long duration = now - outFirstDetected;
-      outWaiting = false;
-      if (duration < DOOR_FILTER_TIME) {
-        Serial.println("OUT ignored - short noise " + String(duration) + "ms");
-      }
-    }
-  }
-
-  bool cooldownReady = testMode || (now - lastPersonDetected) >= PERSON_COOLDOWN;
-  bool sequenceCompleted = false;
-
-  if (inStableEvent && outStableEvent && sequenceState == 0) {
-    Serial.println("IN and OUT stable at the same time - direction unclear, ignored");
-  } else {
-    if (inStableEvent) {
-      if (sequenceState == 2) {
-        if (!cooldownReady) {
-          Serial.println("OUT-IN ignored - still in person cooldown");
-          sequenceState = 0;
-          sequenceCompleted = true;
-        } else if (jumlahOrang > 0) {
-          jumlahOrang--;
-          lastPersonDetected = now;
-          sequenceState = 0;
-          sequenceCompleted = true;
-
-          if (jumlahOrang == 0) {
-            emptyRoomStartTime = millis();
-            roomEmptyTimerActive = true;
-            Serial.println("Empty room timer started");
-          }
-
-          Serial.println("KELUAR TERKONFIRMASI: OUT->IN. Count: " + String(jumlahOrang));
-          syncDeviceControlsAfterPeopleChange("EXIT_CONFIRMED_OUT_IN");
-
-          if (WiFi.status() == WL_CONNECTED) {
-            String reason = "EXIT_CONFIRMED - Person left by OUT-IN sequence, remaining: " +
-                            String(jumlahOrang) + " - E18-D80NK";
-            sendDataToAPI(reason);
-          }
-        } else {
-          sequenceState = 0;
-          sequenceCompleted = true;
-          static unsigned long lastFalseExitWarning = 0;
-          if (now - lastFalseExitWarning > 3000) {
-            Serial.println("EXIT ignored - count already 0");
-            lastFalseExitWarning = now;
-          }
-        }
-      } else if (sequenceState == 0) {
-        sequenceState = 1;
-        sequenceStart = now;
-        Serial.println("Sequence start: IN valid, waiting OUT");
-      }
-    }
-
-    if (outStableEvent && !sequenceCompleted) {
-      if (sequenceState == 1) {
-        if (!cooldownReady) {
-          Serial.println("IN-OUT ignored - still in person cooldown");
-          sequenceState = 0;
-          sequenceCompleted = true;
-        } else {
-          if (jumlahOrang >= MAX_PEOPLE) {
-            Serial.println("ENTRY ignored - room capacity already at " + String(MAX_PEOPLE));
-            sequenceState = 0;
-            sequenceCompleted = true;
-          } else {
-            jumlahOrang++;
-            lastPersonDetected = now;
-            sequenceState = 0;
-            sequenceCompleted = true;
-            roomEmptyTimerActive = false;
-
-            Serial.println("MASUK TERKONFIRMASI: IN->OUT. Count: " + String(jumlahOrang));
-            syncDeviceControlsAfterPeopleChange("ENTRY_CONFIRMED_IN_OUT");
-
-            if (WiFi.status() == WL_CONNECTED) {
-              String reason = "ENTRY_CONFIRMED - Person " + String(jumlahOrang) +
-                              " entered by IN-OUT sequence - E18-D80NK";
-              sendDataToAPI(reason);
-            }
-          }
-        }
-      } else if (sequenceState == 0) {
-        sequenceState = 2;
-        sequenceStart = now;
-        Serial.println("Sequence start: OUT valid, waiting IN");
-      }
-    }
-  }
-
-  if (sensorData.objectInDetected != lastInDetected) {
-    Serial.println("IN: " + String(lastInDetected ? "DETECTED" : "CLEAR") +
-                   " -> " + String(sensorData.objectInDetected ? "DETECTED" : "CLEAR"));
-  }
-  if (sensorData.objectOutDetected != lastOutDetected) {
-    Serial.println("OUT: " + String(lastOutDetected ? "DETECTED" : "CLEAR") +
-                   " -> " + String(sensorData.objectOutDetected ? "DETECTED" : "CLEAR"));
-  }
-
-  lastInDetected = sensorData.objectInDetected;
   lastOutDetected = sensorData.objectOutDetected;
   jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
 }
@@ -2761,21 +2584,6 @@ void loop() {
       Serial.println("     Proxy: " + String(proxyState.isProxyDetected ? "DETECTED" : "DIRECT"));
       Serial.println("     Hosting: " + String(proxyState.hostingReachable ? "REACHABLE" : "UNREACHABLE"));
       Serial.println("     Logic: Enhanced SSL + Proxy aware communication");
-    }
-    else if (command == "sequence") {
-      Serial.println("🧪 Proximity Sequence Test:");
-      Serial.println("   Walk through sensors in this order:");
-      Serial.println("   ENTRY: IN sensor first → then OUT sensor");
-      Serial.println("   EXIT:  OUT sensor first → then IN sensor");
-      Serial.println("   Monitoring for 30 seconds...");
-      
-      unsigned long testStart = millis();
-      while (millis() - testStart < 30000) {
-        readSensors();
-        detectPeopleSequenced();
-        delay(50);
-      }
-      Serial.println("   Sequence test completed");
     }
     else if (command == "simple") {
       Serial.println("🧪 Simple Detection Test Mode:");
