@@ -98,7 +98,7 @@ const char* rootCACertificate =
 #define LDR_ENABLED       true // Set true jika sensor LDR terpasang, false = selalu 0 lux
 #define RELAY_LAMP1       25  // Relay untuk lampu (menggunakan NC untuk dual fungsi)
 // #define RELAY_LAMP2       26  // Tidak digunakan - hanya 1 jalur lampure
-#define MAX_PEOPLE 25
+#define MAX_PEOPLE 18
 #define PERSON_COOLDOWN 1500  // 1.5 detik cooldown antar orang (cukup untuk satu orang selesai lewat)
 #define DEBOUNCE_DELAY 80     // 80ms debounce untuk filter noise elektronik
 #define MIN_PRESENCE_TIME 220 // Objek harus terdeteksi minimal 220ms -> filter gerakan pintu yang cepat
@@ -1365,7 +1365,7 @@ void kontrolAC(String &acStatus, int &setTemp) {
     acStatus = "2 AC ON (" + String(jumlahOrang) + " orang)";
   }
   else {
-    // 16-25 orang → 2 AC MAX, suhu 18°C
+    // 16-18 orang → 2 AC MAX, suhu 18°C
     ac1ON = true;
     ac2ON = true;
     targetTemp1 = 18;
