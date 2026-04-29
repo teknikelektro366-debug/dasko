@@ -9,7 +9,6 @@
 #include <IRsend.h>
 #include <ir_Panasonic.h>
 #include <esp_task_wdt.h>  // Add watchdog timer
-#include <time.h>          // Add time library for auto shutdown
 
 // ================= TFT =================
 TFT_eSPI tft;
@@ -107,31 +106,6 @@ const char* rootCACertificate =
 // ================= LIGHT CONTROL THRESHOLDS =================
 #define LUX_THRESHOLD     800  // Threshold cahaya untuk kontrol otomatis (diubah dari 600 ke 800)
 
-// ================= AUTO SHUTDOWN CONFIGURATION =================khhhhhhhhhhhh
-#define AUTO_SHUTDOWN_HOUR    17  // Jam 5 sore (17:00)
-#define AUTO_SHUTDOWN_MINUTE  0   // Menit 0
-#define AUTO_STARTUP_HOUR     6   // Jam 6 pagi (06:00)
-#define AUTO_STARTUP_MINUTE   0   // Menit 0
-#define NIGHT_RESET_START_HOUR 18  // Jam 6 sore
-#define NIGHT_RESET_END_HOUR   5   // Sampai sebelum jam 5 subuh
-#define TIMEZONE_OFFSET_HOURS 7   // WIB (UTC+7)
-
-// NTP Server configuration
-const char* ntpServer = "pool.ntp.org";
-const long gmtOffset_sec = TIMEZONE_OFFSET_HOURS * 3600;
-const int daylightOffset_sec = 0;
-
-// Auto shutdown/startup variables
-bool autoShutdownEnabled = false;  // DISABLED untuk sementara
-bool autoStartupEnabled = false;   // DISABLED untuk sementara
-bool autoShutdownTriggered = false;
-bool autoStartupTriggered = false;
-bool systemAutoShutdown = false;  // Flag to track if system is in auto shutdown state
-unsigned long lastTimeCheck = 0;
-unsigned long lastAutoShutdownLog = 0;
-unsigned long lastNightResetCheck = 0;
-unsigned long lastNightResetSend = 0;
-
 // ================= ENHANCED PROXY DETECTION VARIABLES =================
 struct ProxyDetectionState {
   bool isProxyDetected = false;
@@ -163,11 +137,7 @@ DHT dht(DHTPIN, DHTTYPE);  // Hanya satu DHT22
 int jumlahOrang = 0;
 int lastJumlahOrang = -1;
 unsigned long lastPersonDetected = 0;
-unsigned long emptyRoomStartTime = 0;
-bool roomEmptyTimerActive = false;
 bool testMode = false; // Add test mode flag
-
-#define EMPTY_ROOM_TIMEOUT 30000  // 30 detik kosong, tidak menunggu 5 menit
 
 volatile bool interruptTriggered = false;
 volatile unsigned long lastInterruptTime = 0;
@@ -276,16 +246,6 @@ void testHostingConnectivity();
 int targetSetTemperatureFromPeopleCount(int peopleCount);
 String apiACStatusFromPeopleCount(int peopleCount);
 
-// Auto shutdown functions
-void initializeTime();
-void checkAutoShutdown();
-void performAutoShutdown();
-void performAutoStartup();
-String getCurrentTimeString();
-bool isAutoShutdownTime();
-bool isAutoStartupTime();
-bool isNightResetTime();
-bool enforceNightReset();
 void sendHeartbeat();  // Heartbeat saja, bukan data utama
 
 void IRAM_ATTR proximityInInterrupt();
@@ -942,7 +902,6 @@ void detectPeople() {
         lastPersonDetected = now;
         lastInTrigger = now;
         inWaiting = false;
-        roomEmptyTimerActive = false;
 
         Serial.println("🚶 → MASUK TERKONFIRMASI! (presence=" + String(presenceDuration) + "ms) Count: " + String(jumlahOrang));
         updateSensorData();
@@ -990,9 +949,7 @@ void detectPeople() {
           outWaiting = false;
 
           if (jumlahOrang == 0) {
-            emptyRoomStartTime = millis();
-            roomEmptyTimerActive = true;
-            Serial.println("⏰ Empty room timer started");
+            Serial.println("⏰ Room is empty");
           }
 
           Serial.println("🚶 ← KELUAR TERKONFIRMASI! (presence=" + String(presenceDuration) + "ms) Count: " + String(jumlahOrang));
@@ -1231,31 +1188,15 @@ void drawModernTiles() {
     tft.print("%");
   }
   
-  // Row 4: Timer or Uptime
+  // Row 4: Uptime
   if (statusHeight > 55) {
-    if (jumlahOrang == 0 && roomEmptyTimerActive) {
-      unsigned long emptyDuration = millis() - emptyRoomStartTime;
-      unsigned long remainingTime = EMPTY_ROOM_TIMEOUT - emptyDuration;
-      int remainingMinutes = remainingTime / 60000;
-      int remainingSeconds = (remainingTime % 60000) / 1000;
-      
-      tft.setCursor(10, statusY + 50);
-      tft.setTextColor(TILE_RED);
-      tft.print("AUTO OFF: ");
-      tft.setTextColor(TFT_WHITE);
-      tft.print(remainingMinutes);
-      tft.print("m ");
-      tft.print(remainingSeconds);
-      tft.print("s");
-    } else {
-      tft.setCursor(10, statusY + 50);
-      tft.setTextColor(TILE_TEAL);
-      tft.print("UPTIME: ");
-      tft.setTextColor(TFT_WHITE);
-      unsigned long uptimeMinutes = millis() / 60000;
-      tft.print(uptimeMinutes);
-      tft.print("m");
-    }
+    tft.setCursor(10, statusY + 50);
+    tft.setTextColor(TILE_TEAL);
+    tft.print("UPTIME: ");
+    tft.setTextColor(TFT_WHITE);
+    unsigned long uptimeMinutes = millis() / 60000;
+    tft.print(uptimeMinutes);
+    tft.print("m");
   }
   
   // Row 5: Device info (if space available)
@@ -1324,19 +1265,7 @@ void kontrolAC(String &acStatus, int &setTemp) {
   int targetTemp2 = 22;
   
   // KONTROL AC BERDASARKAN JUMLAH ORANG DI RUANGAN
-  // Cek apakah ruangan kosong lebih dari 30 detik
-  if (jumlahOrang == 0 && roomEmptyTimerActive) {
-    unsigned long emptyDuration = millis() - emptyRoomStartTime;
-    if (emptyDuration >= EMPTY_ROOM_TIMEOUT) {
-      acStatus = "AUTO OFF (30s KOSONG)";
-      setTemp = 0;
-      Serial.println("⏰ AUTO SHUTDOWN: Ruangan kosong > 30 detik - AC dimatikan otomatis");
-    } else {
-      acStatus = "AC OFF (KOSONG)";
-      setTemp = 0;
-    }
-  }
-  else if (jumlahOrang == 0) {
+  if (jumlahOrang == 0) {
     // Tidak ada orang → AC mati
     acStatus = "AC OFF (KOSONG)";
     setTemp = 0;
@@ -1538,7 +1467,6 @@ void updateSensorData() {
 void resetPeopleCounter() {
   jumlahOrang = 0;
   lastJumlahOrang = -1;
-  roomEmptyTimerActive = false;
   
   // Reset sensor states for immediate counting
   sensorData.lastInChange = 0;
@@ -2056,7 +1984,6 @@ void setup() {
   
   Serial.println("⚠️ ANTI-RESTART MODE ENABLED");
   Serial.println("   Watchdog: 60s timeout (extended)");
-  Serial.println("   Auto shutdown/startup: DISABLED");
   Serial.println("   Memory monitoring: ENABLED");
   
   // Set CPU frequency to stable level
@@ -2214,16 +2141,8 @@ void setup() {
   // Enhanced WiFi connection with SSL and proxy detection
   connectWiFi();
   
-  // Initialize time synchronization for auto shutdown
-  if (WiFi.status() == WL_CONNECTED) {
-    initializeTime();
-  }
-  
   Serial.println("\n✅ ENHANCED SYSTEM READY - ANTI-RESTART MODE!");
   Serial.println("Location: Ruang Prodi Dosen Teknik Elektro - UNJA");
-  Serial.println("Auto Shutdown: " + String(autoShutdownEnabled ? "ENABLED" : "DISABLED (SAFE MODE)"));
-  Serial.println("Auto Startup: " + String(autoStartupEnabled ? "ENABLED" : "DISABLED (SAFE MODE)"));
-  Serial.println("Night Reset: ENABLED (18:00-04:59 WIB -> people=0, AC/lamp OFF)");
   Serial.println("Watchdog Timer: 60 seconds (Extended for stability)");
   Serial.println("Memory Monitoring: ACTIVE");
   Serial.println("System Mode: ANTI-RESTART PROTECTION");
@@ -2311,22 +2230,8 @@ void loop() {
     lastMemoryCheck = millis();
   }
   
-  // Skip auto shutdown check (DISABLED)
-  // checkAutoShutdown();
-  
-  // Skip normal operations if system is in auto shutdown mode (DISABLED)
-  // if (systemAutoShutdown) {
-  //   delay(1000);
-  //   return;
-  // }
-  
   // Always read sensors for immediate response
   readSensors();
-  if (enforceNightReset()) {
-    esp_task_wdt_reset();
-    yield();
-    return;
-  }
   detectPeople();
   
   // Handle interrupt-triggered updates immediately
@@ -2412,20 +2317,7 @@ void loop() {
     lastACControlCheck = millis();
   }
   
-  // Empty room timer monitoring (every 30 seconds)
-  if (jumlahOrang == 0 && roomEmptyTimerActive) {
-    static unsigned long lastTimerLog = 0;
-    if (millis() - lastTimerLog > 30000) {
-      unsigned long emptyDuration = millis() - emptyRoomStartTime;
-      unsigned long remainingTime = EMPTY_ROOM_TIMEOUT - emptyDuration;
-      int remainingMinutes = remainingTime / 60000;
-      
-      Serial.println("⏰ Empty room: " + String(remainingMinutes) + "m remaining");
-      lastTimerLog = millis();
-    }
-  }
-  
-  // AC control check for empty room timeout
+  // Periodic AC and lamp control check
   if (jumlahOrang == lastJumlahOrang) {
     // Tetap jalankan kontrol AC dan lampu berdasarkan jumlah orang saat ini
     static unsigned long lastPeriodicCheck = 0;
@@ -2666,283 +2558,6 @@ void loop() {
   esp_task_wdt_reset();
 }
 
-// ================= AUTO SHUTDOWN FUNCTIONS =================
-
-void initializeTime() {
-  Serial.println("🕐 INITIALIZING TIME SYNCHRONIZATION");
-  Serial.println("   NTP Server: " + String(ntpServer));
-  Serial.println("   Timezone: WIB (UTC+" + String(TIMEZONE_OFFSET_HOURS) + ")");
-  
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-  
-  // Wait for time synchronization
-  int attempts = 0;
-  while (!time(nullptr) && attempts < 10) {
-    Serial.print(".");
-    delay(1000);
-    attempts++;
-  }
-  
-  if (time(nullptr)) {
-    Serial.println("\n✅ TIME SYNCHRONIZED");
-    Serial.println("   Current time: " + getCurrentTimeString());
-    Serial.println("   Auto shutdown: " + String(AUTO_SHUTDOWN_HOUR) + ":00 WIB daily");
-    Serial.println("   Auto startup: " + String(AUTO_STARTUP_HOUR) + ":00 WIB daily");
-    
-    // Reset auto shutdown/startup triggers for new day
-    autoShutdownTriggered = false;
-    autoStartupTriggered = false;
-  } else {
-    Serial.println("\n❌ TIME SYNC FAILED - Auto shutdown/startup disabled");
-    autoShutdownEnabled = false;
-    autoStartupEnabled = false;
-  }
-}
-
-void checkAutoShutdown() {
-  if (!autoShutdownEnabled && !autoStartupEnabled) return;
-  
-  unsigned long now = millis();
-  
-  // Check time every 30 seconds
-  if (now - lastTimeCheck < 30000) return;
-  lastTimeCheck = now;
-  
-  // Check for auto shutdown (17:00)
-  if (isAutoShutdownTime() && !autoShutdownTriggered && !systemAutoShutdown) {
-    Serial.println("🕐 AUTO SHUTDOWN TIME REACHED: " + getCurrentTimeString());
-    performAutoShutdown();
-    autoShutdownTriggered = true;
-    systemAutoShutdown = true;
-  }
-  
-  // Check for auto startup (06:00)
-  if (isAutoStartupTime() && !autoStartupTriggered && systemAutoShutdown) {
-    Serial.println("🕐 AUTO STARTUP TIME REACHED: " + getCurrentTimeString());
-    performAutoStartup();
-    autoStartupTriggered = true;
-    systemAutoShutdown = false;
-  }
-  
-  // Reset triggers at midnight (00:00)
-  struct tm timeinfo;
-  if (getLocalTime(&timeinfo)) {
-    if (timeinfo.tm_hour == 0 && timeinfo.tm_min == 0) {
-      if (autoShutdownTriggered || autoStartupTriggered) {
-        autoShutdownTriggered = false;
-        autoStartupTriggered = false;
-        Serial.println("🔄 Auto shutdown/startup triggers reset for new day");
-      }
-    }
-  }
-  
-  // Log current time every 10 minutes for monitoring
-  if (now - lastAutoShutdownLog > 600000) { // 10 minutes
-    lastAutoShutdownLog = now;
-    String systemStatus = systemAutoShutdown ? "SHUTDOWN MODE" : "NORMAL MODE";
-    Serial.println("🕐 Current time: " + getCurrentTimeString() + 
-                   " | System: " + systemStatus);
-    Serial.println("   Auto shutdown: " + String(autoShutdownEnabled ? "ENABLED" : "DISABLED") +
-                   " at " + String(AUTO_SHUTDOWN_HOUR) + ":00 WIB");
-    Serial.println("   Auto startup: " + String(autoStartupEnabled ? "ENABLED" : "DISABLED") +
-                   " at " + String(AUTO_STARTUP_HOUR) + ":00 WIB");
-  }
-}
-
-void performAutoShutdown() {
-  Serial.println("🔴 PERFORMING AUTO SHUTDOWN AT 17:00");
-  Serial.println("   Shutting down all systems...");
-  
-  // Force people count to 0
-  jumlahOrang = 0;
-  
-  // Turn off AC
-  currentData.acStatus = "AUTO SHUTDOWN 17:00";
-  currentData.setTemp = 0;
-  
-  // Turn off lights
-  currentData.lampStatus = "AUTO SHUTDOWN 17:00";
-  currentData.lamp1 = false;
-  digitalWrite(RELAY_LAMP1, HIGH); // NC relay - HIGH = force off
-  
-  // Send IR commands to turn off AC
-  ac1.off();
-  ac1.send();
-  delay(500);
-  ac2.off();
-  ac2.send();
-  
-  // Update display
-  forceFullUpdate = true;
-  updateTFT(currentData.acStatus, currentData.setTemp, currentData.suhuRuang);
-  
-  // Send final status to API
-  if (WiFi.status() == WL_CONNECTED) {
-    sendDataToAPI("AUTO SHUTDOWN 17:00 - All systems turned off");
-  }
-  
-  // Display shutdown message on TFT
-  tft.fillScreen(TFT_BLACK);
-  tft.setTextSize(3);
-  tft.setTextColor(TFT_RED);
-  tft.setCursor(50, 80);
-  tft.println("AUTO SHUTDOWN");
-  tft.setTextSize(2);
-  tft.setTextColor(TFT_WHITE);
-  tft.setCursor(80, 120);
-  tft.println("17:00 WIB");
-  tft.setCursor(60, 150);
-  tft.println("All systems OFF");
-  tft.setTextSize(1);
-  tft.setCursor(70, 180);
-  tft.println("Prodi Teknik Elektro - UNJA");
-  
-  Serial.println("✅ AUTO SHUTDOWN COMPLETED");
-  Serial.println("   AC: OFF");
-  Serial.println("   Lights: OFF");
-  Serial.println("   People count: 0");
-  Serial.println("   System will restart automatically at 06:00 tomorrow");
-  Serial.println("   Next auto shutdown: Tomorrow 17:00");
-}
-
-String getCurrentTimeString() {
-  struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {
-    return "Time not available";
-  }
-  
-  char timeString[64];
-  strftime(timeString, sizeof(timeString), "%Y-%m-%d %H:%M:%S WIB", &timeinfo);
-  return String(timeString);
-}
-
-bool isAutoShutdownTime() {
-  struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {
-    return false;
-  }
-  
-  // Check if current time is 17:00 (5 PM)
-  return (timeinfo.tm_hour == AUTO_SHUTDOWN_HOUR && 
-          timeinfo.tm_min >= AUTO_SHUTDOWN_MINUTE && 
-          timeinfo.tm_min < AUTO_SHUTDOWN_MINUTE + 1);
-}
-
-bool isNightResetTime() {
-  struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {
-    return false;
-  }
-
-  return timeinfo.tm_hour >= NIGHT_RESET_START_HOUR || timeinfo.tm_hour < NIGHT_RESET_END_HOUR;
-}
-
-bool enforceNightReset() {
-  unsigned long now = millis();
-  if (now - lastNightResetCheck < 1000) {
-    return isNightResetTime();
-  }
-  lastNightResetCheck = now;
-
-  if (!isNightResetTime()) {
-    return false;
-  }
-
-  bool changed = jumlahOrang != 0 || currentData.setTemp != 0 || lastAC1 || lastAC2 || lastLamp1;
-
-  jumlahOrang = 0;
-  roomEmptyTimerActive = false;
-  emptyRoomStartTime = now;
-  updateSensorData();
-
-  String acStatus = currentData.acStatus;
-  int setTemp = currentData.setTemp;
-  String lampStatus = currentData.lampStatus;
-  kontrolAC(acStatus, setTemp);
-  kontrolLampu(lampStatus);
-  currentData.acStatus = acStatus;
-  currentData.setTemp = setTemp;
-  currentData.lampStatus = lampStatus;
-  lastJumlahOrang = jumlahOrang;
-  forceFullUpdate = true;
-
-  if (changed) {
-    Serial.println("🌙 NIGHT RESET ACTIVE (" + getCurrentTimeString() + ") - people=0, AC OFF, lamp OFF");
-    updateTFT(acStatus, setTemp, currentData.suhuRuang);
-  }
-
-  if (WiFi.status() == WL_CONNECTED && (changed || now - lastNightResetSend > 600000) && canSendUpdate()) {
-    sendDataToAPI("NIGHT_RESET_18_05 - Force room empty, AC/lamp OFF");
-    lastNightResetSend = millis();
-  }
-
-  return true;
-}
-
-void performAutoStartup() {
-  Serial.println("🟢 PERFORMING AUTO STARTUP AT 06:00");
-  Serial.println("   Starting up all systems...");
-  
-  // Reset people count to 0 (fresh start)
-  jumlahOrang = 0;
-  
-  // Enable AC control (but don't turn on immediately - wait for people)
-  currentData.acStatus = "READY - AUTO STARTUP 06:00";
-  currentData.setTemp = 0;  // Will be set when people enter
-  
-  // Enable lights control (but don't turn on immediately - wait for low light)
-  currentData.lampStatus = "READY - AUTO STARTUP 06:00";
-  currentData.lamp1 = false;
-  digitalWrite(RELAY_LAMP1, LOW); // NC relay - LOW = allow normal control
-  
-  // Update display
-  forceFullUpdate = true;
-  updateTFT(currentData.acStatus, currentData.setTemp, currentData.suhuRuang);
-  
-  // Send startup status to API
-  if (WiFi.status() == WL_CONNECTED) {
-    sendDataToAPI("AUTO STARTUP 06:00 - Systems ready for operation");
-  }
-  
-  // Display startup message on TFT
-  tft.fillScreen(TFT_BLACK);
-  tft.setTextSize(3);
-  tft.setTextColor(TFT_GREEN);
-  tft.setCursor(50, 80);
-  tft.println("AUTO STARTUP");
-  tft.setTextSize(2);
-  tft.setTextColor(TFT_WHITE);
-  tft.setCursor(80, 120);
-  tft.println("06:00 WIB");
-  tft.setCursor(60, 150);
-  tft.println("Systems READY");
-  tft.setTextSize(1);
-  tft.setCursor(70, 180);
-  tft.println("Prodi Teknik Elektro - UNJA");
-  
-  // Wait 3 seconds to show message, then return to normal display
-  delay(3000);
-  drawUI();
-  
-  Serial.println("✅ AUTO STARTUP COMPLETED");
-  Serial.println("   AC: READY (will activate when people enter)");
-  Serial.println("   Lights: READY (will activate based on light level)");
-  Serial.println("   People count: 0");
-  Serial.println("   Next auto shutdown: Today 17:00");
-}
-
-bool isAutoStartupTime() {
-  struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {
-    return false;
-  }
-  
-  // Check if current time is 06:00 (6 AM)
-  return (timeinfo.tm_hour == AUTO_STARTUP_HOUR && 
-          timeinfo.tm_min >= AUTO_STARTUP_MINUTE && 
-          timeinfo.tm_min < AUTO_STARTUP_MINUTE + 1);
-}
-
 // ================= HTTP FALLBACK FUNCTION =================
 bool makeHTTPRequest(const char* url, const char* method, const char* payload, String& response) {
   if (WiFi.status() != WL_CONNECTED) {
@@ -3001,12 +2616,6 @@ bool makeHTTPRequest(const char* url, const char* method, const char* payload, S
 
 // ================= HEARTBEAT FUNCTIONS =================
 void sendHeartbeat() {
-  if (systemAutoShutdown) {
-    // Kirim status shutdown
-    sendDataToAPI("SYSTEM_HEARTBEAT - Auto shutdown mode");
-    return;
-  }
-  
   // Heartbeat untuk monitoring koneksi saja
   sendDataToAPI("SYSTEM_HEARTBEAT - Connection monitoring");
   
