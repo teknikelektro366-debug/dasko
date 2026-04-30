@@ -166,7 +166,7 @@ class SimpleReportController extends Controller
             line-height: 1.6;
         }
         .header { 
-            text-align: center; 
+            text-align: center;
             margin-bottom: 30px; 
             border-bottom: 3px solid #007bff; 
             padding-bottom: 20px; 
@@ -234,10 +234,11 @@ class SimpleReportController extends Controller
             margin-top: 15px; 
             font-size: 12px;
         }
-        th, td { 
-            padding: 8px; 
-            text-align: left; 
-            border-bottom: 1px solid #ddd; 
+        th, td {
+            padding: 8px;
+            text-align: center;
+            vertical-align: middle;
+            border-bottom: 1px solid #ddd;
         }
         th { 
             background: #007bff; 
@@ -337,25 +338,40 @@ class SimpleReportController extends Controller
                 <table>
                     <thead>
                         <tr>
-                            <th>Waktu</th>
-                            <th>Suhu (°C)</th>
-                            <th>Kelembaban (%)</th>
-                            <th>Cahaya (lux)</th>
-                            <th>Orang</th>
-                            <th>AC Status</th>
+                            <th rowspan="2">Waktu</th>
+                            <th rowspan="2">Suhu (°C)</th>
+                            <th rowspan="2">Kelembaban (%)</th>
+                            <th rowspan="2">Cahaya (lux)</th>
+                            <th colspan="2">ORANG</th>
+                            <th colspan="2">AC</th>
+                        </tr>
+                        <tr>
+                            <th>IN</th>
+                            <th>OUT</th>
+                            <th>Status</th>
+                            <th>Temp</th>
                         </tr>
                     </thead>
                     <tbody>';
 
-            foreach ($sensorData->take(10) as $data) {
+            $recentData = $sensorData->take(10)->values();
+
+            foreach ($recentData as $index => $data) {
                 $timestamp = Carbon::parse($data->created_at)->setTimezone('Asia/Jakarta')->format('d/m H:i');
+                $previousData = $recentData->get($index + 1);
+                $peopleDiff = $previousData ? ((int) $data->people_count - (int) $previousData->people_count) : null;
+                $peopleIn = $peopleDiff === null ? '--' : ($peopleDiff > 0 ? '+' . $peopleDiff : '0');
+                $peopleOut = $peopleDiff === null ? '--' : ($peopleDiff < 0 ? '-' . abs($peopleDiff) : '0');
+
                 $html .= '<tr>
                     <td>' . $timestamp . '</td>
                     <td>' . ($data->temperature ?? '--') . '</td>
                     <td>' . ($data->humidity ?? '--') . '</td>
                     <td>' . ($data->light_intensity ?? '--') . '</td>
-                    <td>' . ($data->people_count ?? 0) . '</td>
+                    <td>' . $peopleIn . '</td>
+                    <td>' . $peopleOut . '</td>
                     <td>' . ($data->ac_status ?? 'OFF') . '</td>
+                    <td>' . ($data->set_temperature !== null ? $data->set_temperature . '°C' : '-') . '</td>
                 </tr>';
             }
 

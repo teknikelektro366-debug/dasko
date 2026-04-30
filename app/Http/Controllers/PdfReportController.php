@@ -83,10 +83,13 @@ class PdfReportController extends Controller
                     'id',
                     'created_at',
                     'people_count',
+                    'proximity_in',
+                    'proximity_out',
                     'room_temperature',
                     'humidity',
                     'light_level',
                     'ac_status',
+                    'set_temperature',
                     'lamp_status',
                 ])
                 ->orderBy('created_at', 'desc')
@@ -262,10 +265,13 @@ class PdfReportController extends Controller
                     'device_id',
                     'created_at',
                     'people_count',
+                    'proximity_in',
+                    'proximity_out',
                     'room_temperature',
                     'humidity',
                     'light_level',
                     'ac_status',
+                    'set_temperature',
                     'lamp_status',
                 ])
                 ->orderBy('created_at', 'desc')
@@ -327,10 +333,13 @@ class PdfReportController extends Controller
                         'device_id',
                         'created_at',
                         'people_count',
+                        'proximity_in',
+                        'proximity_out',
                         'room_temperature',
                         'humidity',
                         'light_level',
                         'ac_status',
+                        'set_temperature',
                         'lamp_status',
                     ])
                     ->orderBy('created_at', 'desc')

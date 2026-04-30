@@ -64,13 +64,16 @@
             background: #4F46E5;
             color: white;
             padding: 10px;
-            text-align: left;
+            text-align: center;
             font-size: 11px;
+            vertical-align: middle;
         }
         td {
             padding: 8px;
             border-bottom: 1px solid #E5E7EB;
             font-size: 10px;
+            text-align: center;
+            vertical-align: middle;
         }
         tr:nth-child(even) {
             background: #F9FAFB;
@@ -141,20 +144,31 @@
     <table>
         <thead>
             <tr>
-                <th>Waktu</th>
-                <th>Orang</th>
-                <th>Suhu</th>
-                <th>Kelembaban</th>
-                <th>Cahaya</th>
-                <th>AC</th>
-                <th>Lampu</th>
+                <th rowspan="2">Waktu</th>
+                <th colspan="2" style="text-align: center;">ORANG</th>
+                <th rowspan="2">Suhu</th>
+                <th rowspan="2">Kelembaban</th>
+                <th rowspan="2">Cahaya</th>
+                <th colspan="2" style="text-align: center;">AC</th>
+                <th rowspan="2">Lampu</th>
+            </tr>
+            <tr>
+                <th>IN</th>
+                <th>OUT</th>
+                <th>Status</th>
+                <th>Temp</th>
             </tr>
         </thead>
         <tbody>
             @forelse($data as $item)
+            @php
+                $previousItem = $data->get($loop->index + 1);
+                $peopleDiff = $previousItem ? ((int) $item->people_count - (int) $previousItem->people_count) : null;
+            @endphp
             <tr>
                 <td>{{ optional($item->created_at)->format('H:i:s') ?? '-' }}</td>
-                <td>{{ $item->people_count }}</td>
+                <td>{{ $peopleDiff === null ? '--' : ($peopleDiff > 0 ? '+' . $peopleDiff : '0') }}</td>
+                <td>{{ $peopleDiff === null ? '--' : ($peopleDiff < 0 ? '-' . abs($peopleDiff) : '0') }}</td>
                 <td>{{ $item->room_temperature !== null ? number_format((float) $item->room_temperature, 1) : '-' }}°C</td>
                 <td>{{ $item->humidity !== null ? number_format((float) $item->humidity, 1) : '-' }}%</td>
                 <td>{{ $item->light_level }} lux</td>
@@ -165,6 +179,7 @@
                         <span class="badge badge-danger">OFF</span>
                     @endif
                 </td>
+                <td>{{ $item->set_temperature !== null ? $item->set_temperature . '°C' : '-' }}</td>
                 <td>
                     @if($item->lamp_status == 'ON')
                         <span class="badge badge-success">ON</span>
@@ -175,7 +190,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="7" style="text-align: center; padding: 20px;">Tidak ada data</td>
+                <td colspan="9" style="text-align: center; padding: 20px;">Tidak ada data</td>
             </tr>
             @endforelse
         </tbody>
