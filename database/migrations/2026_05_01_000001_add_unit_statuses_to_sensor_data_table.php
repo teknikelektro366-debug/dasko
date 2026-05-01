@@ -6,31 +6,18 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        if (Schema::hasColumn('sensor_data', 'lamp_status')) {
-            return;
-        }
-
         Schema::table('sensor_data', function (Blueprint $table) {
-            $table->string('lamp_status', 10)->default('OFF')->after('light_level');
+            $table->boolean('ac1_status')->default(false)->after('ac_status');
+            $table->boolean('ac2_status')->default(false)->after('ac1_status');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        if (!Schema::hasColumn('sensor_data', 'lamp_status')) {
-            return;
-        }
-
         Schema::table('sensor_data', function (Blueprint $table) {
-            $table->dropColumn('lamp_status');
+            $table->dropColumn(['ac1_status', 'ac2_status']);
         });
     }
 };

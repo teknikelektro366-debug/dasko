@@ -75,6 +75,8 @@ class SensorDataController extends Controller
                 'location' => 'string|max:255',
                 'people_count' => 'required|integer|min:0|max:25',
                 'ac_status' => 'required|string|max:50',
+                'ac1_status' => 'nullable|boolean',
+                'ac2_status' => 'nullable|boolean',
                 'set_temperature' => 'nullable|integer|min:0|max:30',
                 'room_temperature' => 'nullable|numeric|min:-10|max:60',
                 'humidity' => 'nullable|numeric|min:0|max:100',
@@ -96,16 +98,20 @@ class SensorDataController extends Controller
                 ], 422);
             }
 
-            $deviceId = $request->input('device_id', 'ESP32_Smart_Energy');
-            $location = $request->input('location', 'Lab Teknik Tegangan Tinggi');
+            $deviceId = $request->input('device_id', 'UNJA_Prodi_Elektro');
+            $location = $request->input('location', 'Ruang Dosen Prodi Teknik Elektro');
             $peopleCount = $this->isNightResetTime()
                 ? 0
                 : min((int) $request->input('people_count'), 25);
-            $lampStatus = $peopleCount > 0 ? 'ON' : 'OFF';
-            $setTemperature = $this->targetTemperatureFromPeopleCount($peopleCount);
-            $acStatus = $this->normalizeAcStatusFromPeopleCount(
-                $peopleCount,
-                $request->input('ac_status')
+            $lampStatus = $this->normalizeLampStatus($request->input('lamp_status'));
+            $setTemperature = $request->filled('set_temperature')
+                ? (int) $request->input('set_temperature')
+                : $this->targetTemperatureFromPeopleCount($peopleCount);
+            $acStatus = $this->normalizeAcStatus($request->input('ac_status'));
+            [$ac1Status, $ac2Status] = $this->normalizeAcUnitStatuses(
+                $request->input('ac1_status'),
+                $request->input('ac2_status'),
+                $acStatus
             );
 
             // ALWAYS CREATE NEW RECORD - Setiap data dari ESP32 disimpan sebagai record baru
@@ -114,6 +120,8 @@ class SensorDataController extends Controller
                 'location' => $location,
                 'people_count' => $peopleCount,
                 'ac_status' => $acStatus,
+                'ac1_status' => $ac1Status,
+                'ac2_status' => $ac2Status,
                 'set_temperature' => $setTemperature,
                 'room_temperature' => $request->input('room_temperature'),
                 'humidity' => $request->input('humidity'),
@@ -179,6 +187,8 @@ class SensorDataController extends Controller
                     'location' => $sensorData->location,
                     'people_count' => $sensorData->people_count,
                     'ac_status' => $sensorData->ac_status,
+                    'ac1_status' => $sensorData->ac1_status,
+                    'ac2_status' => $sensorData->ac2_status,
                     'set_temperature' => $sensorData->set_temperature,
                     'room_temperature' => $sensorData->room_temperature,
                     'humidity' => $sensorData->humidity,
@@ -239,15 +249,14 @@ class SensorDataController extends Controller
                     'device_id' => $latestData->device_id,
                     'location' => $latestData->location,
                     'people_count' => $this->currentPeopleCount($latestData->people_count),
-                    'ac_status' => $this->normalizeAcStatusFromPeopleCount(
-                        $this->currentPeopleCount($latestData->people_count),
-                        $latestData->ac_status
-                    ),
-                    'set_temperature' => $this->targetTemperatureFromPeopleCount($this->currentPeopleCount($latestData->people_count)),
+                    'ac_status' => $this->normalizeAcStatus($latestData->ac_status),
+                    'ac1_status' => (bool) $latestData->ac1_status,
+                    'ac2_status' => (bool) $latestData->ac2_status,
+                    'set_temperature' => $latestData->set_temperature,
                     'room_temperature' => $latestData->room_temperature,
                     'humidity' => $latestData->humidity,
                     'light_level' => $latestData->light_level,
-                    'lamp_status' => $this->lampStatusFromPeopleCount($this->currentPeopleCount($latestData->people_count)),
+                    'lamp_status' => $this->normalizeLampStatus($latestData->lamp_status),
                     'proximity_in' => $latestData->proximity_in,
                     'proximity_out' => $latestData->proximity_out,
                     'wifi_rssi' => $latestData->wifi_rssi,
@@ -545,27 +554,44 @@ class SensorDataController extends Controller
         return 18;
     }
 
-    private function normalizeAcStatusFromPeopleCount($peopleCount, ?string $currentStatus = null): string
+    private function normalizeAcStatus(?string $status): string
     {
-        $peopleCount = (int) $peopleCount;
+        $status = strtoupper(trim((string) $status));
 
-        if ($peopleCount <= 0) {
-            return 'OFF';
+        if (in_array($status, ['AC 1+2', 'AC1+AC2', '2 AC ON', '2 AC MAX'], true)) {
+            return 'AC 1+2';
         }
 
-        if ($peopleCount <= 10) {
+        if (in_array($status, ['ON', 'AC ON', '1 AC ON'], true)) {
             return 'ON';
         }
 
-        return 'AC 1+2';
+        return 'OFF';
+    }
+
+    private function normalizeLampStatus(?string $status): string
+    {
+        return strtoupper(trim((string) $status)) === 'ON' ? 'ON' : 'OFF';
+    }
+
+    private function normalizeAcUnitStatuses($ac1Status, $ac2Status, string $acStatus): array
+    {
+        if ($ac1Status !== null || $ac2Status !== null) {
+            return [(bool) $ac1Status, (bool) $ac2Status];
+        }
+
+        return match ($acStatus) {
+            'AC 1+2' => [true, true],
+            'ON' => [true, false],
+            default => [false, false],
+        };
     }
 
     private function normalizeLampStatusForRows(array $rows): array
     {
         return array_map(function ($row) {
-            $row->lamp_status = $this->lampStatusFromPeopleCount($row->people_count);
-            $row->ac_status = $this->normalizeAcStatusFromPeopleCount($row->people_count, $row->ac_status);
-            $row->set_temperature = $this->targetTemperatureFromPeopleCount($row->people_count);
+            $row->lamp_status = $this->normalizeLampStatus($row->lamp_status);
+            $row->ac_status = $this->normalizeAcStatus($row->ac_status);
             return $row;
         }, $rows);
     }

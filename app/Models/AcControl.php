@@ -17,6 +17,7 @@ class AcControl extends Model
         'location',
         'ac1_status',
         'ac2_status',
+        'lamp_status',
         'ac1_temperature',
         'ac2_temperature',
         'control_mode',
@@ -28,6 +29,7 @@ class AcControl extends Model
     protected $casts = [
         'ac1_status' => 'boolean',
         'ac2_status' => 'boolean',
+        'lamp_status' => 'boolean',
         'manual_override' => 'boolean',
         'expires_at' => 'datetime'
     ];
@@ -67,6 +69,7 @@ class AcControl extends Model
             'location' => $location,
             'ac1_status' => $data['ac1_status'] ?? false,
             'ac2_status' => $data['ac2_status'] ?? false,
+            'lamp_status' => $data['lamp_status'] ?? false,
             'ac1_temperature' => $data['ac1_temperature'] ?? 25,
             'ac2_temperature' => $data['ac2_temperature'] ?? 25,
             'control_mode' => $data['control_mode'] ?? 'manual',
@@ -118,6 +121,8 @@ class AcControl extends Model
         } else {
             $summary[] = "AC2: OFF";
         }
+
+        $summary[] = $this->lamp_status ? 'Lampu: ON' : 'Lampu: OFF';
         
         return implode(', ', $summary);
     }

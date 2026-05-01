@@ -17,8 +17,8 @@ class AcControlController extends Controller
     public function getControl(Request $request): JsonResponse
     {
         try {
-            $deviceId = $request->input('device_id', 'ESP32_Smart_Energy');
-            $location = $request->input('location', 'Lab Teknik Tegangan Tinggi');
+            $deviceId = $request->input('device_id', 'UNJA_Prodi_Elektro');
+            $location = $request->input('location', 'Ruang Dosen Prodi Teknik Elektro');
 
             $control = AcControl::getActiveControl($deviceId, $location);
 
@@ -31,6 +31,7 @@ class AcControlController extends Controller
                         'manual_override' => false,
                         'ac1_status' => false,
                         'ac2_status' => false,
+                        'lamp_status' => false,
                         'ac1_temperature' => 25,
                         'ac2_temperature' => 25,
                         'expires_at' => null
@@ -48,6 +49,7 @@ class AcControlController extends Controller
                         'manual_override' => false,
                         'ac1_status' => false,
                         'ac2_status' => false,
+                        'lamp_status' => false,
                         'ac1_temperature' => 25,
                         'ac2_temperature' => 25,
                         'expires_at' => null
@@ -64,6 +66,7 @@ class AcControlController extends Controller
                     'manual_override' => $control->manual_override,
                     'ac1_status' => $control->ac1_status,
                     'ac2_status' => $control->ac2_status,
+                    'lamp_status' => $control->lamp_status,
                     'ac1_temperature' => $control->ac1_temperature,
                     'ac2_temperature' => $control->ac2_temperature,
                     'created_by' => $control->created_by,
@@ -98,6 +101,7 @@ class AcControlController extends Controller
                 'location' => 'string|max:255',
                 'ac1_status' => 'required|boolean',
                 'ac2_status' => 'required|boolean',
+                'lamp_status' => 'nullable|boolean',
                 'ac1_temperature' => 'required|integer|min:16|max:30',
                 'ac2_temperature' => 'required|integer|min:16|max:30',
                 'control_mode' => 'required|in:auto,manual,schedule',
@@ -113,13 +117,17 @@ class AcControlController extends Controller
                 ], 422);
             }
 
-            $deviceId = $request->input('device_id', 'ESP32_Smart_Energy');
-            $location = $request->input('location', 'Lab Teknik Tegangan Tinggi');
+            $deviceId = $request->input('device_id', 'UNJA_Prodi_Elektro');
+            $location = $request->input('location', 'Ruang Dosen Prodi Teknik Elektro');
             $durationMinutes = $request->input('duration_minutes');
+            $existingControl = AcControl::getActiveControl($deviceId, $location);
 
             $controlData = [
                 'ac1_status' => $request->input('ac1_status'),
                 'ac2_status' => $request->input('ac2_status'),
+                'lamp_status' => $request->has('lamp_status')
+                    ? $request->boolean('lamp_status')
+                    : (bool) ($existingControl?->lamp_status ?? false),
                 'ac1_temperature' => $request->input('ac1_temperature'),
                 'ac2_temperature' => $request->input('ac2_temperature'),
                 'control_mode' => $request->input('control_mode'),
@@ -147,6 +155,7 @@ class AcControlController extends Controller
                     'manual_override' => $control->manual_override,
                     'ac1_status' => $control->ac1_status,
                     'ac2_status' => $control->ac2_status,
+                    'lamp_status' => $control->lamp_status,
                     'ac1_temperature' => $control->ac1_temperature,
                     'ac2_temperature' => $control->ac2_temperature,
                     'expires_at' => $control->expires_at?->toISOString(),
@@ -176,12 +185,13 @@ class AcControlController extends Controller
     public function emergencyStop(Request $request): JsonResponse
     {
         try {
-            $deviceId = $request->input('device_id', 'ESP32_Smart_Energy');
-            $location = $request->input('location', 'Lab Teknik Tegangan Tinggi');
+            $deviceId = $request->input('device_id', 'UNJA_Prodi_Elektro');
+            $location = $request->input('location', 'Ruang Dosen Prodi Teknik Elektro');
 
             $controlData = [
                 'ac1_status' => false,
                 'ac2_status' => false,
+                'lamp_status' => false,
                 'ac1_temperature' => 25,
                 'ac2_temperature' => 25,
                 'control_mode' => 'manual',
@@ -206,6 +216,7 @@ class AcControlController extends Controller
                     'control_mode' => $control->control_mode,
                     'ac1_status' => false,
                     'ac2_status' => false,
+                    'lamp_status' => false,
                     'formatted_status' => 'OFF'
                 ]
             ]);
@@ -230,8 +241,8 @@ class AcControlController extends Controller
     public function autoMode(Request $request): JsonResponse
     {
         try {
-            $deviceId = $request->input('device_id', 'ESP32_Smart_Energy');
-            $location = $request->input('location', 'Lab Teknik Tegangan Tinggi');
+            $deviceId = $request->input('device_id', 'UNJA_Prodi_Elektro');
+            $location = $request->input('location', 'Ruang Dosen Prodi Teknik Elektro');
 
             // Expire all existing controls
             AcControl::where('device_id', $deviceId)
@@ -273,8 +284,8 @@ class AcControlController extends Controller
     public function history(Request $request): JsonResponse
     {
         try {
-            $deviceId = $request->input('device_id', 'ESP32_Smart_Energy');
-            $location = $request->input('location', 'Lab Teknik Tegangan Tinggi');
+            $deviceId = $request->input('device_id', 'UNJA_Prodi_Elektro');
+            $location = $request->input('location', 'Ruang Dosen Prodi Teknik Elektro');
             $perPage = min(max($request->input('per_page', 20), 10), 100);
 
             $history = AcControl::where('device_id', $deviceId)

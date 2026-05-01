@@ -1352,7 +1352,7 @@
                         </div>
                         <div class="title">Lampu TL (12 Unit - 1 Jalur)</div>
                         <div class="device-info">
-                            <span>Daya: 22W per unit | Total Konsumsi: 1.056 kWh</span>
+                            <span>Daya: 22W per unit | Total Konsumsi: 2.112 kWh</span>
                         </div>
 
                         <!-- Status jalur lampu -->
@@ -1364,6 +1364,9 @@
                                         class="fas fa-power-off"></i></button>
                             </div>
                         </div>
+
+                        <div id="lampStatus" class="status-off">MATI</div>
+                        <button onclick="toggleLampCircuit(1)"><i class="fas fa-power-off"></i> KONTROL LAMPU</button>
                     </div>
 
                 </div>
@@ -2352,9 +2355,207 @@
                 .catch(error => console.error('Error updating dashboard cards:', error));
         }
 
+        const IOT_DEVICE_ID = 'UNJA_Prodi_Elektro';
+        const IOT_LOCATION = 'Ruang Dosen Prodi Teknik Elektro';
+        const CONTROL_POLL_INTERVAL_MS = 5000;
+
+        let electricalControlState = {
+            ac1_status: false,
+            ac2_status: false,
+            lamp_status: false,
+            ac1_temperature: 24,
+            ac2_temperature: 24,
+            control_mode: 'auto',
+            manual_override: false
+        };
+        let electricalControlPending = false;
+
+        function csrfToken() {
+            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        }
+
+        function normalizeApiBoolean(value) {
+            return value === true || value === 1 || value === '1' || value === 'ON' || value === 'on';
+        }
+
+        function setControlStatusElement(elementId, isOn, onText = 'MENYALA', offText = 'MATI') {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+
+            element.textContent = isOn ? onText : offText;
+            element.className = element.classList.contains('mini-status')
+                ? `mini-status ${isOn ? 'status-on' : 'status-off'}`
+                : (isOn ? 'status-on' : 'status-off');
+        }
+
+        function renderElectricalControlState(state) {
+            electricalControlState = {
+                ...electricalControlState,
+                ...state,
+                ac1_status: normalizeApiBoolean(state.ac1_status),
+                ac2_status: normalizeApiBoolean(state.ac2_status),
+                lamp_status: normalizeApiBoolean(state.lamp_status),
+                ac1_temperature: Number(state.ac1_temperature || electricalControlState.ac1_temperature || 24),
+                ac2_temperature: Number(state.ac2_temperature || electricalControlState.ac2_temperature || 24)
+            };
+
+            setControlStatusElement('ac1Status', electricalControlState.ac1_status);
+            setControlStatusElement('ac2Status', electricalControlState.ac2_status);
+            setControlStatusElement('lamp1Status', electricalControlState.lamp_status);
+            setControlStatusElement('lampStatus', electricalControlState.lamp_status);
+
+            const acStatus = document.getElementById('acStatus');
+            if (acStatus) {
+                const activeAcCount = Number(electricalControlState.ac1_status) + Number(electricalControlState.ac2_status);
+                acStatus.textContent = activeAcCount === 0
+                    ? 'SEMUA MATI'
+                    : activeAcCount === 2
+                        ? 'SEMUA MENYALA'
+                        : 'SEBAGIAN MENYALA';
+                acStatus.className = activeAcCount === 0
+                    ? 'status-off'
+                    : activeAcCount === 2
+                        ? 'status-on'
+                        : 'status-partial';
+            }
+
+            const tempValue = document.getElementById('acTempValue');
+            if (tempValue) tempValue.textContent = `${electricalControlState.ac1_temperature} °C`;
+        }
+
+        function stateFromSensorPayload(data) {
+            const acStatus = String(data.ac_status || 'OFF').toUpperCase();
+            const hasUnitStatus = data.ac1_status !== undefined || data.ac2_status !== undefined;
+
+            return {
+                ac1_status: hasUnitStatus ? data.ac1_status : acStatus === 'ON' || acStatus === 'AC 1+2',
+                ac2_status: hasUnitStatus ? data.ac2_status : acStatus === 'AC 1+2',
+                lamp_status: String(data.lamp_status || 'OFF').toUpperCase() === 'ON',
+                ac1_temperature: data.set_temperature || electricalControlState.ac1_temperature,
+                ac2_temperature: data.set_temperature || electricalControlState.ac2_temperature
+            };
+        }
+
+        async function loadElectricalControlState() {
+            if (electricalControlPending) return;
+
+            try {
+                const sensorResponse = await fetch('/api/sensor/latest', {
+                    cache: 'no-store',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const sensorPayload = await sensorResponse.json();
+                if (sensorPayload.success && sensorPayload.data) {
+                    renderElectricalControlState(stateFromSensorPayload(sensorPayload.data));
+                }
+
+                const params = new URLSearchParams({ device_id: IOT_DEVICE_ID, location: IOT_LOCATION });
+                const controlResponse = await fetch(`/api/ac/control?${params.toString()}`, {
+                    cache: 'no-store',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const controlPayload = await controlResponse.json();
+                if (controlPayload.success && controlPayload.data?.manual_override) {
+                    renderElectricalControlState(controlPayload.data);
+                }
+            } catch (error) {
+                console.error('Gagal memuat status kontrol perangkat:', error);
+            }
+        }
+
+        async function submitElectricalControlState(nextState) {
+            electricalControlPending = true;
+            const previousState = { ...electricalControlState };
+            renderElectricalControlState(nextState);
+
+            try {
+                const response = await fetch('/api/ac/control', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        device_id: IOT_DEVICE_ID,
+                        location: IOT_LOCATION,
+                        ac1_status: electricalControlState.ac1_status,
+                        ac2_status: electricalControlState.ac2_status,
+                        lamp_status: electricalControlState.lamp_status,
+                        ac1_temperature: electricalControlState.ac1_temperature,
+                        ac2_temperature: electricalControlState.ac2_temperature,
+                        control_mode: 'manual',
+                        created_by: 'dashboard_monitoring'
+                    })
+                });
+
+                const payload = await response.json();
+                if (!response.ok || !payload.success) {
+                    throw new Error(payload.message || 'Perintah kontrol gagal disimpan');
+                }
+
+                renderElectricalControlState(payload.data);
+                setTimeout(loadElectricalControlState, 1200);
+            } catch (error) {
+                renderElectricalControlState(previousState);
+                alert(error.message || 'Gagal mengirim perintah ke perangkat IoT');
+            } finally {
+                electricalControlPending = false;
+            }
+        }
+
+        function toggleACUnit(unitNumber) {
+            const key = unitNumber === 1 ? 'ac1_status' : 'ac2_status';
+            submitElectricalControlState({
+                ...electricalControlState,
+                [key]: !electricalControlState[key]
+            });
+        }
+
+        function toggleAllAC() {
+            const shouldTurnOn = !(electricalControlState.ac1_status && electricalControlState.ac2_status);
+            submitElectricalControlState({
+                ...electricalControlState,
+                ac1_status: shouldTurnOn,
+                ac2_status: shouldTurnOn
+            });
+        }
+
+        function toggleLampCircuit() {
+            submitElectricalControlState({
+                ...electricalControlState,
+                lamp_status: !electricalControlState.lamp_status
+            });
+        }
+
+        function tempUp() {
+            const nextTemp = Math.min(30, electricalControlState.ac1_temperature + 1);
+            submitElectricalControlState({
+                ...electricalControlState,
+                ac1_temperature: nextTemp,
+                ac2_temperature: nextTemp
+            });
+        }
+
+        function tempDown() {
+            const nextTemp = Math.max(16, electricalControlState.ac1_temperature - 1);
+            submitElectricalControlState({
+                ...electricalControlState,
+                ac1_temperature: nextTemp,
+                ac2_temperature: nextTemp
+            });
+        }
+
+        function startACGradualMode() {
+            tempDown();
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             updateMainDashboardCards();
+            loadElectricalControlState();
             setInterval(updateMainDashboardCards, 3000);
+            setInterval(loadElectricalControlState, CONTROL_POLL_INTERVAL_MS);
         });
 
         // ===== HISTORY FUNCTIONS =====
@@ -3384,6 +3585,10 @@
         };
 
         function initializeACControl() {
+            if (!document.getElementById('ac1Toggle') && !document.getElementById('controlStatus')) {
+                return;
+            }
+
             // Load current AC control status
             loadACControlStatus();
         }
@@ -3483,8 +3688,8 @@
             const duration = document.getElementById('controlDuration').value;
 
             const controlData = {
-                device_id: 'ESP32_Smart_Energy_ChangeDetection',
-                location: 'Ruang Dosen Prodi Teknik Elektro',
+                device_id: IOT_DEVICE_ID,
+                location: IOT_LOCATION,
                 ac1_status: currentACState.ac1_status,
                 ac2_status: currentACState.ac2_status,
                 ac1_temperature: currentACState.ac1_temperature,
@@ -3526,8 +3731,8 @@
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                     },
                     body: JSON.stringify({
-                        device_id: 'ESP32_Smart_Energy_ChangeDetection',
-                        location: 'Ruang Dosen Prodi Teknik Elektro'
+                        device_id: IOT_DEVICE_ID,
+                        location: IOT_LOCATION
                     })
                 })
                     .then(response => response.json())
@@ -3558,8 +3763,8 @@
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
                 body: JSON.stringify({
-                    device_id: 'ESP32_Smart_Energy_ChangeDetection',
-                    location: 'Ruang Dosen Prodi Teknik Elektro'
+                    device_id: IOT_DEVICE_ID,
+                    location: IOT_LOCATION
                 })
             })
                 .then(response => response.json())

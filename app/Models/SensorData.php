@@ -17,6 +17,8 @@ class SensorData extends Model
         'location',
         'people_count',
         'ac_status',
+        'ac1_status',
+        'ac2_status',
         'set_temperature',
         'room_temperature',
         'humidity',
@@ -33,6 +35,8 @@ class SensorData extends Model
 
     protected $casts = [
         'people_count' => 'integer',
+        'ac1_status' => 'boolean',
+        'ac2_status' => 'boolean',
         'set_temperature' => 'integer',
         'room_temperature' => 'decimal:2',
         'humidity' => 'decimal:2',
