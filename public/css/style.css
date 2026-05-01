@@ -262,6 +262,10 @@ button {
     gap: 20px;
 }
 
+.device-grid-two-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .card {
     background: white;
     border-radius: 12px;
@@ -1205,7 +1209,8 @@ button {
 
     .sensor-grid,
     .status-grid,
-    .device-grid {
+    .device-grid,
+    .device-grid-two-columns {
         grid-template-columns: 1fr;
     }
 

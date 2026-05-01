@@ -109,7 +109,7 @@ function updateStatusWithAnimation(elementId, newStatus, statusClass) {
 /* ===== DATA PERANGKAT BERDASARKAN TABEL ===== */
 const deviceData = {
     ac: { name: 'AC Panasonic', units: 2, power: 1050, consumption: 10.8, startTime: null, totalUsage: 0 },
-    lamp: { name: 'Lampu TL', units: 12, power: 22, consumption: 2.112, startTime: null, totalUsage: 0 },
+    lamp: { name: 'Lampu TL', units: 6, power: 22, consumption: 1.056, startTime: null, totalUsage: 0 },
     dispenser: { name: 'Dispenser Sanken', units: 1, power: 420, consumption: 3.36, startTime: null, totalUsage: 0 },
     tv: { name: 'Smart TV Horizon', units: 1, power: 170, consumption: 0.17, startTime: null, totalUsage: 0 },
     fridge: { name: 'Kulkas Sharp', units: 1, power: 90, consumption: 0.72, startTime: null, totalUsage: 0, alwaysOn: true },
@@ -432,7 +432,7 @@ function turnOffAllDevices() {
 /* ===== CHECK PANEL STATUS ===== */
 function isPanelOn() {
     const panelStatus = document.getElementById("panelStatus");
-    return panelStatus && panelStatus.innerHTML === "MENYALA";
+    return !panelStatus || panelStatus.innerHTML === "MENYALA";
 }
 
 /* ===== DISABLE ALL DEVICE CONTROLS ===== */
@@ -777,6 +777,10 @@ let lampCircuits = {
     circuit2: false
 };
 
+function getAvailableLampCircuits() {
+    return [1, 2].filter(circuitNumber => document.getElementById(`lamp${circuitNumber}Status`));
+}
+
 function toggleLampCircuit(circuitNumber) {
     checkDailyReset();
     
@@ -804,7 +808,8 @@ function toggleLampCircuit(circuitNumber) {
         // Calculate usage for this circuit (6 units)
         if (dailyData.devices.lamp.startTime && workingHours) {
             let duration = (Date.now() - dailyData.devices.lamp.startTime) / (1000 * 60);
-            dailyData.devices.lamp.usage += duration * 0.5; // 50% of total lamp usage
+            const availableCircuitCount = Math.max(getAvailableLampCircuits().length, 1);
+            dailyData.devices.lamp.usage += duration / availableCircuitCount;
         }
         
         showNotification(`Jalur ${circuitNumber} lampu dimatikan (6 unit)`, 'info');
@@ -827,18 +832,19 @@ function toggleLampCircuit(circuitNumber) {
 }
 
 function toggleAllLamps() {
-    const bothOn = lampCircuits.circuit1 && lampCircuits.circuit2;
-    const shouldTurnOn = !bothOn;
+    const availableCircuits = getAvailableLampCircuits();
+    const allOn = availableCircuits.length > 0 && availableCircuits.every(circuitNumber => lampCircuits[`circuit${circuitNumber}`]);
+    const shouldTurnOn = !allOn;
     
     if (shouldTurnOn) {
-        // Turn on both circuits if not both are on
-        if (!lampCircuits.circuit1) toggleLampCircuit(1);
-        if (!lampCircuits.circuit2) toggleLampCircuit(2);
+        availableCircuits.forEach(circuitNumber => {
+            if (!lampCircuits[`circuit${circuitNumber}`]) toggleLampCircuit(circuitNumber);
+        });
         showNotification('Semua lampu dinyalakan', 'success');
     } else {
-        // Turn off both circuits
-        if (lampCircuits.circuit1) toggleLampCircuit(1);
-        if (lampCircuits.circuit2) toggleLampCircuit(2);
+        availableCircuits.forEach(circuitNumber => {
+            if (lampCircuits[`circuit${circuitNumber}`]) toggleLampCircuit(circuitNumber);
+        });
         showNotification('Semua lampu dimatikan', 'info');
     }
 }
@@ -847,13 +853,19 @@ function updateLampStatus() {
     const mainStatusElement = document.getElementById("lampStatus");
     if (!mainStatusElement) return;
     
-    const circuit1On = lampCircuits.circuit1;
-    const circuit2On = lampCircuits.circuit2;
+    const availableCircuits = getAvailableLampCircuits();
+    const activeCircuits = availableCircuits.filter(circuitNumber => lampCircuits[`circuit${circuitNumber}`]);
     
-    if (!circuit1On && !circuit2On) {
+    if (availableCircuits.length === 1) {
+        mainStatusElement.innerHTML = activeCircuits.length === 1 ? "MENYALA" : "MATI";
+        mainStatusElement.className = activeCircuits.length === 1 ? "status-on" : "status-off";
+        return;
+    }
+    
+    if (activeCircuits.length === 0) {
         mainStatusElement.innerHTML = "SEMUA MATI";
         mainStatusElement.className = "status-off";
-    } else if (circuit1On && circuit2On) {
+    } else if (activeCircuits.length === availableCircuits.length) {
         mainStatusElement.innerHTML = "SEMUA MENYALA";
         mainStatusElement.className = "status-on";
     } else {

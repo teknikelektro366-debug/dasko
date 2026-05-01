@@ -1047,7 +1047,8 @@
                             <i class="fas fa-users"></i>
                         </div>
                         <div class="title">Jumlah Orang di Ruangan</div>
-                        <div class="value" id="peopleCountMainValue"><?php echo e($sensorData['people_count'] ?? 0); ?></div>
+                        <div class="value" id="peopleCountMainValue"><?php echo e($sensorData['people_count'] ?? 0); ?>
+                        </div>
                         <div class="data-timestamp">
                             <?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?>
                         </div>
@@ -1098,7 +1099,8 @@
                             <i class="fas fa-snowflake"></i>
                         </div>
                         <div class="title">Status AC</div>
-                        <div class="value" id="acStatusMainValue"><?php echo e($sensorData['ac_status'] ?? 'OFF'); ?></div>
+                        <div class="value" id="acStatusMainValue"><?php echo e($sensorData['ac_status'] ?? 'OFF'); ?>
+                        </div>
                         <div class="data-timestamp">
                             <?php echo e($sensorData['last_update_time'] ?? 'Belum ada data'); ?>
                         </div>
@@ -1299,7 +1301,7 @@
             <!-- Device Control Section -->
             <div class="device-section">
                 <h3><i class="fas fa-microchip"></i> Kontrol Perangkat Listrik</h3>
-                <div class="device-grid">
+                <div class="device-grid device-grid-two-columns">
 
                     <!-- AC Panasonic -->
                     <div class="card device-card ac-card">
@@ -1340,11 +1342,6 @@
                                 <button onclick="tempUp()" class="temp-btn"><i class="fas fa-plus"></i></button>
                                 <button onclick="tempDown()" class="temp-btn"><i class="fas fa-minus"></i></button>
                             </div>
-                            <div class="gradual-controls" style="margin-top: 10px;">
-                                <button onclick="startACGradualMode()" class="btn-small" style="font-size: 11px;">
-                                    <i class="fas fa-thermometer-half"></i> Mode Gradual
-                                </button>
-                            </div>
                         </div>
                     </div>
 
@@ -1353,45 +1350,20 @@
                         <div class="card-icon">
                             <i class="fas fa-lightbulb"></i>
                         </div>
-                        <div class="title">Lampu TL (12 Unit - 2 Jalur)</div>
+                        <div class="title">Lampu TL (12 Unit - 1 Jalur)</div>
                         <div class="device-info">
-                            <span>Daya: 22W per unit | Total Konsumsi: 2.112 kWh</span>
+                            <span>Daya: 22W per unit | Total Konsumsi: 1.056 kWh</span>
                         </div>
 
-                        <!-- Status kedua jalur lampu -->
+                        <!-- Status jalur lampu -->
                         <div class="lamp-circuits-status">
                             <div class="lamp-circuit">
-                                <span>Jalur 1 (6 Unit):</span>
+                                <span>Lampu TL</span>
                                 <div id="lamp1Status" class="mini-status status-off">MATI</div>
                                 <button onclick="toggleLampCircuit(1)" class="mini-btn"><i
                                         class="fas fa-power-off"></i></button>
                             </div>
-                            <div class="lamp-circuit">
-                                <span>Jalur 2 (6 Unit):</span>
-                                <div id="lamp2Status" class="mini-status status-off">MATI</div>
-                                <button onclick="toggleLampCircuit(2)" class="mini-btn"><i
-                                        class="fas fa-power-off"></i></button>
-                            </div>
                         </div>
-
-                        <!-- Status keseluruhan -->
-                        <div id="lampStatus" class="status-off">SEMUA MATI</div>
-
-                        <!-- Kontrol keseluruhan -->
-                        <button onclick="toggleAllLamps()"><i class="fas fa-power-off"></i> KONTROL SEMUA LAMPU</button>
-                    </div>
-
-                    <!-- Panel Listrik -->
-                    <div class="card device-card">
-                        <div class="card-icon">
-                            <i class="fas fa-bolt"></i>
-                        </div>
-                        <div class="title">Panel Listrik (1 Unit)</div>
-                        <div class="device-info">
-                            <span>Daya: 300W | Konsumsi: 0.3 kWh</span>
-                        </div>
-                        <div id="panelStatus" class="status-on">MENYALA</div>
-                        <button onclick="toggleDevice('panel')"><i class="fas fa-power-off"></i> ON / OFF</button>
                     </div>
 
                 </div>
@@ -1418,7 +1390,8 @@
                     <div class="card sensor-card analytics-chart-card">
                         <div class="analytics-chart-header">
                             <div class="title">Grafik Jumlah Orang</div>
-                            <button type="button" class="chart-download-btn" onclick="downloadAnalyticsChartReport('people')">
+                            <button type="button" class="chart-download-btn"
+                                onclick="downloadAnalyticsChartReport('people')">
                                 <i class="fas fa-download"></i> PDF
                             </button>
                         </div>
@@ -1430,7 +1403,8 @@
                     <div class="card sensor-card analytics-chart-card">
                         <div class="analytics-chart-header">
                             <div class="title">Grafik Suhu AC</div>
-                            <button type="button" class="chart-download-btn" onclick="downloadAnalyticsChartReport('ac_temperature')">
+                            <button type="button" class="chart-download-btn"
+                                onclick="downloadAnalyticsChartReport('ac_temperature')">
                                 <i class="fas fa-download"></i> PDF
                             </button>
                         </div>
@@ -1442,7 +1416,8 @@
                     <div class="card sensor-card analytics-chart-card">
                         <div class="analytics-chart-header">
                             <div class="title">Grafik Kelembapan</div>
-                            <button type="button" class="chart-download-btn" onclick="downloadAnalyticsChartReport('humidity')">
+                            <button type="button" class="chart-download-btn"
+                                onclick="downloadAnalyticsChartReport('humidity')">
                                 <i class="fas fa-download"></i> PDF
                             </button>
                         </div>
@@ -1454,7 +1429,8 @@
                     <div class="card sensor-card analytics-chart-card">
                         <div class="analytics-chart-header">
                             <div class="title">Grafik Cahaya</div>
-                            <button type="button" class="chart-download-btn" onclick="downloadAnalyticsChartReport('light')">
+                            <button type="button" class="chart-download-btn"
+                                onclick="downloadAnalyticsChartReport('light')">
                                 <i class="fas fa-download"></i> PDF
                             </button>
                         </div>
@@ -1466,7 +1442,8 @@
                     <div class="card sensor-card analytics-chart-card">
                         <div class="analytics-chart-header">
                             <div class="title">Grafik Suhu Ruangan</div>
-                            <button type="button" class="chart-download-btn" onclick="downloadAnalyticsChartReport('room_temperature')">
+                            <button type="button" class="chart-download-btn"
+                                onclick="downloadAnalyticsChartReport('room_temperature')">
                                 <i class="fas fa-download"></i> PDF
                             </button>
                         </div>
