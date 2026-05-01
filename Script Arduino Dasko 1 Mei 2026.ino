@@ -1354,6 +1354,73 @@ void kontrolAC(String &acStatus, int &setTemp) {
   }
 }
 
+void applyManualACControl(bool ac1ON, bool ac2ON, int temp1, int temp2) {
+  temp1 = constrain(temp1, 16, 30);
+  temp2 = constrain(temp2, 16, 30);
+
+  if (ac1ON != lastAC1 || ac2ON != lastAC2 || temp1 != lastTemp1 || temp2 != lastTemp2) {
+    Serial.println("🌐 Manual AC command from dashboard");
+    Serial.println("   AC1: " + String(ac1ON ? "ON" : "OFF") + " @ " + String(temp1) + "°C");
+    Serial.println("   AC2: " + String(ac2ON ? "ON" : "OFF") + " @ " + String(temp2) + "°C");
+
+    if (ac1ON) {
+      ac1.on();
+      ac1.setMode(kPanasonicAcCool);
+      ac1.setTemp(temp1);
+      ac1.setFan(kPanasonicAcFanAuto);
+    } else {
+      ac1.off();
+    }
+    ac1.send();
+    delay(200);
+
+    if (ac2ON) {
+      ac2.on();
+      ac2.setMode(kPanasonicAcCool);
+      ac2.setTemp(temp2);
+      ac2.setFan(kPanasonicAcFanAuto);
+    } else {
+      ac2.off();
+    }
+    ac2.send();
+    delay(200);
+
+    lastAC1 = ac1ON;
+    lastAC2 = ac2ON;
+    lastTemp1 = temp1;
+    lastTemp2 = temp2;
+  }
+
+  if (ac1ON && ac2ON) {
+    currentData.acStatus = "2 AC MANUAL";
+    currentData.setTemp = min(temp1, temp2);
+  } else if (ac1ON) {
+    currentData.acStatus = "AC1 MANUAL";
+    currentData.setTemp = temp1;
+  } else if (ac2ON) {
+    currentData.acStatus = "AC2 MANUAL";
+    currentData.setTemp = temp2;
+  } else {
+    currentData.acStatus = "OFF";
+    currentData.setTemp = 0;
+  }
+}
+
+void applyManualLampControl(bool lampON) {
+  String lampStatus = lampON ? "MANUAL ON" : "MANUAL OFF";
+
+  if (lampON != lastLamp1 || lampStatus != lastLampStatus) {
+    Serial.println("🌐 Manual lamp command from dashboard: " + String(lampON ? "ON" : "OFF"));
+    digitalWrite(RELAY_LAMP1, lampON ? LOW : HIGH);
+    lastLamp1 = lampON;
+    lastLampStatus = lampStatus;
+  }
+
+  currentData.lamp1 = lampON;
+  currentData.lamp2 = false;
+  currentData.lampStatus = lampStatus;
+}
+
 // ================= LAMP CONTROL (DUAL FUNCTION) =================
 void kontrolLampu(String &lampStatus) {
   jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
@@ -1396,18 +1463,20 @@ void kontrolLampu(String &lampStatus) {
 void syncDeviceControlsAfterPeopleChange(String reason) {
   updateSensorData();
 
-  String lampStatus = currentData.lampStatus;
-  kontrolLampu(lampStatus);
-  currentData.lampStatus = lampStatus;
+  if (autoMode) {
+    String lampStatus = currentData.lampStatus;
+    kontrolLampu(lampStatus);
+    currentData.lampStatus = lampStatus;
 
-  String acStatus = currentData.acStatus;
-  int setTemp = currentData.setTemp;
-  kontrolAC(acStatus, setTemp);
-  currentData.acStatus = acStatus;
-  currentData.setTemp = setTemp;
+    String acStatus = currentData.acStatus;
+    int setTemp = currentData.setTemp;
+    kontrolAC(acStatus, setTemp);
+    currentData.acStatus = acStatus;
+    currentData.setTemp = setTemp;
+  }
 
   forceFullUpdate = true;
-  updateTFT(acStatus, setTemp, currentData.suhuRuang);
+  updateTFT(currentData.acStatus, currentData.setTemp, currentData.suhuRuang);
   lastJumlahOrang = jumlahOrang;
 
   Serial.println("🔄 DEVICE SYNC AFTER PEOPLE CHANGE: " + reason);
@@ -1540,6 +1609,7 @@ void checkACControlAPI() {
         String controlMode     = data["control_mode"]   | "auto";
         bool ac1               = data["ac1_status"]     | false;
         bool ac2               = data["ac2_status"]     | false;
+        bool lamp              = data["lamp_status"]    | false;
         int  temp1             = data["ac1_temperature"] | 24;
         int  temp2             = data["ac2_temperature"] | 24;
 
@@ -1547,11 +1617,16 @@ void checkACControlAPI() {
         Serial.println("   Manual       : " + String(manualOverrideAPI ? "YES" : "NO"));
         Serial.println("   AC1          : " + String(ac1 ? "ON" : "OFF") + " @ " + String(temp1) + "°C");
         Serial.println("   AC2          : " + String(ac2 ? "ON" : "OFF") + " @ " + String(temp2) + "°C");
+        Serial.println("   Lampu        : " + String(lamp ? "ON" : "OFF"));
 
         // Jika server override manual, terapkan ke hardware
         if (manualOverrideAPI && controlMode == "manual") {
           manualOverride = true;
           autoMode = false;
+          applyManualACControl(ac1, ac2, temp1, temp2);
+          applyManualLampControl(lamp);
+          updateTFT(currentData.acStatus, currentData.setTemp, currentData.suhuRuang);
+          sendDataToAPI("MANUAL_CONTROL_APPLIED_FROM_DASHBOARD");
           Serial.println("⚙️ Manual override dari dashboard diterapkan");
         } else if (controlMode == "auto") {
           manualOverride = false;
@@ -1845,21 +1920,24 @@ void sendDataToAPI(String reason) {
   currentData.proximity2  = sensorData.objectOutDetected;
   currentData.jumlahOrang = jumlahOrang;
 
-  // Pastikan target suhu AC selalu sinkron dengan jumlah orang terbaru
-  // sebelum payload dikirim. Ini mencegah set_temperature tertahan di nilai lama.
-  String syncedACStatus = currentData.acStatus;
-  int syncedSetTemp = currentData.setTemp;
-  kontrolAC(syncedACStatus, syncedSetTemp);
-  currentData.acStatus = syncedACStatus;
-  currentData.setTemp = syncedSetTemp;
+  // Saat auto mode, sinkronkan target dari jumlah orang.
+  // Saat manual override, pertahankan state hardware dari dashboard.
+  if (autoMode) {
+    String syncedACStatus = currentData.acStatus;
+    int syncedSetTemp = currentData.setTemp;
+    kontrolAC(syncedACStatus, syncedSetTemp);
+    currentData.acStatus = syncedACStatus;
+    currentData.setTemp = syncedSetTemp;
+  }
 
   // ── Normalisasi nilai agar sesuai validasi API ──
   String apiACStatus   = normalizeACStatus();          // "ON" / "OFF" / "AC 1+2"
   String apiLampStatus = normalizeLampStatus();         // "ON" / "OFF"
   int    apiLightLevel = constrain((int)currentData.lightLevel, 0, 1000); // max 1000
   int    apiPeopleCount = constrain((int)currentData.jumlahOrang, 0, MAX_PEOPLE);
-  int    apiSetTemp = targetSetTemperatureFromPeopleCount(apiPeopleCount);
-  apiACStatus = apiACStatusFromPeopleCount(apiPeopleCount);
+  int    apiSetTemp = currentData.setTemp > 0
+    ? constrain(currentData.setTemp, 16, 30)
+    : targetSetTemperatureFromPeopleCount(apiPeopleCount);
 
   // ── Validasi suhu & humidity (range API: suhu -10~60, humidity 0-100) ──
   float apiTemp = currentData.suhuRuang;
@@ -1869,7 +1947,7 @@ void sendDataToAPI(String reason) {
   if (isnan(apiHumidity) || apiHumidity < 0.0 || apiHumidity > 100.0) apiHumidity = 60.0;
 
   // ── Bangun JSON — field PERSIS sesuai API docs /api/sensor/data ──
-  StaticJsonDocument<512> doc;
+  StaticJsonDocument<640> doc;
 
   // Optional
   doc["device_id"]    = DEVICE_ID;
@@ -1877,8 +1955,10 @@ void sendDataToAPI(String reason) {
   // Required
   doc["people_count"] = apiPeopleCount;  // integer, 0-100, WAJIB
   doc["ac_status"]    = apiACStatus;     // "ON"/"OFF"/"AC 1+2", WAJIB
+  doc["ac1_status"]   = lastAC1;
+  doc["ac2_status"]   = lastAC2;
   // Optional sensor
-  if (apiSetTemp > 0) {
+  if ((lastAC1 || lastAC2) && apiSetTemp > 0) {
     // Kirim set_temperature hanya saat AC ON (null saat OFF, sesuai DB default null)
     doc["set_temperature"] = constrain(apiSetTemp, 16, 30);
   }
@@ -2243,13 +2323,15 @@ void loop() {
       String acStatus = currentData.acStatus;
       int setTemp = currentData.setTemp;
       String lampStatus = currentData.lampStatus;
-      kontrolAC(acStatus, setTemp);
-      kontrolLampu(lampStatus);
-      currentData.acStatus = acStatus;
-      currentData.setTemp = setTemp;
-      currentData.lampStatus = lampStatus;
+      if (autoMode) {
+        kontrolAC(acStatus, setTemp);
+        kontrolLampu(lampStatus);
+        currentData.acStatus = acStatus;
+        currentData.setTemp = setTemp;
+        currentData.lampStatus = lampStatus;
+      }
       forceFullUpdate = true; // Force immediate display update
-      updateTFT(acStatus, setTemp, currentData.suhuRuang);
+      updateTFT(currentData.acStatus, currentData.setTemp, currentData.suhuRuang);
       lastJumlahOrang = jumlahOrang;
       Serial.println("🔄 INTERRUPT UPDATE - People: " + String(jumlahOrang));
     }
@@ -2262,13 +2344,15 @@ void loop() {
       String acStatus = currentData.acStatus;
       int setTemp = currentData.setTemp;
       String lampStatus = currentData.lampStatus;
-      kontrolAC(acStatus, setTemp);
-      kontrolLampu(lampStatus);
-      currentData.acStatus = acStatus;
-      currentData.setTemp = setTemp;
-      currentData.lampStatus = lampStatus;
+      if (autoMode) {
+        kontrolAC(acStatus, setTemp);
+        kontrolLampu(lampStatus);
+        currentData.acStatus = acStatus;
+        currentData.setTemp = setTemp;
+        currentData.lampStatus = lampStatus;
+      }
       forceFullUpdate = true; // Force immediate display update
-      updateTFT(acStatus, setTemp, currentData.suhuRuang);
+      updateTFT(currentData.acStatus, currentData.setTemp, currentData.suhuRuang);
       lastJumlahOrang = jumlahOrang;
       Serial.println("🔄 UPDATE - People: " + String(jumlahOrang));
     }
@@ -2291,7 +2375,7 @@ void loop() {
   
   // Light control check (every 3 seconds) - berdasarkan jumlah orang dan lux
   static unsigned long lastLightCheck = 0;
-  if (millis() - lastLightCheck > 3000) {
+  if (autoMode && millis() - lastLightCheck > 3000) {
     String lampStatus = currentData.lampStatus;
     kontrolLampu(lampStatus);
     currentData.lampStatus = lampStatus;
@@ -2308,7 +2392,7 @@ void loop() {
   
   // AC control check berkala - berdasarkan jumlah orang
   static unsigned long lastACControlCheck = 0;
-  if (millis() - lastACControlCheck > AC_CONTROL_CHECK_INTERVAL) {
+  if (autoMode && millis() - lastACControlCheck > AC_CONTROL_CHECK_INTERVAL) {
     String acStatus = currentData.acStatus;
     int setTemp = currentData.setTemp;
     kontrolAC(acStatus, setTemp);
@@ -2318,7 +2402,7 @@ void loop() {
   }
   
   // Periodic AC and lamp control check
-  if (jumlahOrang == lastJumlahOrang) {
+  if (autoMode && jumlahOrang == lastJumlahOrang) {
     // Tetap jalankan kontrol AC dan lampu berdasarkan jumlah orang saat ini
     static unsigned long lastPeriodicCheck = 0;
     if (millis() - lastPeriodicCheck > 10000) { // Every 10 seconds
