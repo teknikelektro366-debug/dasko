@@ -98,10 +98,7 @@ const char* rootCACertificate =
 #define RELAY_LAMP1       25  // Relay untuk lampu (menggunakan NC untuk dual fungsi)
 // #define RELAY_LAMP2       26  // Tidak digunakan - hanya 1 jalur lampure
 #define MAX_PEOPLE 18
-#define PERSON_COOLDOWN 1500  // 1.5 detik cooldown antar orang (cukup untuk satu orang selesai lewat)
 #define DEBOUNCE_DELAY 80     // 80ms debounce untuk filter noise elektronik
-#define MIN_PRESENCE_TIME 220 // Objek harus terdeteksi minimal 220ms -> filter gerakan pintu yang cepat
-#define DOOR_FILTER_TIME 180  // Durasi di bawah ini dianggap gerakan pintu/noise, bukan orang
 
 // ================= LIGHT CONTROL THRESHOLDS =================
 #define LUX_THRESHOLD     800  // Threshold cahaya untuk kontrol otomatis (diubah dari 600 ke 800)
@@ -142,8 +139,20 @@ bool testMode = false; // Add test mode flag
 volatile bool interruptTriggered = false;
 volatile unsigned long lastInterruptTime = 0;
 
+enum SequenceSensor {
+  SENSOR_NONE,
+  SENSOR_IN,
+  SENSOR_OUT
+};
+
+enum PeopleSequenceState {
+  SEQ_IDLE,
+  SEQ_WAIT_SECOND,
+  SEQ_WAIT_CLEAR
+};
+
 // ================= PROXIMITY SENSOR CONFIGURATION =================
-// Simplified configuration for immediate counting
+// Debounced proximity data used by the sequenced people counter
 struct SensorData {
   bool proximityIn = false;
   bool proximityOut = false;
@@ -154,6 +163,13 @@ struct SensorData {
   unsigned long lastInChange = 0;
   unsigned long lastOutChange = 0;
 } sensorData;
+
+struct PeopleCounterSequence {
+  bool lastInDetected = false;
+  bool lastOutDetected = false;
+  PeopleSequenceState state = SEQ_IDLE;
+  SequenceSensor firstSensor = SENSOR_NONE;
+} peopleSequence;
 
 bool lastAC1 = false;
 bool lastAC2 = false;
@@ -849,157 +865,115 @@ void detectPeople() {
   }
 
   // ================================================================
-  // STATE TRACKING
-  // Variabel static untuk melacak status per-siklus
-  // ================================================================
-  static bool lastInDetected  = false;
-  static bool lastOutDetected = false;
-
-  // Waktu terakhir trigger yang SAH (setelah melewati semua filter)
-  static unsigned long lastInTrigger  = 0;
-  static unsigned long lastOutTrigger = 0;
-
-  // Waktu pertama kali sensor menjadi HIGH (untuk MIN_PRESENCE_TIME)
-  static unsigned long inFirstDetected  = 0;
-  static unsigned long outFirstDetected = 0;
-
-  // Flag "sedang menunggu konfirmasi presence"
-  static bool inWaiting  = false;
-  static bool outWaiting = false;
-
-  // ================================================================
-  // FILTER PINTU / NOISE BERBASIS MINIMUM PRESENCE TIME
+  // SEQUENCED PEOPLE COUNTER
   //
-  // Prinsip kerja:
-  //  1. Saat sensor pertama kali HIGH  → catat waktu, set flag "waiting"
-  //  2. Selama sensor masih HIGH       → cek apakah durasi >= MIN_PRESENCE_TIME
-  //                                      DAN cooldown antar orang sudah terpenuhi
-  //  3. Jika kedua syarat terpenuhi    → hitung sebagai orang (masuk/keluar)
-  //  4. Jika sensor kembali LOW
-  //     sebelum MIN_PRESENCE_TIME      → batalkan (dianggap gerakan pintu/noise)
+  // Valid:
+  //   OUT -> IN  = masuk (+1)
+  //   IN  -> OUT = keluar (-1)
   //
-  // Hasil: Gerakan pintu (cepat, <180ms) diabaikan otomatis.
-  //        Orang lewat (>220ms) tetap terhitung dengan tepat.
+  // Sensor tunggal hanya disimpan sebagai awal sequence. Tidak valid:
+  //   dua sensor bersamaan dari kondisi idle atau sensor yang sama berulang.
+  //
+  // Tidak ada pewaktu, timeout, cooldown, atau minimum durasi di
+  // logika sequence. Sistem hanya membaca urutan rising-edge sensor.
   // ================================================================
+  bool inRising = sensorData.objectInDetected && !peopleSequence.lastInDetected;
+  bool outRising = sensorData.objectOutDetected && !peopleSequence.lastOutDetected;
 
-  // ---------- ENTRY (sensor IN / PROXIMITY_PIN_IN) ----------
-  if (sensorData.objectInDetected && !lastInDetected) {
-    // Rising edge: objek baru terdeteksi
-    inFirstDetected = now;
-    inWaiting = true;
-    Serial.println("🔵 IN rising-edge → menunggu konfirmasi presence...");
+  if (inRising) {
+    Serial.println("🔵 IN detected");
+  }
+  if (outRising) {
+    Serial.println("🔴 OUT detected");
   }
 
-  if (inWaiting) {
-    if (sensorData.objectInDetected) {
-      // Objek masih terdeteksi – cek dua syarat:
-      //   a) Sudah hadir minimal MIN_PRESENCE_TIME
-      //   b) Cooldown antar orang sudah lewat
-      unsigned long presenceDuration = now - inFirstDetected;
-      if (presenceDuration >= MIN_PRESENCE_TIME && (now - lastInTrigger) >= PERSON_COOLDOWN) {
-        // ✅ Konfirmasi: INI ORANG, bukan pintu
-        jumlahOrang++;
-        lastPersonDetected = now;
-        lastInTrigger = now;
-        inWaiting = false;
+  bool sequenceStartedThisLoop = false;
 
-        Serial.println("🚶 → MASUK TERKONFIRMASI! (presence=" + String(presenceDuration) + "ms) Count: " + String(jumlahOrang));
-        updateSensorData();
-
-        if (WiFi.status() == WL_CONNECTED) {
-          String reason = "ENTRY_CONFIRMED - Person " + String(jumlahOrang) +
-                          " entered (presence " + String(presenceDuration) + "ms) - Proximity IN";
-          sendDataToAPI(reason);
-          Serial.println("📤 ✅ TERCATAT: Orang masuk #" + String(jumlahOrang));
-        }
-      }
-      // Belum memenuhi syarat → lanjut tunggu
-    } else {
-      // Falling edge sebelum syarat terpenuhi → pintu / noise → abaikan
-      unsigned long duration = now - inFirstDetected;
-      inWaiting = false;
-      if (duration < DOOR_FILTER_TIME) {
-        Serial.println("🚪 IN: Diabaikan – durasi " + String(duration) + "ms < " +
-                       String(DOOR_FILTER_TIME) + "ms (kemungkinan gerakan pintu/noise)");
-      } else {
-        // Durasi cukup tapi cooldown belum lewat → masih dalam cooldown
-        Serial.println("⏸️ IN: Diabaikan – masih dalam cooldown antar orang (" +
-                       String(now - lastInTrigger) + "ms < " + String(PERSON_COOLDOWN) + "ms)");
-      }
+  if (peopleSequence.state == SEQ_IDLE) {
+    if (inRising && outRising) {
+      peopleSequence.state = SEQ_WAIT_CLEAR;
+      Serial.println("⚠️ Sequence tidak valid: IN dan OUT aktif bersamaan");
+    } else if (inRising) {
+      peopleSequence.firstSensor = SENSOR_IN;
+      peopleSequence.state = SEQ_WAIT_SECOND;
+      sequenceStartedThisLoop = true;
+      Serial.println("➡️ Sequence mulai: IN, menunggu OUT");
+    } else if (outRising) {
+      peopleSequence.firstSensor = SENSOR_OUT;
+      peopleSequence.state = SEQ_WAIT_SECOND;
+      sequenceStartedThisLoop = true;
+      Serial.println("⬅️ Sequence mulai: OUT, menunggu IN");
     }
   }
 
-  // ---------- EXIT (sensor OUT / PROXIMITY_PIN_OUT) ----------
-  if (sensorData.objectOutDetected && !lastOutDetected) {
-    // Rising edge: objek baru terdeteksi
-    outFirstDetected = now;
-    outWaiting = true;
-    Serial.println("🔴 OUT rising-edge → menunggu konfirmasi presence...");
-  }
+  if (peopleSequence.state == SEQ_WAIT_SECOND && !sequenceStartedThisLoop) {
+    bool secondRising = (peopleSequence.firstSensor == SENSOR_IN) ? outRising : inRising;
+    bool sameSensorRising = (peopleSequence.firstSensor == SENSOR_IN) ? inRising : outRising;
 
-  if (outWaiting) {
-    if (sensorData.objectOutDetected) {
-      unsigned long presenceDuration = now - outFirstDetected;
-      if (presenceDuration >= MIN_PRESENCE_TIME && (now - lastOutTrigger) >= PERSON_COOLDOWN) {
-        // ✅ Konfirmasi: INI ORANG yang keluar
-        if (jumlahOrang > 0) {
-          jumlahOrang--;
+    if (sameSensorRising) {
+      Serial.println("⚠️ Sequence tidak valid: sensor yang sama aktif ulang");
+      peopleSequence.state = SEQ_WAIT_CLEAR;
+    } else if (secondRising) {
+      if (peopleSequence.firstSensor == SENSOR_OUT) {
+        if (jumlahOrang < MAX_PEOPLE) {
+          jumlahOrang++;
           lastPersonDetected = now;
-          lastOutTrigger = now;
-          outWaiting = false;
-
-          if (jumlahOrang == 0) {
-            Serial.println("⏰ Room is empty");
-          }
-
-          Serial.println("🚶 ← KELUAR TERKONFIRMASI! (presence=" + String(presenceDuration) + "ms) Count: " + String(jumlahOrang));
+          Serial.println("🚶 → MASUK VALID: OUT -> IN. Count: " + String(jumlahOrang));
           updateSensorData();
 
           if (WiFi.status() == WL_CONNECTED) {
-            String reason = "EXIT_CONFIRMED - Person left (presence " + String(presenceDuration) +
-                            "ms), remaining: " + String(jumlahOrang) + " - Proximity OUT";
+            String reason = "ENTRY_SEQUENCE_CONFIRMED - OUT_TO_IN, people: " + String(jumlahOrang);
+            sendDataToAPI(reason);
+            Serial.println("📤 ✅ TERCATAT: Orang masuk #" + String(jumlahOrang));
+          }
+        } else {
+          Serial.println("⚠️ MASUK valid tetapi kapasitas sudah maksimum: " + String(MAX_PEOPLE));
+        }
+      } else {
+        if (jumlahOrang > 0) {
+          jumlahOrang--;
+          lastPersonDetected = now;
+          if (jumlahOrang == 0) {
+            Serial.println("⏰ Room is empty");
+          }
+          Serial.println("🚶 ← KELUAR VALID: IN -> OUT. Count: " + String(jumlahOrang));
+          updateSensorData();
+
+          if (WiFi.status() == WL_CONNECTED) {
+            String reason = "EXIT_SEQUENCE_CONFIRMED - IN_TO_OUT, people: " + String(jumlahOrang);
             sendDataToAPI(reason);
             Serial.println("📤 ✅ TERCATAT: Orang keluar, sisa #" + String(jumlahOrang));
           }
         } else {
-          // Count sudah 0, batalkan
-          outWaiting = false;
-          lastOutTrigger = now;
-          static unsigned long lastFalseExitWarning = 0;
-          if (now - lastFalseExitWarning > 3000) {
-            Serial.println("⚠️ EXIT saat count=0 – kemungkinan sensor issue");
-            lastFalseExitWarning = now;
-          }
+          Serial.println("⚠️ KELUAR valid tetapi count sudah 0");
         }
       }
-    } else {
-      // Falling edge sebelum syarat terpenuhi → pintu / noise → abaikan
-      unsigned long duration = now - outFirstDetected;
-      outWaiting = false;
-      if (duration < DOOR_FILTER_TIME) {
-        Serial.println("🚪 OUT: Diabaikan – durasi " + String(duration) + "ms < " +
-                       String(DOOR_FILTER_TIME) + "ms (kemungkinan gerakan pintu/noise)");
-      } else {
-        Serial.println("⏸️ OUT: Diabaikan – masih dalam cooldown antar orang (" +
-                       String(now - lastOutTrigger) + "ms < " + String(PERSON_COOLDOWN) + "ms)");
-      }
+
+      jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
+      peopleSequence.state = SEQ_WAIT_CLEAR;
     }
+  }
+
+  if (peopleSequence.state == SEQ_WAIT_CLEAR && !sensorData.objectInDetected && !sensorData.objectOutDetected) {
+    peopleSequence.state = SEQ_IDLE;
+    peopleSequence.firstSensor = SENSOR_NONE;
+    Serial.println("✅ Sequence reset - siap hitung orang berikutnya");
   }
 
   // ================================================================
   // DEBUG STATE CHANGES
   // ================================================================
-  if (sensorData.objectInDetected != lastInDetected) {
-    Serial.println("🔄 IN: " + String(lastInDetected ? "DETECTED" : "CLEAR") +
+  if (sensorData.objectInDetected != peopleSequence.lastInDetected) {
+    Serial.println("🔄 IN: " + String(peopleSequence.lastInDetected ? "DETECTED" : "CLEAR") +
                    " → " + String(sensorData.objectInDetected ? "DETECTED" : "CLEAR"));
   }
-  if (sensorData.objectOutDetected != lastOutDetected) {
-    Serial.println("🔄 OUT: " + String(lastOutDetected ? "DETECTED" : "CLEAR") +
+  if (sensorData.objectOutDetected != peopleSequence.lastOutDetected) {
+    Serial.println("🔄 OUT: " + String(peopleSequence.lastOutDetected ? "DETECTED" : "CLEAR") +
                    " → " + String(sensorData.objectOutDetected ? "DETECTED" : "CLEAR"));
   }
 
-  lastInDetected  = sensorData.objectInDetected;
-  lastOutDetected = sensorData.objectOutDetected;
+  peopleSequence.lastInDetected = sensorData.objectInDetected;
+  peopleSequence.lastOutDetected = sensorData.objectOutDetected;
   jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
 }
 
@@ -1537,12 +1511,13 @@ void resetPeopleCounter() {
   jumlahOrang = 0;
   lastJumlahOrang = -1;
   
-  // Reset sensor states for immediate counting
+  // Reset sensor states for sequenced counting
   sensorData.lastInChange = 0;
   sensorData.lastOutChange = 0;
+  peopleSequence = PeopleCounterSequence();
   
   Serial.println("🔄 People counter manually reset to 0");
-  Serial.println("🔄 Sensor states cleared");
+  Serial.println("🔄 Sensor sequence states cleared");
   updateSensorData();
   
   // Force display update
@@ -2181,13 +2156,14 @@ void setup() {
     delay(100);
   }
   Serial.println("Proximity sensor test completed");
-  Serial.println("Expected behavior for immediate counting:");
+  Serial.println("Expected behavior for sequenced counting:");
   Serial.println("- Sensors read HIGH (1) when clear");
   Serial.println("- Sensors read LOW (0) when object detected");
-  Serial.println("- Every stable detection is counted immediately");
-  Serial.println("- Only cooldown prevents double counting (180ms)");
-  Serial.println("- IN sensor = +1 person");
-  Serial.println("- OUT sensor = -1 person (if count > 0)");
+  Serial.println("- OUT then IN = +1 person masuk");
+  Serial.println("- IN then OUT = -1 person keluar");
+  Serial.println("- Single sensor waits for the next different sensor");
+  Serial.println("- Simultaneous trigger or same sensor repeated = invalid");
+  Serial.println("- No sequence timer, timeout, or cooldown");
   Serial.println("==============================");
   
   // Test TFT with error handling
@@ -2567,10 +2543,11 @@ void loop() {
     }
     else if (command == "testmode") {
       testMode = !testMode;
-      Serial.println("🧪 Test mode: " + String(testMode ? "ON (no cooldown)" : "OFF (normal cooldown)"));
+      Serial.println("🧪 Test mode: " + String(testMode ? "ON (sequenced debug)" : "OFF"));
       if (testMode) {
-        Serial.println("   IN sensor will immediately +1");
-        Serial.println("   OUT sensor will immediately -1 (if count > 0)");
+        Serial.println("   OUT -> IN will count +1");
+        Serial.println("   IN -> OUT will count -1");
+        Serial.println("   Invalid sensor order will be ignored");
         Serial.println("   Use 'testmode' again to turn OFF");
       }
     }
@@ -2594,44 +2571,29 @@ void loop() {
       Serial.println("     Logic: Enhanced SSL + Proxy aware communication");
     }
     else if (command == "simple") {
-      Serial.println("🧪 Simple Detection Test Mode:");
-      Serial.println("   IN sensor = +1 person");
-      Serial.println("   OUT sensor = -1 person (if count > 0)");
+      Serial.println("🧪 Sequenced Detection Test Mode:");
+      Serial.println("   OUT -> IN = +1 person");
+      Serial.println("   IN -> OUT = -1 person (if count > 0)");
+      Serial.println("   Single sensor waits for the next different sensor");
+      Serial.println("   Simultaneous trigger or same sensor repeated = invalid");
+      Serial.println("   No sequence timer, timeout, or cooldown");
       Serial.println("   Testing for 60 seconds...");
       
       unsigned long testStart = millis();
-      bool lastTestIn = false;
-      bool lastTestOut = false;
-
       
       while (millis() - testStart < 60000) {
-        bool currentIn = !digitalRead(PROXIMITY_PIN_IN);  // LOW = detected
-        bool currentOut = !digitalRead(PROXIMITY_PIN_OUT); // LOW = detected
-        
-        // Simple immediate counting
-        if (currentIn && !lastTestIn) {
-          if (jumlahOrang < MAX_PEOPLE) {
-            jumlahOrang++;
-          } else {
-            Serial.println("⚠️ Simple test IN ignored - room capacity already at " + String(MAX_PEOPLE));
-          }
-          jumlahOrang = constrain(jumlahOrang, 0, MAX_PEOPLE);
-          Serial.println("🚶 → IN DETECTED! Count: " + String(jumlahOrang));
-          syncDeviceControlsAfterPeopleChange("SIMPLE_TEST_IN");
+        int beforeCount = jumlahOrang;
+        readSensors();
+        detectPeople();
+        updateSensorData();
+
+        if (jumlahOrang != beforeCount) {
+          syncDeviceControlsAfterPeopleChange("SEQUENCED_TEST");
         }
-        
-        if (currentOut && !lastTestOut && jumlahOrang > 0) {
-          jumlahOrang--;
-          Serial.println("🚶 ← OUT DETECTED! Count: " + String(jumlahOrang));
-          syncDeviceControlsAfterPeopleChange("SIMPLE_TEST_OUT");
-        }
-        
-        lastTestIn = currentIn;
-        lastTestOut = currentOut;
-        
-        delay(50);
+
+        delay(20);
       }
-      Serial.println("   Simple test completed. Final count: " + String(jumlahOrang));
+      Serial.println("   Sequenced test completed. Final count: " + String(jumlahOrang));
     }
   }
   
