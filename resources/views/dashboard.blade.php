@@ -396,6 +396,37 @@
             transform: translateX(25px);
         }
 
+        .mini-status,
+        .status-on,
+        .status-off,
+        .status-partial {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 72px;
+            min-height: 26px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .status-on {
+            background: #16a34a;
+            color: #fff;
+        }
+
+        .status-off {
+            background: #6b7280;
+            color: #fff;
+        }
+
+        .status-partial {
+            background: #f59e0b;
+            color: #111827;
+        }
+
         .temp-buttons {
             display: flex;
             align-items: center;
@@ -2280,7 +2311,7 @@
         }
 
         function updateMainDashboardCards() {
-            fetch('/api/sensor/latest', {
+            fetch(`/api/sensor/latest?${iotQueryString()}`, {
                 cache: 'no-store',
                 headers: {
                     'Accept': 'application/json',
@@ -2309,6 +2340,8 @@
         const IOT_DEVICE_ID = 'UNJA_Prodi_Elektro';
         const IOT_LOCATION = 'Ruang Dosen Prodi Teknik Elektro';
         const CONTROL_POLL_INTERVAL_MS = 5000;
+        const ARDUINO_CONFIRM_TIMEOUT_MS = 30000;
+        const ARDUINO_CONFIRM_INTERVAL_MS = 1000;
 
         let electricalControlState = {
             ac1_status: false,
@@ -2320,6 +2353,7 @@
             manual_override: false
         };
         let electricalControlPending = false;
+        let pendingControlTarget = null;
 
         function csrfToken() {
             return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -2327,6 +2361,10 @@
 
         function normalizeApiBoolean(value) {
             return value === true || value === 1 || value === '1' || value === 'ON' || value === 'on';
+        }
+
+        function iotQueryString() {
+            return new URLSearchParams({ device_id: IOT_DEVICE_ID, location: IOT_LOCATION }).toString();
         }
 
         function setControlStatusElement(elementId, isOn, onText = 'MENYALA', offText = 'MATI') {
@@ -2337,6 +2375,42 @@
             element.className = element.classList.contains('mini-status')
                 ? `mini-status ${isOn ? 'status-on' : 'status-off'}`
                 : (isOn ? 'status-on' : 'status-off');
+        }
+
+        function setPendingStatusElement(elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+
+            element.textContent = 'MENUNGGU';
+            element.className = element.classList.contains('mini-status')
+                ? 'mini-status status-partial'
+                : 'status-partial';
+        }
+
+        function setElectricalControlsBusy(isBusy, targetState = null) {
+            const buttons = document.querySelectorAll([
+                'button[onclick^="toggleACUnit"]',
+                'button[onclick^="toggleAllAC"]',
+                'button[onclick^="toggleLampCircuit"]',
+                'button[onclick^="tempUp"]',
+                'button[onclick^="tempDown"]',
+                'button[onclick^="startACGradualMode"]'
+            ].join(','));
+
+            buttons.forEach(button => {
+                button.disabled = isBusy;
+                button.style.opacity = isBusy ? '0.65' : '';
+                button.style.cursor = isBusy ? 'wait' : '';
+            });
+
+            if (isBusy && targetState) {
+                if (targetState.ac1_status !== electricalControlState.ac1_status) setPendingStatusElement('ac1Status');
+                if (targetState.ac2_status !== electricalControlState.ac2_status) setPendingStatusElement('ac2Status');
+                if (targetState.lamp_status !== electricalControlState.lamp_status) {
+                    setPendingStatusElement('lamp1Status');
+                    setPendingStatusElement('lampStatus');
+                }
+            }
         }
 
         function renderElectricalControlState(state) {
@@ -2372,6 +2446,11 @@
 
             const tempValue = document.getElementById('acTempValue');
             if (tempValue) tempValue.textContent = `${electricalControlState.ac1_temperature} °C`;
+
+            const controlMode = document.getElementById('controlMode');
+            if (controlMode) {
+                controlMode.textContent = electricalControlState.manual_override ? 'Manual' : 'Auto';
+            }
         }
 
         function stateFromSensorPayload(data) {
@@ -2387,27 +2466,82 @@
             };
         }
 
+        async function fetchLatestArduinoState() {
+            const response = await fetch(`/api/sensor/latest?${iotQueryString()}`, {
+                cache: 'no-store',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const payload = await response.json();
+
+            if (!response.ok || !payload.success || !payload.data) {
+                throw new Error(payload.message || 'Status Arduino belum tersedia');
+            }
+
+            return {
+                raw: payload.data,
+                state: stateFromSensorPayload(payload.data)
+            };
+        }
+
+        function arduinoStateMatchesTarget(arduinoState, targetState, changedKeys) {
+            return changedKeys.every(key => {
+                if (key === 'ac1_temperature' || key === 'ac2_temperature') {
+                    if (!targetState.ac1_status && !targetState.ac2_status) return true;
+                    return Number(arduinoState[key]) === Number(targetState[key]);
+                }
+
+                return normalizeApiBoolean(arduinoState[key]) === normalizeApiBoolean(targetState[key]);
+            });
+        }
+
+        function changedControlKeys(previousState, targetState) {
+            return ['ac1_status', 'ac2_status', 'lamp_status', 'ac1_temperature', 'ac2_temperature']
+                .filter(key => previousState[key] !== targetState[key]);
+        }
+
+        async function waitForArduinoConfirmation(targetState, baselineSensorId, baselineSensorUpdatedAt, changedKeys) {
+            const startedAt = Date.now();
+
+            while (Date.now() - startedAt < ARDUINO_CONFIRM_TIMEOUT_MS) {
+                try {
+                    const latest = await fetchLatestArduinoState();
+                    const latestSensorId = Number(latest.raw.id || 0);
+                    const latestUpdatedAt = Date.parse(latest.raw.updated_at || latest.raw.created_at || '');
+                    const hasFreshArduinoResponse = changedKeys.length === 0 ||
+                        latestSensorId > baselineSensorId ||
+                        (Number.isFinite(latestUpdatedAt) && latestUpdatedAt > baselineSensorUpdatedAt);
+
+                    if (hasFreshArduinoResponse && arduinoStateMatchesTarget(latest.state, targetState, changedKeys)) {
+                        return latest;
+                    }
+                } catch (error) {
+                    console.warn('Menunggu konfirmasi Arduino:', error);
+                }
+
+                await new Promise(resolve => setTimeout(resolve, ARDUINO_CONFIRM_INTERVAL_MS));
+            }
+
+            throw new Error('Arduino belum mengirim status sesuai perintah. Coba cek koneksi ESP32 atau ulangi perintah.');
+        }
+
         async function loadElectricalControlState() {
             if (electricalControlPending) return;
 
             try {
-                const sensorResponse = await fetch('/api/sensor/latest', {
-                    cache: 'no-store',
-                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                const sensorPayload = await sensorResponse.json();
-                if (sensorPayload.success && sensorPayload.data) {
-                    renderElectricalControlState(stateFromSensorPayload(sensorPayload.data));
-                }
+                const latestArduino = await fetchLatestArduinoState();
+                renderElectricalControlState(latestArduino.state);
 
-                const params = new URLSearchParams({ device_id: IOT_DEVICE_ID, location: IOT_LOCATION });
-                const controlResponse = await fetch(`/api/ac/control?${params.toString()}`, {
+                const controlResponse = await fetch(`/api/ac/control?${iotQueryString()}`, {
                     cache: 'no-store',
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 const controlPayload = await controlResponse.json();
-                if (controlPayload.success && controlPayload.data?.manual_override) {
-                    renderElectricalControlState(controlPayload.data);
+                if (controlPayload.success && controlPayload.data) {
+                    electricalControlState.control_mode = controlPayload.data.control_mode || electricalControlState.control_mode;
+                    electricalControlState.manual_override = normalizeApiBoolean(controlPayload.data.manual_override);
+
+                    const controlMode = document.getElementById('controlMode');
+                    if (controlMode) controlMode.textContent = electricalControlState.manual_override ? 'Manual' : 'Auto';
                 }
             } catch (error) {
                 console.error('Gagal memuat status kontrol perangkat:', error);
@@ -2417,7 +2551,15 @@
         async function submitElectricalControlState(nextState) {
             electricalControlPending = true;
             const previousState = { ...electricalControlState };
-            renderElectricalControlState(nextState);
+            const targetState = { ...electricalControlState, ...nextState };
+            pendingControlTarget = targetState;
+            const changedKeys = changedControlKeys(previousState, targetState);
+            const baselineArduino = await fetchLatestArduinoState().catch(() => ({ raw: { id: 0 } }));
+            const baselineSensorId = Number(baselineArduino.raw?.id || 0);
+            const baselineSensorUpdatedAt = Date.parse(
+                baselineArduino.raw?.updated_at || baselineArduino.raw?.created_at || ''
+            ) || 0;
+            setElectricalControlsBusy(true, targetState);
 
             try {
                 const response = await fetch('/api/ac/control', {
@@ -2431,11 +2573,11 @@
                     body: JSON.stringify({
                         device_id: IOT_DEVICE_ID,
                         location: IOT_LOCATION,
-                        ac1_status: electricalControlState.ac1_status,
-                        ac2_status: electricalControlState.ac2_status,
-                        lamp_status: electricalControlState.lamp_status,
-                        ac1_temperature: electricalControlState.ac1_temperature,
-                        ac2_temperature: electricalControlState.ac2_temperature,
+                        ac1_status: targetState.ac1_status,
+                        ac2_status: targetState.ac2_status,
+                        lamp_status: targetState.lamp_status,
+                        ac1_temperature: targetState.ac1_temperature,
+                        ac2_temperature: targetState.ac2_temperature,
                         control_mode: 'manual',
                         created_by: 'dashboard_monitoring'
                     })
@@ -2446,13 +2588,24 @@
                     throw new Error(payload.message || 'Perintah kontrol gagal disimpan');
                 }
 
-                renderElectricalControlState(payload.data);
-                setTimeout(loadElectricalControlState, 1200);
+                const confirmedArduino = await waitForArduinoConfirmation(
+                    targetState,
+                    baselineSensorId,
+                    baselineSensorUpdatedAt,
+                    changedKeys
+                );
+                renderElectricalControlState({
+                    ...confirmedArduino.state,
+                    control_mode: payload.data?.control_mode || 'manual',
+                    manual_override: payload.data?.manual_override ?? true
+                });
             } catch (error) {
                 renderElectricalControlState(previousState);
                 alert(error.message || 'Gagal mengirim perintah ke perangkat IoT');
             } finally {
+                pendingControlTarget = null;
                 electricalControlPending = false;
+                setElectricalControlsBusy(false);
             }
         }
 

@@ -229,7 +229,17 @@ class SensorDataController extends Controller
     public function realtime(): JsonResponse
     {
         try {
-            $latestData = SensorData::latest()->first();
+            $query = SensorData::query();
+
+            if (request()->filled('device_id')) {
+                $query->where('device_id', request()->input('device_id'));
+            }
+
+            if (request()->filled('location')) {
+                $query->where('location', request()->input('location'));
+            }
+
+            $latestData = $query->latest()->first();
 
             if (!$latestData) {
                 return response()->json([
@@ -262,6 +272,7 @@ class SensorDataController extends Controller
                     'wifi_rssi' => $latestData->wifi_rssi,
                     'status' => $latestData->status,
                     'created_at' => $latestData->created_at->toISOString(),
+                    'updated_at' => $latestData->updated_at->toISOString(),
                     'time_ago' => $latestData->time_ago,
                     'is_recent' => $isRecent,
                     'formatted' => [
