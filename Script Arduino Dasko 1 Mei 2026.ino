@@ -167,6 +167,8 @@ int lastAppliedManualControlId = -1;
 // Dual function control variables
 bool manualOverride = false;  // Flag untuk kontrol manual
 bool autoMode = true;         // Flag untuk mode otomatis
+bool acAutoMode = true;       // Mode otomatis khusus AC
+bool lampAutoMode = true;     // Mode otomatis khusus lampu
 
 struct CurrentData {
   int jumlahOrang = 0;
@@ -1451,7 +1453,7 @@ void kontrolLampu(String &lampStatus) {
     
     Serial.println("   Relay GPIO 25: " + String(lampON ? "LOW (NC ON)" : "HIGH (NC OFF)"));
     Serial.println("   Status: " + String(lampON ? "LAMPU NYALA" : "LAMPU MATI"));
-    Serial.println("   Mode: " + String(autoMode ? "OTOMATIS" : "MANUAL"));
+    Serial.println("   Mode: " + String(lampAutoMode ? "OTOMATIS" : "MANUAL"));
     
     Serial.println("✅ Lamp control updated!");
     
@@ -1467,11 +1469,13 @@ void kontrolLampu(String &lampStatus) {
 void syncDeviceControlsAfterPeopleChange(String reason) {
   updateSensorData();
 
-  if (autoMode) {
+  if (lampAutoMode) {
     String lampStatus = currentData.lampStatus;
     kontrolLampu(lampStatus);
     currentData.lampStatus = lampStatus;
+  }
 
+  if (acAutoMode) {
     String acStatus = currentData.acStatus;
     int setTemp = currentData.setTemp;
     kontrolAC(acStatus, setTemp);
@@ -1612,6 +1616,10 @@ void checkACControlAPI() {
         int controlId          = data["id"]              | 0;
         bool manualOverrideAPI = data["manual_override"] | false;
         String controlMode     = data["control_mode"]   | "auto";
+        String acControlMode   = data["ac_control_mode"]   | controlMode;
+        String lampControlMode = data["lamp_control_mode"] | controlMode;
+        bool acManualAPI       = data["ac_manual_override"]   | (manualOverrideAPI && acControlMode == "manual");
+        bool lampManualAPI     = data["lamp_manual_override"] | (manualOverrideAPI && lampControlMode == "manual");
         bool ac1               = data["ac1_status"]     | false;
         bool ac2               = data["ac2_status"]     | false;
         bool lamp              = data["lamp_status"]    | false;
@@ -1620,21 +1628,42 @@ void checkACControlAPI() {
 
         Serial.println("   Control Mode : " + controlMode);
         Serial.println("   Manual       : " + String(manualOverrideAPI ? "YES" : "NO"));
+        Serial.println("   AC Mode      : " + acControlMode);
+        Serial.println("   Lamp Mode    : " + lampControlMode);
         Serial.println("   AC1          : " + String(ac1 ? "ON" : "OFF") + " @ " + String(temp1) + "°C");
         Serial.println("   AC2          : " + String(ac2 ? "ON" : "OFF") + " @ " + String(temp2) + "°C");
         Serial.println("   Lampu        : " + String(lamp ? "ON" : "OFF"));
 
-        // Jika server override manual, terapkan ke hardware
-        if (manualOverrideAPI && controlMode == "manual") {
-          manualOverride = true;
-          autoMode = false;
+        bool hasManualDevice = acManualAPI || lampManualAPI || (manualOverrideAPI && controlMode == "manual");
+        acAutoMode = !acManualAPI && acControlMode == "auto";
+        lampAutoMode = !lampManualAPI && lampControlMode == "auto";
+        autoMode = acAutoMode && lampAutoMode;
+        manualOverride = hasManualDevice;
+
+        // Jika server override manual, terapkan hanya ke perangkat yang mode manual.
+        if (hasManualDevice) {
 
           bool isNewControl = controlId > 0 && controlId != lastAppliedManualControlId;
           bool targetChanged = ac1 != lastAC1 || ac2 != lastAC2 || lamp != lastLamp1 ||
                                temp1 != lastTemp1 || temp2 != lastTemp2;
 
-          applyManualACControl(ac1, ac2, temp1, temp2, isNewControl);
-          applyManualLampControl(lamp, isNewControl);
+          if (acManualAPI || (manualOverrideAPI && controlMode == "manual" && acControlMode != "auto")) {
+            applyManualACControl(ac1, ac2, temp1, temp2, isNewControl);
+          } else if (acAutoMode) {
+            String acStatus = currentData.acStatus;
+            int setTemp = currentData.setTemp;
+            kontrolAC(acStatus, setTemp);
+            currentData.acStatus = acStatus;
+            currentData.setTemp = setTemp;
+          }
+
+          if (lampManualAPI || (manualOverrideAPI && controlMode == "manual" && lampControlMode != "auto")) {
+            applyManualLampControl(lamp, isNewControl);
+          } else if (lampAutoMode) {
+            String lampStatus = currentData.lampStatus;
+            kontrolLampu(lampStatus);
+            currentData.lampStatus = lampStatus;
+          }
 
           if (isNewControl || targetChanged) {
             updateTFT(currentData.acStatus, currentData.setTemp, currentData.suhuRuang);
@@ -1648,9 +1677,11 @@ void checkACControlAPI() {
             lastAppliedManualControlId = controlId;
           }
         } else if (controlMode == "auto") {
-          bool wasManualMode = manualOverride || !autoMode;
+          bool wasManualMode = manualOverride || !autoMode || !acAutoMode || !lampAutoMode;
           manualOverride = false;
           autoMode = true;
+          acAutoMode = true;
+          lampAutoMode = true;
           lastAppliedManualControlId = -1;
           Serial.println("⚙️ Mode otomatis aktif dari dashboard");
 
@@ -1956,9 +1987,9 @@ void sendDataToAPI(String reason) {
   currentData.proximity2  = sensorData.objectOutDetected;
   currentData.jumlahOrang = jumlahOrang;
 
-  // Saat auto mode, sinkronkan target dari jumlah orang.
+  // Saat mode auto per perangkat, sinkronkan target dari jumlah orang.
   // Saat manual override, pertahankan state hardware dari dashboard.
-  if (autoMode) {
+  if (acAutoMode) {
     String syncedACStatus = currentData.acStatus;
     int syncedSetTemp = currentData.setTemp;
     kontrolAC(syncedACStatus, syncedSetTemp);
@@ -2359,11 +2390,13 @@ void loop() {
       String acStatus = currentData.acStatus;
       int setTemp = currentData.setTemp;
       String lampStatus = currentData.lampStatus;
-      if (autoMode) {
+      if (acAutoMode) {
         kontrolAC(acStatus, setTemp);
-        kontrolLampu(lampStatus);
         currentData.acStatus = acStatus;
         currentData.setTemp = setTemp;
+      }
+      if (lampAutoMode) {
+        kontrolLampu(lampStatus);
         currentData.lampStatus = lampStatus;
       }
       forceFullUpdate = true; // Force immediate display update
@@ -2380,11 +2413,13 @@ void loop() {
       String acStatus = currentData.acStatus;
       int setTemp = currentData.setTemp;
       String lampStatus = currentData.lampStatus;
-      if (autoMode) {
+      if (acAutoMode) {
         kontrolAC(acStatus, setTemp);
-        kontrolLampu(lampStatus);
         currentData.acStatus = acStatus;
         currentData.setTemp = setTemp;
+      }
+      if (lampAutoMode) {
+        kontrolLampu(lampStatus);
         currentData.lampStatus = lampStatus;
       }
       forceFullUpdate = true; // Force immediate display update
@@ -2411,7 +2446,7 @@ void loop() {
   
   // Light control check (every 3 seconds) - berdasarkan jumlah orang dan lux
   static unsigned long lastLightCheck = 0;
-  if (autoMode && millis() - lastLightCheck > 3000) {
+  if (lampAutoMode && millis() - lastLightCheck > 3000) {
     String lampStatus = currentData.lampStatus;
     kontrolLampu(lampStatus);
     currentData.lampStatus = lampStatus;
@@ -2428,7 +2463,7 @@ void loop() {
   
   // AC control check berkala - berdasarkan jumlah orang
   static unsigned long lastACControlCheck = 0;
-  if (autoMode && millis() - lastACControlCheck > AC_CONTROL_CHECK_INTERVAL) {
+  if (acAutoMode && millis() - lastACControlCheck > AC_CONTROL_CHECK_INTERVAL) {
     String acStatus = currentData.acStatus;
     int setTemp = currentData.setTemp;
     kontrolAC(acStatus, setTemp);
@@ -2438,19 +2473,23 @@ void loop() {
   }
   
   // Periodic AC and lamp control check
-  if (autoMode && jumlahOrang == lastJumlahOrang) {
+  if ((acAutoMode || lampAutoMode) && jumlahOrang == lastJumlahOrang) {
     // Tetap jalankan kontrol AC dan lampu berdasarkan jumlah orang saat ini
     static unsigned long lastPeriodicCheck = 0;
     if (millis() - lastPeriodicCheck > 10000) { // Every 10 seconds
-      String acStatus = currentData.acStatus;
-      int setTemp = currentData.setTemp;
-      kontrolAC(acStatus, setTemp);
-      currentData.acStatus = acStatus;
-      currentData.setTemp = setTemp;
+      if (acAutoMode) {
+        String acStatus = currentData.acStatus;
+        int setTemp = currentData.setTemp;
+        kontrolAC(acStatus, setTemp);
+        currentData.acStatus = acStatus;
+        currentData.setTemp = setTemp;
+      }
       
-      String lampStatus = currentData.lampStatus;
-      kontrolLampu(lampStatus);
-      currentData.lampStatus = lampStatus;
+      if (lampAutoMode) {
+        String lampStatus = currentData.lampStatus;
+        kontrolLampu(lampStatus);
+        currentData.lampStatus = lampStatus;
+      }
       
       lastPeriodicCheck = millis();
     }
@@ -2531,6 +2570,8 @@ void loop() {
     }
     else if (command == "manual") {
       autoMode = false;
+      acAutoMode = false;
+      lampAutoMode = false;
       manualOverride = true;
       digitalWrite(RELAY_LAMP1, LOW);  // NC tersambung = kontrol manual penuh
       Serial.println("🔧 Mode: MANUAL - Kontrol sepenuhnya dari saklar fisik");
@@ -2538,6 +2579,8 @@ void loop() {
     }
     else if (command == "auto") {
       autoMode = true;
+      acAutoMode = true;
+      lampAutoMode = true;
       manualOverride = false;
       Serial.println("🔧 Mode: OTOMATIS - Kontrol berdasarkan jumlah orang di ruangan");
       Serial.println("   Algoritma: Ada orang = LAMPU NYALA, Kosong = LAMPU MATI");
