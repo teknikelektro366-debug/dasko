@@ -1235,19 +1235,6 @@
                 <div class="status-grid">
                     <div class="card status-card">
                         <div class="card-icon">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="title">Status Jam Kerja</div>
-                        <div id="workingHoursStatus" class="status-off">Di Luar Jam Kerja</div>
-                        <div class="work-hours-info">
-                            <div id="workingHoursRange">07:00 - 17:00 WIB</div>
-                            <div id="workingDayInfo">Senin - Jumat</div>
-                            <div id="currentTimeDisplay">--:-- (---)</div>
-                        </div>
-                    </div>
-
-                    <div class="card status-card">
-                        <div class="card-icon">
                             <i class="fas fa-leaf"></i>
                         </div>
                         <div class="title">Energi yang Di Hemat</div>
@@ -1278,23 +1265,6 @@
                         </div>
                     </div>
 
-                    <div class="card status-card">
-                        <div class="card-icon">
-                            <i class="fas fa-shield-alt"></i>
-                        </div>
-                        <div class="title">Auto Shutdown</div>
-                        <div id="autoShutdownStatus" class="status-on">AKTIF</div>
-                        <div class="shutdown-info">
-                            <div class="usage-item">
-                                <span>Waktu Tanpa Orang:</span>
-                                <span id="noPersonTime">0 menit</span>
-                            </div>
-                            <div class="usage-item">
-                                <span>Status:</span>
-                                <span id="shutdownCountdown">Normal</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
