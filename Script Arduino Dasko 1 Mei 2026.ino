@@ -1648,9 +1648,26 @@ void checkACControlAPI() {
             lastAppliedManualControlId = controlId;
           }
         } else if (controlMode == "auto") {
+          bool wasManualMode = manualOverride || !autoMode;
           manualOverride = false;
           autoMode = true;
+          lastAppliedManualControlId = -1;
           Serial.println("⚙️ Mode otomatis aktif dari dashboard");
+
+          if (wasManualMode) {
+            String acStatus = currentData.acStatus;
+            int setTemp = currentData.setTemp;
+            kontrolAC(acStatus, setTemp);
+            currentData.acStatus = acStatus;
+            currentData.setTemp = setTemp;
+
+            String lampStatus = currentData.lampStatus;
+            kontrolLampu(lampStatus);
+            currentData.lampStatus = lampStatus;
+
+            updateTFT(currentData.acStatus, currentData.setTemp, currentData.suhuRuang);
+            sendDataToAPI("AUTO_MODE_APPLIED_FROM_DASHBOARD");
+          }
         }
       }
     } else {
