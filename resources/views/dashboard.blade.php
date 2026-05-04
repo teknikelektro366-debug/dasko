@@ -397,39 +397,61 @@
         }
 
         .device-card-header {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 12px;
+            display: block;
             margin-bottom: 10px;
+            padding-right: 108px;
+            width: 100%;
+            min-width: 0;
         }
 
         .device-card-header .title {
             margin: 0;
             text-align: left;
-            flex: 1;
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .mode-switch-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            max-width: calc(100% - 36px);
+            z-index: 2;
+        }
+
+        .mode-switch-label {
+            color: #d1d5db;
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 1;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
         }
 
         .mode-switch {
-            width: 112px;
-            height: 32px;
+            width: 52px;
+            height: 30px;
             border: 0;
             border-radius: 999px;
-            background: #16a34a;
-            color: #fff;
+            background: #9ca3af;
             cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: flex-start;
-            padding: 3px;
+            display: block;
+            padding: 0;
             position: relative;
             flex-shrink: 0;
-            transition: background 0.2s ease, opacity 0.2s ease;
+            appearance: none;
+            -webkit-appearance: none;
+            box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+            transition: background 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
         }
 
-        .mode-switch.manual {
-            background: #2563eb;
-            justify-content: flex-end;
+        .mode-switch.on {
+            background: #10b981;
+            box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.12);
         }
 
         .mode-switch:disabled {
@@ -438,18 +460,63 @@
         }
 
         .mode-switch-knob {
-            width: 56px;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 26px;
             height: 26px;
             border-radius: 999px;
             background: #fff;
-            color: #111827;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: 800;
-            line-height: 1;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.22);
+            display: block;
+            transition: transform 0.2s ease;
+            box-shadow: 0 2px 5px rgba(15, 23, 42, 0.28);
+        }
+
+        .mode-switch.on .mode-switch-knob {
+            transform: translateX(22px);
+        }
+
+        body.light-mode .mode-switch-label {
+            color: #374151;
+        }
+
+        body.light-mode .mode-switch-label.manual {
+            color: #6b7280;
+        }
+
+        .device-card {
+            position: relative;
+        }
+
+        .device-card .mode-switch {
+            width: 52px;
+            min-width: 52px;
+            max-width: 52px;
+            height: 30px;
+            margin: 0;
+            padding: 0;
+            background: #9ca3af;
+            color: transparent;
+            border-radius: 999px;
+            display: block;
+            gap: 0;
+            align-items: initial;
+            justify-content: initial;
+        }
+
+        .device-card .mode-switch:hover {
+            background: #6b7280;
+        }
+
+        .device-card .mode-switch.on,
+        .device-card .mode-switch.on:hover {
+            background: #10b981;
+        }
+
+        .device-card .mode-switch:disabled,
+        .device-card .mode-switch:disabled:hover {
+            opacity: 0.65;
+            cursor: wait;
         }
 
         .mini-status,
@@ -1348,10 +1415,13 @@
                         </div>
                         <div class="device-card-header">
                             <div class="title">AC Panasonic CS-PN12WKJ (2 Unit)</div>
-                            <button type="button" class="mode-switch" data-mode-switch onclick="toggleElectricalMode()"
-                                aria-label="Ubah mode kontrol AC" aria-pressed="false">
-                                <span class="mode-switch-knob">AUTO</span>
-                            </button>
+                            <div class="mode-switch-wrap">
+                                <span class="mode-switch-label" data-mode-label="ac">AUTO</span>
+                                <button type="button" class="mode-switch" data-mode-switch="ac" onclick="toggleElectricalMode('ac')"
+                                    aria-label="Ubah mode kontrol AC" aria-pressed="false">
+                                    <span class="mode-switch-knob"></span>
+                                </button>
+                            </div>
                         </div>
                         <div class="device-info">
                             <span>Daya: 1050W per unit | Total Konsumsi: 10.8 kWh</span>
@@ -1362,13 +1432,13 @@
                             <div class="ac-unit">
                                 <span>AC Unit 1:</span>
                                 <div id="ac1Status" class="mini-status status-off">MATI</div>
-                                <button onclick="toggleACUnit(1)" class="mini-btn" data-manual-control><i
+                                <button onclick="toggleACUnit(1)" class="mini-btn" data-manual-control="ac"><i
                                         class="fas fa-power-off"></i></button>
                             </div>
                             <div class="ac-unit">
                                 <span>AC Unit 2:</span>
                                 <div id="ac2Status" class="mini-status status-off">MATI</div>
-                                <button onclick="toggleACUnit(2)" class="mini-btn" data-manual-control><i
+                                <button onclick="toggleACUnit(2)" class="mini-btn" data-manual-control="ac"><i
                                         class="fas fa-power-off"></i></button>
                             </div>
                         </div>
@@ -1377,14 +1447,14 @@
                         <div id="acStatus" class="status-off">SEMUA MATI</div>
 
                         <!-- Kontrol keseluruhan -->
-                        <button onclick="toggleAllAC()" data-manual-control><i class="fas fa-power-off"></i> KONTROL SEMUA AC</button>
+                        <button onclick="toggleAllAC()" data-manual-control="ac"><i class="fas fa-power-off"></i> KONTROL SEMUA AC</button>
 
                         <div class="device-controls">
                             <div class="title" style="margin-top:10px;">Suhu Setting</div>
                             <div class="value" id="acTempValue">24 °C</div>
                             <div class="temp-controls">
-                                <button onclick="tempUp()" class="temp-btn" data-manual-control><i class="fas fa-plus"></i></button>
-                                <button onclick="tempDown()" class="temp-btn" data-manual-control><i class="fas fa-minus"></i></button>
+                                <button onclick="tempUp()" class="temp-btn" data-manual-control="ac"><i class="fas fa-plus"></i></button>
+                                <button onclick="tempDown()" class="temp-btn" data-manual-control="ac"><i class="fas fa-minus"></i></button>
                             </div>
                         </div>
                     </div>
@@ -1396,10 +1466,13 @@
                         </div>
                         <div class="device-card-header">
                             <div class="title">Lampu TL (12 Unit - 1 Jalur)</div>
-                            <button type="button" class="mode-switch" data-mode-switch onclick="toggleElectricalMode()"
-                                aria-label="Ubah mode kontrol lampu" aria-pressed="false">
-                                <span class="mode-switch-knob">AUTO</span>
-                            </button>
+                            <div class="mode-switch-wrap">
+                                <span class="mode-switch-label" data-mode-label="lamp">AUTO</span>
+                                <button type="button" class="mode-switch" data-mode-switch="lamp" onclick="toggleElectricalMode('lamp')"
+                                    aria-label="Ubah mode kontrol lampu" aria-pressed="false">
+                                    <span class="mode-switch-knob"></span>
+                                </button>
+                            </div>
                         </div>
                         <div class="device-info">
                             <span>Daya: 22W per unit | Total Konsumsi: 2.112 kWh</span>
@@ -1410,13 +1483,13 @@
                             <div class="lamp-circuit">
                                 <span>Lampu TL</span>
                                 <div id="lamp1Status" class="mini-status status-off">MATI</div>
-                                <button onclick="toggleLampCircuit(1)" class="mini-btn" data-manual-control><i
+                                <button onclick="toggleLampCircuit(1)" class="mini-btn" data-manual-control="lamp"><i
                                         class="fas fa-power-off"></i></button>
                             </div>
                         </div>
 
                         <div id="lampStatus" class="status-off">MATI</div>
-                        <button onclick="toggleLampCircuit(1)" data-manual-control><i class="fas fa-power-off"></i> KONTROL LAMPU</button>
+                        <button onclick="toggleLampCircuit(1)" data-manual-control="lamp"><i class="fas fa-power-off"></i> KONTROL LAMPU</button>
                     </div>
 
                 </div>
@@ -2418,7 +2491,11 @@
             ac1_temperature: 24,
             ac2_temperature: 24,
             control_mode: 'auto',
-            manual_override: false
+            manual_override: false,
+            ac_control_mode: 'auto',
+            lamp_control_mode: 'auto',
+            ac_manual_override: false,
+            lamp_manual_override: false
         };
         let electricalControlPending = false;
         let pendingControlTarget = null;
@@ -2429,6 +2506,10 @@
 
         function normalizeApiBoolean(value) {
             return value === true || value === 1 || value === '1' || value === 'ON' || value === 'on';
+        }
+
+        function normalizeControlMode(value, fallback = 'auto') {
+            return value === 'manual' ? 'manual' : (value === 'auto' ? 'auto' : fallback);
         }
 
         function iotQueryString() {
@@ -2472,36 +2553,80 @@
             }
         }
 
-        function isManualElectricalMode() {
-            return electricalControlState.control_mode === 'manual' || electricalControlState.manual_override;
+        function isManualElectricalMode(deviceType = null) {
+            if (deviceType === 'ac') {
+                return electricalControlState.ac_control_mode === 'manual' || electricalControlState.ac_manual_override;
+            }
+
+            if (deviceType === 'lamp') {
+                return electricalControlState.lamp_control_mode === 'manual' || electricalControlState.lamp_manual_override;
+            }
+
+            return isManualElectricalMode('ac') || isManualElectricalMode('lamp');
         }
 
         function updateManualControlAvailability(isBusy = electricalControlPending) {
-            const isManual = isManualElectricalMode();
-
             document.querySelectorAll('[data-manual-control]').forEach(button => {
+                const deviceType = button.dataset.manualControl;
+                const isManual = isManualElectricalMode(deviceType);
                 const disabled = isBusy || !isManual;
                 button.disabled = disabled;
                 button.style.opacity = disabled ? '0.65' : '';
                 button.style.cursor = isBusy ? 'wait' : (!isManual ? 'not-allowed' : '');
-                button.title = isManual ? '' : 'Pindahkan mode ke MANUAL untuk kontrol dari web';
+                button.title = isManual ? '' : `Pindahkan mode ${deviceType === 'lamp' ? 'lampu' : 'AC'} ke MANUAL untuk kontrol dari web`;
             });
         }
 
         function renderElectricalModeSwitches() {
-            const isManual = isManualElectricalMode();
+            ['ac', 'lamp'].forEach(deviceType => {
+                const isManual = isManualElectricalMode(deviceType);
+                const isAutoOn = !isManual;
 
-            document.querySelectorAll('[data-mode-switch]').forEach(button => {
-                const knob = button.querySelector('.mode-switch-knob');
-                button.classList.toggle('manual', isManual);
-                button.setAttribute('aria-pressed', isManual ? 'true' : 'false');
-                if (knob) knob.textContent = isManual ? 'MANUAL' : 'AUTO';
+                document.querySelectorAll(`[data-mode-switch="${deviceType}"]`).forEach(button => {
+                    button.classList.toggle('on', isAutoOn);
+                    button.setAttribute('aria-pressed', isAutoOn ? 'true' : 'false');
+                });
+
+                document.querySelectorAll(`[data-mode-label="${deviceType}"]`).forEach(label => {
+                    label.textContent = isAutoOn ? 'AUTO' : 'MANUAL';
+                    label.classList.toggle('manual', !isAutoOn);
+                });
             });
 
             updateManualControlAvailability();
         }
 
+        function deriveDeviceMode(state, deviceType) {
+            const modeKey = deviceType === 'ac' ? 'ac_control_mode' : 'lamp_control_mode';
+            const overrideKey = deviceType === 'ac' ? 'ac_manual_override' : 'lamp_manual_override';
+            const previousMode = electricalControlState[modeKey] || 'auto';
+
+            if (state[modeKey] !== undefined) {
+                return normalizeControlMode(state[modeKey], previousMode);
+            }
+
+            if (state[overrideKey] !== undefined) {
+                return normalizeApiBoolean(state[overrideKey]) ? 'manual' : 'auto';
+            }
+
+            if (state.control_mode !== undefined && state.manual_override !== undefined) {
+                if (!normalizeApiBoolean(state.manual_override)) {
+                    return 'auto';
+                }
+
+                const hasSplitModeInMemory = electricalControlState.ac_control_mode !== electricalControlState.lamp_control_mode;
+                return hasSplitModeInMemory
+                    ? previousMode
+                    : normalizeControlMode(state.control_mode, previousMode);
+            }
+
+            return previousMode;
+        }
+
         function renderElectricalControlState(state) {
+            const acControlMode = deriveDeviceMode(state, 'ac');
+            const lampControlMode = deriveDeviceMode(state, 'lamp');
+
             electricalControlState = {
                 ...electricalControlState,
                 ...state,
@@ -2509,7 +2634,13 @@
                 ac2_status: normalizeApiBoolean(state.ac2_status),
                 lamp_status: normalizeApiBoolean(state.lamp_status),
                 ac1_temperature: Number(state.ac1_temperature || electricalControlState.ac1_temperature || 24),
-                ac2_temperature: Number(state.ac2_temperature || electricalControlState.ac2_temperature || 24)
+                ac2_temperature: Number(state.ac2_temperature || electricalControlState.ac2_temperature || 24),
+                ac_control_mode: acControlMode,
+                lamp_control_mode: lampControlMode,
+                ac_manual_override: acControlMode === 'manual',
+                lamp_manual_override: lampControlMode === 'manual',
+                control_mode: acControlMode === 'manual' || lampControlMode === 'manual' ? 'manual' : 'auto',
+                manual_override: acControlMode === 'manual' || lampControlMode === 'manual'
             };
 
             setControlStatusElement('ac1Status', electricalControlState.ac1_status);
@@ -2537,7 +2668,9 @@
 
             const controlMode = document.getElementById('controlMode');
             if (controlMode) {
-                controlMode.textContent = electricalControlState.manual_override ? 'Manual' : 'Auto';
+                const acModeText = electricalControlState.ac_control_mode === 'manual' ? 'AC Manual' : 'AC Auto';
+                const lampModeText = electricalControlState.lamp_control_mode === 'manual' ? 'Lampu Manual' : 'Lampu Auto';
+                controlMode.textContent = `${acModeText} / ${lampModeText}`;
             }
 
             renderElectricalModeSwitches();
@@ -2629,9 +2762,17 @@
                 if (controlPayload.success && controlPayload.data) {
                     electricalControlState.control_mode = controlPayload.data.control_mode || electricalControlState.control_mode;
                     electricalControlState.manual_override = normalizeApiBoolean(controlPayload.data.manual_override);
+                    electricalControlState.ac_control_mode = deriveDeviceMode(controlPayload.data, 'ac');
+                    electricalControlState.lamp_control_mode = deriveDeviceMode(controlPayload.data, 'lamp');
+                    electricalControlState.ac_manual_override = electricalControlState.ac_control_mode === 'manual';
+                    electricalControlState.lamp_manual_override = electricalControlState.lamp_control_mode === 'manual';
 
                     const controlMode = document.getElementById('controlMode');
-                    if (controlMode) controlMode.textContent = electricalControlState.manual_override ? 'Manual' : 'Auto';
+                    if (controlMode) {
+                        const acModeText = electricalControlState.ac_control_mode === 'manual' ? 'AC Manual' : 'AC Auto';
+                        const lampModeText = electricalControlState.lamp_control_mode === 'manual' ? 'Lampu Manual' : 'Lampu Auto';
+                        controlMode.textContent = `${acModeText} / ${lampModeText}`;
+                    }
                     renderElectricalModeSwitches();
                 }
             } catch (error) {
@@ -2639,9 +2780,9 @@
             }
         }
 
-        async function submitElectricalControlState(nextState) {
-            if (!isManualElectricalMode()) {
-                alert('Pindahkan mode ke MANUAL terlebih dahulu untuk mengontrol perangkat dari web.');
+        async function submitElectricalControlState(nextState, deviceType) {
+            if (!isManualElectricalMode(deviceType)) {
+                alert(`Pindahkan mode ${deviceType === 'lamp' ? 'lampu' : 'AC'} ke MANUAL terlebih dahulu untuk mengontrol perangkat dari web.`);
                 return;
             }
 
@@ -2674,7 +2815,11 @@
                         lamp_status: targetState.lamp_status,
                         ac1_temperature: targetState.ac1_temperature,
                         ac2_temperature: targetState.ac2_temperature,
-                        control_mode: 'manual',
+                        control_mode: targetState.ac_control_mode === 'manual' || targetState.lamp_control_mode === 'manual' ? 'manual' : 'auto',
+                        ac_control_mode: targetState.ac_control_mode,
+                        lamp_control_mode: targetState.lamp_control_mode,
+                        ac_manual_override: targetState.ac_control_mode === 'manual',
+                        lamp_manual_override: targetState.lamp_control_mode === 'manual',
                         created_by: 'dashboard_monitoring'
                     })
                 });
@@ -2692,8 +2837,12 @@
                 );
                 renderElectricalControlState({
                     ...confirmedArduino.state,
-                    control_mode: payload.data?.control_mode || 'manual',
-                    manual_override: payload.data?.manual_override ?? true
+                    control_mode: targetState.control_mode,
+                    manual_override: targetState.manual_override,
+                    ac_control_mode: targetState.ac_control_mode,
+                    lamp_control_mode: targetState.lamp_control_mode,
+                    ac_manual_override: targetState.ac_manual_override,
+                    lamp_manual_override: targetState.lamp_manual_override
                 });
             } catch (error) {
                 renderElectricalControlState(previousState);
@@ -2705,44 +2854,26 @@
             }
         }
 
-        async function setElectricalMode(mode) {
+        async function setElectricalMode(deviceType, mode) {
             if (electricalControlPending) return;
 
             const previousState = { ...electricalControlState };
+            const modeKey = deviceType === 'lamp' ? 'lamp_control_mode' : 'ac_control_mode';
+            const overrideKey = deviceType === 'lamp' ? 'lamp_manual_override' : 'ac_manual_override';
+            const targetState = {
+                ...electricalControlState,
+                [modeKey]: mode,
+                [overrideKey]: mode === 'manual'
+            };
+            targetState.control_mode = targetState.ac_control_mode === 'manual' || targetState.lamp_control_mode === 'manual'
+                ? 'manual'
+                : 'auto';
+            targetState.manual_override = targetState.control_mode === 'manual';
+
             electricalControlPending = true;
             setElectricalControlsBusy(true);
 
             try {
-                if (mode === 'auto') {
-                    const response = await fetch('/api/ac/auto-mode', {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrfToken(),
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: JSON.stringify({
-                            device_id: IOT_DEVICE_ID,
-                            location: IOT_LOCATION
-                        })
-                    });
-                    const payload = await response.json();
-
-                    if (!response.ok || !payload.success) {
-                        throw new Error(payload.message || 'Gagal mengaktifkan mode auto');
-                    }
-
-                    electricalControlState = {
-                        ...electricalControlState,
-                        control_mode: 'auto',
-                        manual_override: false
-                    };
-                    renderElectricalControlState(electricalControlState);
-                    setTimeout(loadElectricalControlState, 1200);
-                    return;
-                }
-
                 const response = await fetch('/api/ac/control', {
                     method: 'POST',
                     headers: {
@@ -2754,25 +2885,33 @@
                     body: JSON.stringify({
                         device_id: IOT_DEVICE_ID,
                         location: IOT_LOCATION,
-                        ac1_status: electricalControlState.ac1_status,
-                        ac2_status: electricalControlState.ac2_status,
-                        lamp_status: electricalControlState.lamp_status,
-                        ac1_temperature: electricalControlState.ac1_temperature,
-                        ac2_temperature: electricalControlState.ac2_temperature,
-                        control_mode: 'manual',
+                        ac1_status: targetState.ac1_status,
+                        ac2_status: targetState.ac2_status,
+                        lamp_status: targetState.lamp_status,
+                        ac1_temperature: targetState.ac1_temperature,
+                        ac2_temperature: targetState.ac2_temperature,
+                        control_mode: targetState.control_mode,
+                        ac_control_mode: targetState.ac_control_mode,
+                        lamp_control_mode: targetState.lamp_control_mode,
+                        ac_manual_override: targetState.ac_manual_override,
+                        lamp_manual_override: targetState.lamp_manual_override,
                         created_by: 'dashboard_mode_switch'
                     })
                 });
                 const payload = await response.json();
 
                 if (!response.ok || !payload.success) {
-                    throw new Error(payload.message || 'Gagal mengaktifkan mode manual');
+                    throw new Error(payload.message || `Gagal mengaktifkan mode ${mode}`);
                 }
 
                 renderElectricalControlState({
-                    ...electricalControlState,
-                    control_mode: payload.data?.control_mode || 'manual',
-                    manual_override: payload.data?.manual_override ?? true
+                    ...targetState,
+                    control_mode: payload.data?.control_mode || targetState.control_mode,
+                    manual_override: payload.data?.manual_override ?? targetState.manual_override,
+                    ac_control_mode: payload.data?.ac_control_mode || targetState.ac_control_mode,
+                    lamp_control_mode: payload.data?.lamp_control_mode || targetState.lamp_control_mode,
+                    ac_manual_override: payload.data?.ac_manual_override ?? targetState.ac_manual_override,
+                    lamp_manual_override: payload.data?.lamp_manual_override ?? targetState.lamp_manual_override
                 });
                 setTimeout(loadElectricalControlState, 1200);
             } catch (error) {
@@ -2784,12 +2923,12 @@
             }
         }
 
-        function toggleElectricalMode() {
-            setElectricalMode(isManualElectricalMode() ? 'auto' : 'manual');
+        function toggleElectricalMode(deviceType) {
+            setElectricalMode(deviceType, isManualElectricalMode(deviceType) ? 'auto' : 'manual');
         }
 
         function toggleACUnit(unitNumber) {
-            if (!isManualElectricalMode()) {
+            if (!isManualElectricalMode('ac')) {
                 alert('Pindahkan mode ke MANUAL terlebih dahulu untuk mengontrol AC dari web.');
                 return;
             }
@@ -2798,11 +2937,11 @@
             submitElectricalControlState({
                 ...electricalControlState,
                 [key]: !electricalControlState[key]
-            });
+            }, 'ac');
         }
 
         function toggleAllAC() {
-            if (!isManualElectricalMode()) {
+            if (!isManualElectricalMode('ac')) {
                 alert('Pindahkan mode ke MANUAL terlebih dahulu untuk mengontrol AC dari web.');
                 return;
             }
@@ -2812,11 +2951,11 @@
                 ...electricalControlState,
                 ac1_status: shouldTurnOn,
                 ac2_status: shouldTurnOn
-            });
+            }, 'ac');
         }
 
         function toggleLampCircuit() {
-            if (!isManualElectricalMode()) {
+            if (!isManualElectricalMode('lamp')) {
                 alert('Pindahkan mode ke MANUAL terlebih dahulu untuk mengontrol lampu dari web.');
                 return;
             }
@@ -2824,11 +2963,11 @@
             submitElectricalControlState({
                 ...electricalControlState,
                 lamp_status: !electricalControlState.lamp_status
-            });
+            }, 'lamp');
         }
 
         function tempUp() {
-            if (!isManualElectricalMode()) {
+            if (!isManualElectricalMode('ac')) {
                 alert('Pindahkan mode ke MANUAL terlebih dahulu untuk mengatur suhu AC dari web.');
                 return;
             }
@@ -2838,11 +2977,11 @@
                 ...electricalControlState,
                 ac1_temperature: nextTemp,
                 ac2_temperature: nextTemp
-            });
+            }, 'ac');
         }
 
         function tempDown() {
-            if (!isManualElectricalMode()) {
+            if (!isManualElectricalMode('ac')) {
                 alert('Pindahkan mode ke MANUAL terlebih dahulu untuk mengatur suhu AC dari web.');
                 return;
             }
@@ -2852,7 +2991,7 @@
                 ...electricalControlState,
                 ac1_temperature: nextTemp,
                 ac2_temperature: nextTemp
-            });
+            }, 'ac');
         }
 
         function startACGradualMode() {

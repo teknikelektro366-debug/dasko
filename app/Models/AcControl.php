@@ -21,7 +21,11 @@ class AcControl extends Model
         'ac1_temperature',
         'ac2_temperature',
         'control_mode',
+        'ac_control_mode',
+        'lamp_control_mode',
         'manual_override',
+        'ac_manual_override',
+        'lamp_manual_override',
         'created_by',
         'expires_at'
     ];
@@ -31,6 +35,8 @@ class AcControl extends Model
         'ac2_status' => 'boolean',
         'lamp_status' => 'boolean',
         'manual_override' => 'boolean',
+        'ac_manual_override' => 'boolean',
+        'lamp_manual_override' => 'boolean',
         'expires_at' => 'datetime'
     ];
 
@@ -73,7 +79,11 @@ class AcControl extends Model
             'ac1_temperature' => $data['ac1_temperature'] ?? 25,
             'ac2_temperature' => $data['ac2_temperature'] ?? 25,
             'control_mode' => $data['control_mode'] ?? 'manual',
+            'ac_control_mode' => $data['ac_control_mode'] ?? ($data['control_mode'] ?? 'manual'),
+            'lamp_control_mode' => $data['lamp_control_mode'] ?? ($data['control_mode'] ?? 'manual'),
             'manual_override' => $data['manual_override'] ?? true,
+            'ac_manual_override' => $data['ac_manual_override'] ?? (($data['ac_control_mode'] ?? $data['control_mode'] ?? 'manual') === 'manual'),
+            'lamp_manual_override' => $data['lamp_manual_override'] ?? (($data['lamp_control_mode'] ?? $data['control_mode'] ?? 'manual') === 'manual'),
             'created_by' => $data['created_by'] ?? 'system',
             'expires_at' => $data['expires_at'] ?? null
         ]);

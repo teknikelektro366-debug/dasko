@@ -29,6 +29,10 @@ class AcControlController extends Controller
                     'data' => [
                         'control_mode' => 'auto',
                         'manual_override' => false,
+                        'ac_control_mode' => 'auto',
+                        'lamp_control_mode' => 'auto',
+                        'ac_manual_override' => false,
+                        'lamp_manual_override' => false,
                         'ac1_status' => false,
                         'ac2_status' => false,
                         'lamp_status' => false,
@@ -47,6 +51,10 @@ class AcControlController extends Controller
                     'data' => [
                         'control_mode' => 'auto',
                         'manual_override' => false,
+                        'ac_control_mode' => 'auto',
+                        'lamp_control_mode' => 'auto',
+                        'ac_manual_override' => false,
+                        'lamp_manual_override' => false,
                         'ac1_status' => false,
                         'ac2_status' => false,
                         'lamp_status' => false,
@@ -64,6 +72,10 @@ class AcControlController extends Controller
                     'id' => $control->id,
                     'control_mode' => $control->control_mode,
                     'manual_override' => $control->manual_override,
+                    'ac_control_mode' => $control->ac_control_mode ?? ($control->manual_override ? 'manual' : 'auto'),
+                    'lamp_control_mode' => $control->lamp_control_mode ?? ($control->manual_override ? 'manual' : 'auto'),
+                    'ac_manual_override' => $control->ac_manual_override ?? $control->manual_override,
+                    'lamp_manual_override' => $control->lamp_manual_override ?? $control->manual_override,
                     'ac1_status' => $control->ac1_status,
                     'ac2_status' => $control->ac2_status,
                     'lamp_status' => $control->lamp_status,
@@ -105,6 +117,10 @@ class AcControlController extends Controller
                 'ac1_temperature' => 'required|integer|min:16|max:30',
                 'ac2_temperature' => 'required|integer|min:16|max:30',
                 'control_mode' => 'required|in:auto,manual,schedule',
+                'ac_control_mode' => 'nullable|in:auto,manual',
+                'lamp_control_mode' => 'nullable|in:auto,manual',
+                'ac_manual_override' => 'nullable|boolean',
+                'lamp_manual_override' => 'nullable|boolean',
                 'duration_minutes' => 'nullable|integer|min:1|max:1440', // Max 24 hours
                 'created_by' => 'string|max:255'
             ]);
@@ -121,6 +137,16 @@ class AcControlController extends Controller
             $location = $request->input('location', 'Ruang Dosen Prodi Teknik Elektro');
             $durationMinutes = $request->input('duration_minutes');
             $existingControl = AcControl::getActiveControl($deviceId, $location);
+            $legacyManualMode = $request->input('control_mode') === 'manual';
+            $acControlMode = $request->input('ac_control_mode', $legacyManualMode ? 'manual' : 'auto');
+            $lampControlMode = $request->input('lamp_control_mode', $legacyManualMode ? 'manual' : 'auto');
+            $acManualOverride = $request->has('ac_manual_override')
+                ? $request->boolean('ac_manual_override')
+                : $acControlMode === 'manual';
+            $lampManualOverride = $request->has('lamp_manual_override')
+                ? $request->boolean('lamp_manual_override')
+                : $lampControlMode === 'manual';
+            $controlMode = ($acManualOverride || $lampManualOverride) ? 'manual' : 'auto';
 
             $controlData = [
                 'ac1_status' => $request->input('ac1_status'),
@@ -130,8 +156,12 @@ class AcControlController extends Controller
                     : (bool) ($existingControl?->lamp_status ?? false),
                 'ac1_temperature' => $request->input('ac1_temperature'),
                 'ac2_temperature' => $request->input('ac2_temperature'),
-                'control_mode' => $request->input('control_mode'),
-                'manual_override' => $request->input('control_mode') === 'manual',
+                'control_mode' => $controlMode,
+                'manual_override' => $controlMode === 'manual',
+                'ac_control_mode' => $acControlMode,
+                'lamp_control_mode' => $lampControlMode,
+                'ac_manual_override' => $acManualOverride,
+                'lamp_manual_override' => $lampManualOverride,
                 'created_by' => $request->input('created_by', 'dashboard'),
                 'expires_at' => $durationMinutes ? now()->addMinutes($durationMinutes) : null
             ];
@@ -153,6 +183,10 @@ class AcControlController extends Controller
                     'id' => $control->id,
                     'control_mode' => $control->control_mode,
                     'manual_override' => $control->manual_override,
+                    'ac_control_mode' => $control->ac_control_mode,
+                    'lamp_control_mode' => $control->lamp_control_mode,
+                    'ac_manual_override' => $control->ac_manual_override,
+                    'lamp_manual_override' => $control->lamp_manual_override,
                     'ac1_status' => $control->ac1_status,
                     'ac2_status' => $control->ac2_status,
                     'lamp_status' => $control->lamp_status,
@@ -195,7 +229,11 @@ class AcControlController extends Controller
                 'ac1_temperature' => 25,
                 'ac2_temperature' => 25,
                 'control_mode' => 'manual',
+                'ac_control_mode' => 'manual',
+                'lamp_control_mode' => 'manual',
                 'manual_override' => true,
+                'ac_manual_override' => true,
+                'lamp_manual_override' => true,
                 'created_by' => 'emergency_stop',
                 'expires_at' => null
             ];
@@ -214,6 +252,8 @@ class AcControlController extends Controller
                 'data' => [
                     'id' => $control->id,
                     'control_mode' => $control->control_mode,
+                    'ac_control_mode' => $control->ac_control_mode,
+                    'lamp_control_mode' => $control->lamp_control_mode,
                     'ac1_status' => false,
                     'ac2_status' => false,
                     'lamp_status' => false,
@@ -260,6 +300,10 @@ class AcControlController extends Controller
                 'data' => [
                     'control_mode' => 'auto',
                     'manual_override' => false,
+                    'ac_control_mode' => 'auto',
+                    'lamp_control_mode' => 'auto',
+                    'ac_manual_override' => false,
+                    'lamp_manual_override' => false,
                     'message' => 'Arduino will control AC based on people count'
                 ]
             ]);
