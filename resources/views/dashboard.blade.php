@@ -1207,25 +1207,6 @@
                         </div>
                         <div class="data-timestamp">Jumlah maksimum</div>
                     </div>
-
-                    <div class="card sensor-card">
-                        <div class="card-icon">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="title">Data Age</div>
-                        <div class="value">
-                            <?php if ($sensorData['data_age_minutes'] <= 2): ?>
-                            <span style="color: #28a745;">Fresh</span>
-                            <?php elseif ($sensorData['data_age_minutes'] <= 10): ?>
-                            <span style="color: #ffc107;"><?php    echo e($sensorData['data_age_minutes']); ?>
-                                min</span>
-                            <?php else: ?>
-                            <span style="color: #dc3545;"><?php    echo e($sensorData['data_age_minutes']); ?>
-                                min</span>
-                            <?php endif; ?>
-                        </div>
-                        <div class="data-timestamp"><?php echo e($sensorData['time_ago'] ?? ''); ?></div>
-                    </div>
                 </div>
             </div>
 
