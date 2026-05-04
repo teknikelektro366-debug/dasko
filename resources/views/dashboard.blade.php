@@ -396,6 +396,62 @@
             transform: translateX(25px);
         }
 
+        .device-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .device-card-header .title {
+            margin: 0;
+            text-align: left;
+            flex: 1;
+        }
+
+        .mode-switch {
+            width: 112px;
+            height: 32px;
+            border: 0;
+            border-radius: 999px;
+            background: #16a34a;
+            color: #fff;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 3px;
+            position: relative;
+            flex-shrink: 0;
+            transition: background 0.2s ease, opacity 0.2s ease;
+        }
+
+        .mode-switch.manual {
+            background: #2563eb;
+            justify-content: flex-end;
+        }
+
+        .mode-switch:disabled {
+            opacity: 0.65;
+            cursor: wait;
+        }
+
+        .mode-switch-knob {
+            width: 56px;
+            height: 26px;
+            border-radius: 999px;
+            background: #fff;
+            color: #111827;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 800;
+            line-height: 1;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.22);
+        }
+
         .mini-status,
         .status-on,
         .status-off,
@@ -1290,7 +1346,13 @@
                         <div class="card-icon">
                             <i class="fas fa-snowflake"></i>
                         </div>
-                        <div class="title">AC Panasonic CS-PN12WKJ (2 Unit)</div>
+                        <div class="device-card-header">
+                            <div class="title">AC Panasonic CS-PN12WKJ (2 Unit)</div>
+                            <button type="button" class="mode-switch" data-mode-switch onclick="toggleElectricalMode()"
+                                aria-label="Ubah mode kontrol AC" aria-pressed="false">
+                                <span class="mode-switch-knob">AUTO</span>
+                            </button>
+                        </div>
                         <div class="device-info">
                             <span>Daya: 1050W per unit | Total Konsumsi: 10.8 kWh</span>
                         </div>
@@ -1300,13 +1362,13 @@
                             <div class="ac-unit">
                                 <span>AC Unit 1:</span>
                                 <div id="ac1Status" class="mini-status status-off">MATI</div>
-                                <button onclick="toggleACUnit(1)" class="mini-btn"><i
+                                <button onclick="toggleACUnit(1)" class="mini-btn" data-manual-control><i
                                         class="fas fa-power-off"></i></button>
                             </div>
                             <div class="ac-unit">
                                 <span>AC Unit 2:</span>
                                 <div id="ac2Status" class="mini-status status-off">MATI</div>
-                                <button onclick="toggleACUnit(2)" class="mini-btn"><i
+                                <button onclick="toggleACUnit(2)" class="mini-btn" data-manual-control><i
                                         class="fas fa-power-off"></i></button>
                             </div>
                         </div>
@@ -1315,14 +1377,14 @@
                         <div id="acStatus" class="status-off">SEMUA MATI</div>
 
                         <!-- Kontrol keseluruhan -->
-                        <button onclick="toggleAllAC()"><i class="fas fa-power-off"></i> KONTROL SEMUA AC</button>
+                        <button onclick="toggleAllAC()" data-manual-control><i class="fas fa-power-off"></i> KONTROL SEMUA AC</button>
 
                         <div class="device-controls">
                             <div class="title" style="margin-top:10px;">Suhu Setting</div>
                             <div class="value" id="acTempValue">24 °C</div>
                             <div class="temp-controls">
-                                <button onclick="tempUp()" class="temp-btn"><i class="fas fa-plus"></i></button>
-                                <button onclick="tempDown()" class="temp-btn"><i class="fas fa-minus"></i></button>
+                                <button onclick="tempUp()" class="temp-btn" data-manual-control><i class="fas fa-plus"></i></button>
+                                <button onclick="tempDown()" class="temp-btn" data-manual-control><i class="fas fa-minus"></i></button>
                             </div>
                         </div>
                     </div>
@@ -1332,7 +1394,13 @@
                         <div class="card-icon">
                             <i class="fas fa-lightbulb"></i>
                         </div>
-                        <div class="title">Lampu TL (12 Unit - 1 Jalur)</div>
+                        <div class="device-card-header">
+                            <div class="title">Lampu TL (12 Unit - 1 Jalur)</div>
+                            <button type="button" class="mode-switch" data-mode-switch onclick="toggleElectricalMode()"
+                                aria-label="Ubah mode kontrol lampu" aria-pressed="false">
+                                <span class="mode-switch-knob">AUTO</span>
+                            </button>
+                        </div>
                         <div class="device-info">
                             <span>Daya: 22W per unit | Total Konsumsi: 2.112 kWh</span>
                         </div>
@@ -1342,13 +1410,13 @@
                             <div class="lamp-circuit">
                                 <span>Lampu TL</span>
                                 <div id="lamp1Status" class="mini-status status-off">MATI</div>
-                                <button onclick="toggleLampCircuit(1)" class="mini-btn"><i
+                                <button onclick="toggleLampCircuit(1)" class="mini-btn" data-manual-control><i
                                         class="fas fa-power-off"></i></button>
                             </div>
                         </div>
 
                         <div id="lampStatus" class="status-off">MATI</div>
-                        <button onclick="toggleLampCircuit(1)"><i class="fas fa-power-off"></i> KONTROL LAMPU</button>
+                        <button onclick="toggleLampCircuit(1)" data-manual-control><i class="fas fa-power-off"></i> KONTROL LAMPU</button>
                     </div>
 
                 </div>
@@ -2388,20 +2456,11 @@
         }
 
         function setElectricalControlsBusy(isBusy, targetState = null) {
-            const buttons = document.querySelectorAll([
-                'button[onclick^="toggleACUnit"]',
-                'button[onclick^="toggleAllAC"]',
-                'button[onclick^="toggleLampCircuit"]',
-                'button[onclick^="tempUp"]',
-                'button[onclick^="tempDown"]',
-                'button[onclick^="startACGradualMode"]'
-            ].join(','));
-
-            buttons.forEach(button => {
+            document.querySelectorAll('[data-mode-switch]').forEach(button => {
                 button.disabled = isBusy;
-                button.style.opacity = isBusy ? '0.65' : '';
-                button.style.cursor = isBusy ? 'wait' : '';
             });
+
+            updateManualControlAvailability(isBusy);
 
             if (isBusy && targetState) {
                 if (targetState.ac1_status !== electricalControlState.ac1_status) setPendingStatusElement('ac1Status');
@@ -2411,6 +2470,35 @@
                     setPendingStatusElement('lampStatus');
                 }
             }
+        }
+
+        function isManualElectricalMode() {
+            return electricalControlState.control_mode === 'manual' || electricalControlState.manual_override;
+        }
+
+        function updateManualControlAvailability(isBusy = electricalControlPending) {
+            const isManual = isManualElectricalMode();
+
+            document.querySelectorAll('[data-manual-control]').forEach(button => {
+                const disabled = isBusy || !isManual;
+                button.disabled = disabled;
+                button.style.opacity = disabled ? '0.65' : '';
+                button.style.cursor = isBusy ? 'wait' : (!isManual ? 'not-allowed' : '');
+                button.title = isManual ? '' : 'Pindahkan mode ke MANUAL untuk kontrol dari web';
+            });
+        }
+
+        function renderElectricalModeSwitches() {
+            const isManual = isManualElectricalMode();
+
+            document.querySelectorAll('[data-mode-switch]').forEach(button => {
+                const knob = button.querySelector('.mode-switch-knob');
+                button.classList.toggle('manual', isManual);
+                button.setAttribute('aria-pressed', isManual ? 'true' : 'false');
+                if (knob) knob.textContent = isManual ? 'MANUAL' : 'AUTO';
+            });
+
+            updateManualControlAvailability();
         }
 
         function renderElectricalControlState(state) {
@@ -2451,6 +2539,8 @@
             if (controlMode) {
                 controlMode.textContent = electricalControlState.manual_override ? 'Manual' : 'Auto';
             }
+
+            renderElectricalModeSwitches();
         }
 
         function stateFromSensorPayload(data) {
@@ -2542,6 +2632,7 @@
 
                     const controlMode = document.getElementById('controlMode');
                     if (controlMode) controlMode.textContent = electricalControlState.manual_override ? 'Manual' : 'Auto';
+                    renderElectricalModeSwitches();
                 }
             } catch (error) {
                 console.error('Gagal memuat status kontrol perangkat:', error);
@@ -2549,6 +2640,11 @@
         }
 
         async function submitElectricalControlState(nextState) {
+            if (!isManualElectricalMode()) {
+                alert('Pindahkan mode ke MANUAL terlebih dahulu untuk mengontrol perangkat dari web.');
+                return;
+            }
+
             electricalControlPending = true;
             const previousState = { ...electricalControlState };
             const targetState = { ...electricalControlState, ...nextState };
@@ -2609,7 +2705,95 @@
             }
         }
 
+        async function setElectricalMode(mode) {
+            if (electricalControlPending) return;
+
+            const previousState = { ...electricalControlState };
+            electricalControlPending = true;
+            setElectricalControlsBusy(true);
+
+            try {
+                if (mode === 'auto') {
+                    const response = await fetch('/api/ac/auto-mode', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken(),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            device_id: IOT_DEVICE_ID,
+                            location: IOT_LOCATION
+                        })
+                    });
+                    const payload = await response.json();
+
+                    if (!response.ok || !payload.success) {
+                        throw new Error(payload.message || 'Gagal mengaktifkan mode auto');
+                    }
+
+                    electricalControlState = {
+                        ...electricalControlState,
+                        control_mode: 'auto',
+                        manual_override: false
+                    };
+                    renderElectricalControlState(electricalControlState);
+                    setTimeout(loadElectricalControlState, 1200);
+                    return;
+                }
+
+                const response = await fetch('/api/ac/control', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        device_id: IOT_DEVICE_ID,
+                        location: IOT_LOCATION,
+                        ac1_status: electricalControlState.ac1_status,
+                        ac2_status: electricalControlState.ac2_status,
+                        lamp_status: electricalControlState.lamp_status,
+                        ac1_temperature: electricalControlState.ac1_temperature,
+                        ac2_temperature: electricalControlState.ac2_temperature,
+                        control_mode: 'manual',
+                        created_by: 'dashboard_mode_switch'
+                    })
+                });
+                const payload = await response.json();
+
+                if (!response.ok || !payload.success) {
+                    throw new Error(payload.message || 'Gagal mengaktifkan mode manual');
+                }
+
+                renderElectricalControlState({
+                    ...electricalControlState,
+                    control_mode: payload.data?.control_mode || 'manual',
+                    manual_override: payload.data?.manual_override ?? true
+                });
+                setTimeout(loadElectricalControlState, 1200);
+            } catch (error) {
+                renderElectricalControlState(previousState);
+                alert(error.message || 'Gagal mengubah mode kontrol perangkat');
+            } finally {
+                electricalControlPending = false;
+                setElectricalControlsBusy(false);
+            }
+        }
+
+        function toggleElectricalMode() {
+            setElectricalMode(isManualElectricalMode() ? 'auto' : 'manual');
+        }
+
         function toggleACUnit(unitNumber) {
+            if (!isManualElectricalMode()) {
+                alert('Pindahkan mode ke MANUAL terlebih dahulu untuk mengontrol AC dari web.');
+                return;
+            }
+
             const key = unitNumber === 1 ? 'ac1_status' : 'ac2_status';
             submitElectricalControlState({
                 ...electricalControlState,
@@ -2618,6 +2802,11 @@
         }
 
         function toggleAllAC() {
+            if (!isManualElectricalMode()) {
+                alert('Pindahkan mode ke MANUAL terlebih dahulu untuk mengontrol AC dari web.');
+                return;
+            }
+
             const shouldTurnOn = !(electricalControlState.ac1_status && electricalControlState.ac2_status);
             submitElectricalControlState({
                 ...electricalControlState,
@@ -2627,6 +2816,11 @@
         }
 
         function toggleLampCircuit() {
+            if (!isManualElectricalMode()) {
+                alert('Pindahkan mode ke MANUAL terlebih dahulu untuk mengontrol lampu dari web.');
+                return;
+            }
+
             submitElectricalControlState({
                 ...electricalControlState,
                 lamp_status: !electricalControlState.lamp_status
@@ -2634,6 +2828,11 @@
         }
 
         function tempUp() {
+            if (!isManualElectricalMode()) {
+                alert('Pindahkan mode ke MANUAL terlebih dahulu untuk mengatur suhu AC dari web.');
+                return;
+            }
+
             const nextTemp = Math.min(30, electricalControlState.ac1_temperature + 1);
             submitElectricalControlState({
                 ...electricalControlState,
@@ -2643,6 +2842,11 @@
         }
 
         function tempDown() {
+            if (!isManualElectricalMode()) {
+                alert('Pindahkan mode ke MANUAL terlebih dahulu untuk mengatur suhu AC dari web.');
+                return;
+            }
+
             const nextTemp = Math.max(16, electricalControlState.ac1_temperature - 1);
             submitElectricalControlState({
                 ...electricalControlState,
@@ -2656,6 +2860,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
+            renderElectricalModeSwitches();
             updateMainDashboardCards();
             loadElectricalControlState();
             setInterval(updateMainDashboardCards, 3000);
