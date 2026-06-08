@@ -13,6 +13,11 @@ use Illuminate\Support\Facades\Log;
 class PdfReportController extends Controller
 {
     private const PDF_MAX_DETAIL_ROWS = 300;
+    private const ELECTRICITY_TARIFF_PER_KWH = 1500;
+    private const AC_POWER_WATT = 750;
+    private const AC_BASELINE_HOURS_PER_DAY = 10;
+    private const LAMP_POWER_WATT = 18;
+    private const LAMP_BASELINE_HOURS_PER_DAY = 24;
 
     /**
      * Generate Daily PDF Report
@@ -829,6 +834,16 @@ class PdfReportController extends Controller
     
     private function calculateEfficiencySummary($data, $startDate, $endDate)
     {
+        $periodDays = max(1, $startDate->copy()->startOfDay()->diffInDays($endDate->copy()->startOfDay()) + 1);
+        $usageHours = $this->calculateDeviceUsageHours($data->sortBy('created_at')->values(), $endDate);
+
+        $acBeforeKwh = $this->calculateEnergyKwh(self::AC_POWER_WATT, self::AC_BASELINE_HOURS_PER_DAY * $periodDays);
+        $acAfterKwh = $this->calculateEnergyKwh(self::AC_POWER_WATT, $usageHours['ac']);
+        $lampBeforeKwh = $this->calculateEnergyKwh(self::LAMP_POWER_WATT, self::LAMP_BASELINE_HOURS_PER_DAY * $periodDays);
+        $lampAfterKwh = $this->calculateEnergyKwh(self::LAMP_POWER_WATT, $usageHours['lamp']);
+        $totalBeforeKwh = $acBeforeKwh + $lampBeforeKwh;
+        $totalAfterKwh = $acAfterKwh + $lampAfterKwh;
+
         $acOnData = $data->filter(function ($item) {
             return $this->isStatusOn($item->ac_status ?? null);
         });
@@ -840,6 +855,8 @@ class PdfReportController extends Controller
         
         return [
             'period' => $startDate->format('d M Y') . ' - ' . $endDate->format('d M Y'),
+            'period_days' => $periodDays,
+            'tariff_per_kwh' => self::ELECTRICITY_TARIFF_PER_KWH,
             'total_records' => $data->count(),
             'ac_usage_percentage' => $acValidStatusCount > 0 ? round(($acOnData->count() / $acValidStatusCount) * 100, 1) : 0,
             'lamp_usage_percentage' => $lampValidStatusCount > 0 ? round(($lampOnData->count() / $lampValidStatusCount) * 100, 1) : 0,
@@ -847,7 +864,67 @@ class PdfReportController extends Controller
             'avg_people_when_lamp_on' => $this->calculateAveragePeople($lampOnData),
             'avg_temperature' => $this->calculateAverageFloat($data, 'room_temperature', 1),
             'avg_humidity' => $this->calculateAverageFloat($data, 'humidity', 1),
+            'devices' => [
+                [
+                    'name' => 'Lampu LED',
+                    'power_watt' => self::LAMP_POWER_WATT,
+                    'baseline_hours' => self::LAMP_BASELINE_HOURS_PER_DAY * $periodDays,
+                    'actual_hours' => round($usageHours['lamp'], 2),
+                    'energy_before_kwh' => round($lampBeforeKwh, 3),
+                    'energy_after_kwh' => round($lampAfterKwh, 3),
+                    'cost_before' => round($lampBeforeKwh * self::ELECTRICITY_TARIFF_PER_KWH),
+                    'cost_after' => round($lampAfterKwh * self::ELECTRICITY_TARIFF_PER_KWH),
+                    'efficiency_percentage' => $this->calculateEfficiencyPercentage($lampBeforeKwh, $lampAfterKwh),
+                ],
+                [
+                    'name' => 'AC',
+                    'power_watt' => self::AC_POWER_WATT,
+                    'baseline_hours' => self::AC_BASELINE_HOURS_PER_DAY * $periodDays,
+                    'actual_hours' => round($usageHours['ac'], 2),
+                    'energy_before_kwh' => round($acBeforeKwh, 3),
+                    'energy_after_kwh' => round($acAfterKwh, 3),
+                    'cost_before' => round($acBeforeKwh * self::ELECTRICITY_TARIFF_PER_KWH),
+                    'cost_after' => round($acAfterKwh * self::ELECTRICITY_TARIFF_PER_KWH),
+                    'efficiency_percentage' => $this->calculateEfficiencyPercentage($acBeforeKwh, $acAfterKwh),
+                ],
+            ],
+            'total_energy_before_kwh' => round($totalBeforeKwh, 3),
+            'total_energy_after_kwh' => round($totalAfterKwh, 3),
+            'total_cost_before' => round($totalBeforeKwh * self::ELECTRICITY_TARIFF_PER_KWH),
+            'total_cost_after' => round($totalAfterKwh * self::ELECTRICITY_TARIFF_PER_KWH),
+            'total_efficiency_percentage' => $this->calculateEfficiencyPercentage($totalBeforeKwh, $totalAfterKwh),
         ];
+    }
+
+    private function calculateDeviceUsageHours(Collection $data, Carbon $endDate): array
+    {
+        $hours = ['ac' => 0.0, 'lamp' => 0.0];
+
+        for ($index = 0; $index < $data->count(); $index++) {
+            $current = $data[$index];
+            $nextTime = $data->has($index + 1) ? $data[$index + 1]->created_at : $endDate;
+            $durationHours = max(0, Carbon::parse($current->created_at)->floatDiffInHours(Carbon::parse($nextTime)));
+
+            if ($this->isStatusOn($current->ac_status ?? null)) {
+                $hours['ac'] += $durationHours;
+            }
+
+            if ($this->isStatusOn($current->lamp_status ?? null)) {
+                $hours['lamp'] += $durationHours;
+            }
+        }
+
+        return $hours;
+    }
+
+    private function calculateEnergyKwh(float $powerWatt, float $hours): float
+    {
+        return ($powerWatt * $hours) / 1000;
+    }
+
+    private function calculateEfficiencyPercentage(float $energyBeforeKwh, float $energyAfterKwh): float
+    {
+        return $energyBeforeKwh > 0 ? round((($energyBeforeKwh - $energyAfterKwh) / $energyBeforeKwh) * 100, 1) : 0.0;
     }
 
     private function calculateAveragePeople(Collection $data): int
