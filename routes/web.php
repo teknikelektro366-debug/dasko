@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DeviceController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ACRuleController;
 use App\Http\Controllers\Admin\EnergyLogController;
+use App\Http\Controllers\SitePasswordController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -14,6 +15,11 @@ use Illuminate\Support\Facades\Route;
 | Web Routes
 |--------------------------------------------------------------------------
 */
+
+Route::get('/unlock', [SitePasswordController::class, 'show'])->name('site-password.show');
+Route::post('/unlock', [SitePasswordController::class, 'unlock'])->name('site-password.unlock');
+
+Route::middleware('site.password')->group(function () {
 
 // Public routes - Direct access to dashboard (no login required for now)
 Route::get('/', function () {
@@ -114,3 +120,5 @@ Route::get('/dashboard.html', function () {
         Route::post('/logs/clear', [AdminController::class, 'clearLogs'])->name('logs.clear');
     });
 // });
+
+});
