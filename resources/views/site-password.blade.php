@@ -103,15 +103,36 @@
 
         .password-toggle {
             position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
+            right: 4px;
+            top: 0;
+            bottom: 0;
+            width: 42px;
             border: none;
             background: transparent;
             color: #6b7280;
             cursor: pointer;
             font-size: 1rem;
-            padding: 4px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        .password-toggle:hover {
+            color: #0e3261;
+        }
+
+        .password-toggle:focus {
+            outline: none;
+        }
+
+        .password-toggle:focus-visible {
+            color: #0e3261;
+            border-radius: 6px;
+            box-shadow: inset 0 0 0 2px rgba(14, 50, 97, 0.18);
         }
 
         .password-toggle:hover {
@@ -231,8 +252,8 @@
                         <div class="password-field">
                             <input id="password" class="unlock-input" type="password" name="password" required autofocus
                                 autocomplete="current-password" placeholder="Masukkan password">
-                            <button type="button" class="password-toggle" onclick="togglePasswordVisibility()"
-                                aria-label="Tampilkan password" aria-pressed="false">
+                            <button type="button" class="password-toggle" aria-label="Tampilkan password"
+                                aria-pressed="false">
                                 <i class="fas fa-eye" id="passwordToggleIcon"></i>
                             </button>
                         </div>
@@ -253,17 +274,23 @@
         </div>
     </div>
     <script>
-        function togglePasswordVisibility() {
-            const input = document.getElementById('password');
-            const icon = document.getElementById('passwordToggleIcon');
-            const button = icon.closest('button');
-            const shouldShow = input.type === 'password';
+        const passwordInput = document.getElementById('password');
+        const passwordToggle = document.querySelector('.password-toggle');
+        const passwordToggleIcon = document.getElementById('passwordToggleIcon');
 
-            input.type = shouldShow ? 'text' : 'password';
-            icon.className = shouldShow ? 'fas fa-eye-slash' : 'fas fa-eye';
-            button.setAttribute('aria-label', shouldShow ? 'Sembunyikan password' : 'Tampilkan password');
-            button.setAttribute('aria-pressed', shouldShow ? 'true' : 'false');
-        }
+        passwordToggle.addEventListener('pointerdown', function (event) {
+            event.preventDefault();
+        });
+
+        passwordToggle.addEventListener('click', function () {
+            const shouldShow = passwordInput.type === 'password';
+
+            passwordInput.type = shouldShow ? 'text' : 'password';
+            passwordToggleIcon.className = shouldShow ? 'fas fa-eye-slash' : 'fas fa-eye';
+            passwordToggle.setAttribute('aria-label', shouldShow ? 'Sembunyikan password' : 'Tampilkan password');
+            passwordToggle.setAttribute('aria-pressed', shouldShow ? 'true' : 'false');
+            passwordInput.focus({ preventScroll: true });
+        });
     </script>
 </body>
 
