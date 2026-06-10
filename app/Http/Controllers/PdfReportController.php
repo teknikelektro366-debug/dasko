@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 
 class PdfReportController extends Controller
 {
-    private const PDF_MAX_DETAIL_ROWS = 300;
+    private const PDF_MAX_DETAIL_ROWS = 100;
     private const ELECTRICITY_TARIFF_PER_KWH = 1500;
     private const AC_POWER_WATT = 750;
     private const AC_BASELINE_HOURS_PER_DAY = 10;
@@ -75,12 +75,7 @@ class PdfReportController extends Controller
                 ]);
             }
 
-            if ($requestedPart > $totalParts) {
-                return response()->json([
-                    'error' => 'Parameter part melebihi total bagian laporan',
-                    'total_parts' => $totalParts,
-                ], 422);
-            }
+            $requestedPart = min($requestedPart, $totalParts);
 
             $offset = ($requestedPart - 1) * self::PDF_MAX_DETAIL_ROWS;
             $data = (clone $baseQuery)
@@ -324,12 +319,7 @@ class PdfReportController extends Controller
                     ]);
                 }
 
-                if ($requestedPart > $totalParts) {
-                    return response()->json([
-                        'error' => 'Parameter part melebihi total bagian laporan',
-                        'total_parts' => $totalParts,
-                    ], 422);
-                }
+                $requestedPart = min($requestedPart, $totalParts);
 
                 $offset = ($requestedPart - 1) * self::PDF_MAX_DETAIL_ROWS;
                 $data = (clone $query)
@@ -985,16 +975,22 @@ class PdfReportController extends Controller
     private function downloadPdfWithFallback(string $view, array $data, string $filename)
     {
         $pdfBinary = $this->renderPdfBinary($view, $data);
+        $safeFilename = str_replace(['\\', '/', '"'], '_', $filename);
 
         return response($pdfBinary, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="' . $safeFilename . '"',
+            'Content-Length' => (string) strlen($pdfBinary),
+            'Cache-Control' => 'private, no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
         ]);
     }
 
     private function renderPdfBinary(string $view, array $data): string
     {
         try {
+            @set_time_limit(120);
+
             $html = view($view, $data)->render();
 
             // Guard untuk shared hosting: hindari render HTML terlalu besar.
