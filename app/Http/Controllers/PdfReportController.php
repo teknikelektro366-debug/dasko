@@ -7,6 +7,7 @@ use Dompdf\Dompdf;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -305,24 +306,64 @@ class PdfReportController extends Controller
             ];
             
             if ($format === 'pdf') {
-                $totalParts = max(1, (int) ceil($totalRecords / self::PDF_MAX_DETAIL_ROWS));
-                $requestedPart = max(1, (int) $request->input('part', 1));
+                $reportDates = collect(CarbonPeriod::create($startDate->copy()->startOfDay(), '1 day', $endDate->copy()->startOfDay()))
+                    ->map(function (Carbon $date) {
+                        return $date->copy();
+                    })
+                    ->values();
+                $totalParts = max(1, $reportDates->count());
+                $requestedPart = min(max(1, (int) $request->input('part', 1)), $totalParts);
 
                 if ($request->boolean('meta')) {
                     return response()->json([
                         'success' => true,
                         'total_records' => $totalRecords,
-                        'per_file' => self::PDF_MAX_DETAIL_ROWS,
+                        'per_file' => '1 hari, maksimal ' . self::PDF_MAX_DETAIL_ROWS . ' record detail',
                         'total_parts' => $totalParts,
                         'date_from' => $startDate->format('Y-m-d'),
                         'date_to' => $endDate->format('Y-m-d'),
+                        'dates' => $reportDates->map(function (Carbon $date) {
+                            return $date->format('Y-m-d');
+                        })->all(),
                     ]);
                 }
 
-                $requestedPart = min($requestedPart, $totalParts);
+                $reportDate = $reportDates->get($requestedPart - 1, $startDate->copy());
+                $dayStart = $reportDate->copy()->startOfDay();
+                $dayEnd = $reportDate->copy()->endOfDay();
 
-                $offset = ($requestedPart - 1) * self::PDF_MAX_DETAIL_ROWS;
-                $data = (clone $query)
+                $dayQuery = SensorData::whereBetween('created_at', [$dayStart, $dayEnd]);
+
+                if ($deviceType && $deviceType !== 'all') {
+                    $dayQuery->where('device_id', $deviceType);
+                }
+
+                $dayTotalRecords = (clone $dayQuery)->count();
+                $dayAggregate = (clone $dayQuery)->selectRaw("
+                    COUNT(*) as total_records,
+                    AVG(people_count) as avg_people,
+                    MAX(people_count) as max_people,
+                    AVG(room_temperature) as avg_temperature,
+                    AVG(humidity) as avg_humidity,
+                    AVG(light_level) as avg_light,
+                    SUM(CASE WHEN UPPER(TRIM(COALESCE(ac_status, ''))) = 'ON' THEN 1 ELSE 0 END) as ac_on_count,
+                    SUM(CASE WHEN UPPER(TRIM(COALESCE(lamp_status, ''))) = 'ON' THEN 1 ELSE 0 END) as lamp_on_count
+                ")->first();
+
+                $dailySummary = [
+                    'period' => $dayStart->format('d M Y'),
+                    'total_records' => (int) ($dayAggregate->total_records ?? $dayTotalRecords),
+                    'avg_people' => (int) round((float) ($dayAggregate->avg_people ?? 0)),
+                    'max_people' => (int) ($dayAggregate->max_people ?? 0),
+                    'avg_temperature' => round((float) ($dayAggregate->avg_temperature ?? 0), 1),
+                    'avg_humidity' => round((float) ($dayAggregate->avg_humidity ?? 0), 1),
+                    'avg_light' => round((float) ($dayAggregate->avg_light ?? 0), 0),
+                    'ac_on_count' => (int) ($dayAggregate->ac_on_count ?? 0),
+                    'lamp_on_count' => (int) ($dayAggregate->lamp_on_count ?? 0),
+                    'device_type' => $deviceType === 'all' ? 'Semua Perangkat' : $deviceType,
+                ];
+
+                $data = (clone $dayQuery)
                     ->select([
                         'id',
                         'device_id',
@@ -338,24 +379,23 @@ class PdfReportController extends Controller
                         'lamp_status',
                     ])
                     ->orderBy('created_at', 'desc')
-                    ->offset($offset)
                     ->limit(self::PDF_MAX_DETAIL_ROWS)
                     ->get();
 
                 $pdfData = [
                     'data' => $data,
-                    'summary' => $summary,
-                    'startDate' => $startDate,
-                    'endDate' => $endDate,
-                    'is_truncated' => false,
+                    'summary' => $dailySummary,
+                    'startDate' => $dayStart,
+                    'endDate' => $dayEnd,
+                    'is_truncated' => $dayTotalRecords > $data->count(),
                     'displayed_records' => $data->count(),
                     'part_number' => $requestedPart,
                     'total_parts' => $totalParts,
                 ];
                 
-                $baseFilename = 'laporan_kustom_' . $startDate->format('Y_m_d');
+                $baseFilename = 'laporan_konsumsi_' . $dayStart->format('Y_m_d');
                 $filename = $totalParts > 1
-                    ? $baseFilename . '_part_' . $requestedPart . '_of_' . $totalParts . '.pdf'
+                    ? $baseFilename . '_hari_' . $requestedPart . '_dari_' . $totalParts . '.pdf'
                     : $baseFilename . '.pdf';
 
                 return $this->downloadPdfWithFallback('reports.pdf.custom', $pdfData, $filename);
