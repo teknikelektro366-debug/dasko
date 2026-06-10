@@ -155,6 +155,11 @@
     </div>
 
     <h3>Detail Data Sensor</h3>
+    @if(!empty($report_hours))
+    <p style="font-size: 10px; color: #2563EB; margin: 0 0 8px 0;">
+        Periode detail: {{ $report_hours }}. Data dipilih agar setiap jam terwakili dan baris stagnan diprioritaskan untuk dilewati.
+    </p>
+    @endif
     @if(!empty($is_truncated))
     <p style="font-size: 10px; color: #B45309; margin: 0 0 8px 0;">
         Menampilkan {{ $displayed_records ?? count($data) }} dari total {{ $summary['total_records'] }} record untuk menjaga performa PDF.

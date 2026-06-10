@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 
 class PdfReportController extends Controller
 {
-    private const PDF_MAX_DETAIL_ROWS = 100;
+    private const PDF_MAX_DETAIL_ROWS = 150;
     private const ELECTRICITY_TARIFF_PER_KWH = 1500;
     private const AC_POWER_WATT = 750;
     private const AC_BASELINE_HOURS_PER_DAY = 10;
@@ -393,7 +393,9 @@ class PdfReportController extends Controller
                 $dayStart = $reportDate->copy()->startOfDay();
                 $dayEnd = $reportDate->copy()->endOfDay();
 
-                $dayQuery = SensorData::whereBetween('created_at', [$dayStart, $dayEnd]);
+                $reportStart = $dayStart->copy()->setTime(7, 0, 0);
+                $reportEnd = $dayStart->copy()->setTime(17, 0, 0);
+                $dayQuery = SensorData::whereBetween('created_at', [$reportStart, $reportEnd]);
 
                 if ($deviceType && $deviceType !== 'all') {
                     $dayQuery->where('device_id', $deviceType);
@@ -424,7 +426,7 @@ class PdfReportController extends Controller
                     'device_type' => $deviceType === 'all' ? 'Semua Perangkat' : $deviceType,
                 ];
 
-                $data = (clone $dayQuery)
+                $rawData = (clone $dayQuery)
                     ->select([
                         'id',
                         'device_id',
@@ -439,9 +441,11 @@ class PdfReportController extends Controller
                         'set_temperature',
                         'lamp_status',
                     ])
-                    ->orderBy('created_at', 'desc')
-                    ->limit(self::PDF_MAX_DETAIL_ROWS)
+                    ->orderBy('created_at')
                     ->get();
+                $data = $this->selectConsumptionReportRows($rawData)
+                    ->sortByDesc('created_at')
+                    ->values();
 
                 $pdfData = [
                     'data' => $data,
@@ -450,6 +454,7 @@ class PdfReportController extends Controller
                     'endDate' => $dayEnd,
                     'is_truncated' => $dayTotalRecords > $data->count(),
                     'displayed_records' => $data->count(),
+                    'report_hours' => '07:00 - 17:00 WIB',
                     'part_number' => $requestedPart,
                     'total_parts' => $totalParts,
                 ];
@@ -843,6 +848,112 @@ class PdfReportController extends Controller
             'min' => $min,
             'max' => $max,
         ];
+    }
+
+    private function selectConsumptionReportRows(Collection $data): Collection
+    {
+        if ($data->isEmpty()) {
+            return collect();
+        }
+
+        $selected = collect();
+        $selectedIds = [];
+        $sortedData = $data->sortBy('created_at')->values();
+        $byHour = $sortedData->groupBy(function ($item) {
+            return (int) $item->created_at->format('G');
+        });
+
+        foreach (range(7, 17) as $hour) {
+            $hourData = $byHour->get($hour, collect());
+            if ($hourData->isEmpty()) {
+                continue;
+            }
+
+            $representative = $this->findMostInformativeConsumptionRow($hourData);
+            $selected->push($representative);
+            $selectedIds[$representative->id] = true;
+        }
+
+        $previous = null;
+        foreach ($sortedData as $item) {
+            if (isset($selectedIds[$item->id])) {
+                $previous = $item;
+                continue;
+            }
+
+            if ($previous === null || $this->isConsumptionRowChanged($previous, $item)) {
+                $selected->push($item);
+                $selectedIds[$item->id] = true;
+            }
+
+            $previous = $item;
+        }
+
+        if ($selected->count() <= self::PDF_MAX_DETAIL_ROWS) {
+            return $selected->unique('id')->values();
+        }
+
+        $requiredIds = [];
+        $requiredRows = collect();
+        foreach (range(7, 17) as $hour) {
+            $hourData = $selected->filter(function ($item) use ($hour) {
+                return (int) $item->created_at->format('G') === $hour;
+            });
+
+            if ($hourData->isEmpty()) {
+                continue;
+            }
+
+            $row = $hourData->first();
+            $requiredRows->push($row);
+            $requiredIds[$row->id] = true;
+        }
+
+        $remainingSlots = max(0, self::PDF_MAX_DETAIL_ROWS - $requiredRows->count());
+        $changeRows = $selected
+            ->reject(function ($item) use ($requiredIds) {
+                return isset($requiredIds[$item->id]);
+            })
+            ->values();
+
+        if ($changeRows->count() > $remainingSlots && $remainingSlots > 0) {
+            $step = max(1, (int) ceil($changeRows->count() / $remainingSlots));
+            $changeRows = $changeRows->filter(function ($item, int $index) use ($step) {
+                return $index % $step === 0;
+            })->take($remainingSlots)->values();
+        } else {
+            $changeRows = $changeRows->take($remainingSlots)->values();
+        }
+
+        return $requiredRows
+            ->merge($changeRows)
+            ->unique('id')
+            ->values();
+    }
+
+    private function findMostInformativeConsumptionRow(Collection $hourData)
+    {
+        $previous = null;
+        foreach ($hourData->values() as $item) {
+            if ($previous !== null && $this->isConsumptionRowChanged($previous, $item)) {
+                return $item;
+            }
+
+            $previous = $item;
+        }
+
+        return $hourData->first();
+    }
+
+    private function isConsumptionRowChanged($previous, $current): bool
+    {
+        return (int) ($previous->people_count ?? 0) !== (int) ($current->people_count ?? 0)
+            || (string) ($previous->ac_status ?? '') !== (string) ($current->ac_status ?? '')
+            || (string) ($previous->lamp_status ?? '') !== (string) ($current->lamp_status ?? '')
+            || (int) ($previous->set_temperature ?? 0) !== (int) ($current->set_temperature ?? 0)
+            || abs((float) ($previous->room_temperature ?? 0) - (float) ($current->room_temperature ?? 0)) >= 0.5
+            || abs((float) ($previous->humidity ?? 0) - (float) ($current->humidity ?? 0)) >= 2
+            || abs((float) ($previous->light_level ?? 0) - (float) ($current->light_level ?? 0)) >= 50;
     }
 
     private function calculateDailySummary($data, $date)
