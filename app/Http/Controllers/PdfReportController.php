@@ -226,20 +226,7 @@ class PdfReportController extends Controller
                 ]);
             }
 
-            $data = (clone $query)
-                ->select([
-                    'id',
-                    'created_at',
-                    'people_count',
-                    'room_temperature',
-                    'humidity',
-                    'ac_status',
-                    'lamp_status',
-                ])
-                ->orderBy('created_at')
-                ->get();
-            
-            $summary = $this->calculateEfficiencySummary($data, $startDate, $endDate);
+            $summary = $this->calculateEfficiencySummaryFromQuery(clone $query, $startDate, $endDate);
             $summary['total_records'] = $totalRecords;
             
             $pdfData = [
@@ -1015,6 +1002,152 @@ class PdfReportController extends Controller
         ];
     }
     
+    private function calculateEfficiencySummaryFromQuery($query, Carbon $startDate, Carbon $endDate): array
+    {
+        $periodDays = max(1, $startDate->copy()->startOfDay()->diffInDays($endDate->copy()->startOfDay()) + 1);
+        $stats = [
+            'total_records' => 0,
+            'ac_on_count' => 0,
+            'lamp_on_count' => 0,
+            'ac_valid_count' => 0,
+            'lamp_valid_count' => 0,
+            'ac_people_sum' => 0,
+            'lamp_people_sum' => 0,
+            'temperature_sum' => 0.0,
+            'temperature_count' => 0,
+            'humidity_sum' => 0.0,
+            'humidity_count' => 0,
+        ];
+        $usageHours = ['ac' => 0.0, 'lamp' => 0.0];
+        $previous = null;
+
+        (clone $query)
+            ->select([
+                'id',
+                'created_at',
+                'people_count',
+                'room_temperature',
+                'humidity',
+                'ac_status',
+                'lamp_status',
+            ])
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->chunk(1000, function ($rows) use (&$stats, &$usageHours, &$previous) {
+                foreach ($rows as $row) {
+                    if ($previous !== null) {
+                        $this->addEfficiencyUsageDuration($previous, $row->created_at, $usageHours);
+                    }
+
+                    $peopleCount = is_numeric($row->people_count) ? (int) $row->people_count : 0;
+                    $acStatus = is_string($row->ac_status) ? trim($row->ac_status) : '';
+                    $lampStatus = is_string($row->lamp_status) ? trim($row->lamp_status) : '';
+                    $isAcOn = $this->isStatusOn($acStatus);
+                    $isLampOn = $this->isStatusOn($lampStatus);
+
+                    $stats['total_records']++;
+
+                    if ($acStatus !== '') {
+                        $stats['ac_valid_count']++;
+                        if ($isAcOn) {
+                            $stats['ac_on_count']++;
+                            $stats['ac_people_sum'] += $peopleCount;
+                        }
+                    }
+
+                    if ($lampStatus !== '') {
+                        $stats['lamp_valid_count']++;
+                        if ($isLampOn) {
+                            $stats['lamp_on_count']++;
+                            $stats['lamp_people_sum'] += $peopleCount;
+                        }
+                    }
+
+                    if (is_numeric($row->room_temperature)) {
+                        $stats['temperature_sum'] += (float) $row->room_temperature;
+                        $stats['temperature_count']++;
+                    }
+
+                    if (is_numeric($row->humidity)) {
+                        $stats['humidity_sum'] += (float) $row->humidity;
+                        $stats['humidity_count']++;
+                    }
+
+                    $previous = $row;
+                }
+            });
+
+        if ($previous !== null) {
+            $this->addEfficiencyUsageDuration($previous, $endDate, $usageHours);
+        }
+
+        $acBeforeKwh = $this->calculateEnergyKwh(self::AC_POWER_WATT, self::AC_BASELINE_HOURS_PER_DAY * $periodDays);
+        $acAfterKwh = $this->calculateEnergyKwh(self::AC_POWER_WATT, $usageHours['ac']);
+        $lampBeforeKwh = $this->calculateEnergyKwh(self::LAMP_POWER_WATT, self::LAMP_BASELINE_HOURS_PER_DAY * $periodDays);
+        $lampAfterKwh = $this->calculateEnergyKwh(self::LAMP_POWER_WATT, $usageHours['lamp']);
+        $totalBeforeKwh = $acBeforeKwh + $lampBeforeKwh;
+        $totalAfterKwh = $acAfterKwh + $lampAfterKwh;
+
+        return [
+            'period' => $startDate->format('d M Y') . ' - ' . $endDate->format('d M Y'),
+            'period_days' => $periodDays,
+            'tariff_per_kwh' => self::ELECTRICITY_TARIFF_PER_KWH,
+            'total_records' => $stats['total_records'],
+            'ac_usage_percentage' => $stats['ac_valid_count'] > 0 ? round(($stats['ac_on_count'] / $stats['ac_valid_count']) * 100, 1) : 0,
+            'lamp_usage_percentage' => $stats['lamp_valid_count'] > 0 ? round(($stats['lamp_on_count'] / $stats['lamp_valid_count']) * 100, 1) : 0,
+            'avg_people_when_ac_on' => $stats['ac_on_count'] > 0 ? (int) round($stats['ac_people_sum'] / $stats['ac_on_count']) : 0,
+            'avg_people_when_lamp_on' => $stats['lamp_on_count'] > 0 ? (int) round($stats['lamp_people_sum'] / $stats['lamp_on_count']) : 0,
+            'avg_temperature' => $stats['temperature_count'] > 0 ? round($stats['temperature_sum'] / $stats['temperature_count'], 1) : 0.0,
+            'avg_humidity' => $stats['humidity_count'] > 0 ? round($stats['humidity_sum'] / $stats['humidity_count'], 1) : 0.0,
+            'devices' => [
+                [
+                    'name' => 'Lampu LED',
+                    'power_watt' => self::LAMP_POWER_WATT,
+                    'baseline_hours' => self::LAMP_BASELINE_HOURS_PER_DAY * $periodDays,
+                    'actual_hours' => round($usageHours['lamp'], 2),
+                    'energy_before_kwh' => round($lampBeforeKwh, 3),
+                    'energy_after_kwh' => round($lampAfterKwh, 3),
+                    'cost_before' => round($lampBeforeKwh * self::ELECTRICITY_TARIFF_PER_KWH),
+                    'cost_after' => round($lampAfterKwh * self::ELECTRICITY_TARIFF_PER_KWH),
+                    'efficiency_percentage' => $this->calculateEfficiencyPercentage($lampBeforeKwh, $lampAfterKwh),
+                ],
+                [
+                    'name' => 'AC',
+                    'power_watt' => self::AC_POWER_WATT,
+                    'baseline_hours' => self::AC_BASELINE_HOURS_PER_DAY * $periodDays,
+                    'actual_hours' => round($usageHours['ac'], 2),
+                    'energy_before_kwh' => round($acBeforeKwh, 3),
+                    'energy_after_kwh' => round($acAfterKwh, 3),
+                    'cost_before' => round($acBeforeKwh * self::ELECTRICITY_TARIFF_PER_KWH),
+                    'cost_after' => round($acAfterKwh * self::ELECTRICITY_TARIFF_PER_KWH),
+                    'efficiency_percentage' => $this->calculateEfficiencyPercentage($acBeforeKwh, $acAfterKwh),
+                ],
+            ],
+            'total_energy_before_kwh' => round($totalBeforeKwh, 3),
+            'total_energy_after_kwh' => round($totalAfterKwh, 3),
+            'total_cost_before' => round($totalBeforeKwh * self::ELECTRICITY_TARIFF_PER_KWH),
+            'total_cost_after' => round($totalAfterKwh * self::ELECTRICITY_TARIFF_PER_KWH),
+            'total_efficiency_percentage' => $this->calculateEfficiencyPercentage($totalBeforeKwh, $totalAfterKwh),
+        ];
+    }
+
+    private function addEfficiencyUsageDuration($row, $nextTime, array &$usageHours): void
+    {
+        $durationHours = max(0, Carbon::parse($row->created_at)->floatDiffInHours(Carbon::parse($nextTime)));
+
+        if ($durationHours > 24) {
+            $durationHours = 24;
+        }
+
+        if ($this->isStatusOn($row->ac_status ?? null)) {
+            $usageHours['ac'] += $durationHours;
+        }
+
+        if ($this->isStatusOn($row->lamp_status ?? null)) {
+            $usageHours['lamp'] += $durationHours;
+        }
+    }
+
     private function calculateEfficiencySummary($data, $startDate, $endDate)
     {
         $periodDays = max(1, $startDate->copy()->startOfDay()->diffInDays($endDate->copy()->startOfDay()) + 1);
