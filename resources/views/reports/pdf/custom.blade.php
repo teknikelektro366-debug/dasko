@@ -122,10 +122,6 @@
                 <div class="summary-value">{{ $summary['total_records'] }}</div>
             </div>
             <div class="summary-item">
-                <div class="summary-label">Rata-rata Orang</div>
-                <div class="summary-value">{{ $summary['avg_people'] }}</div>
-            </div>
-            <div class="summary-item">
                 <div class="summary-label">Max Orang</div>
                 <div class="summary-value">{{ $summary['max_people'] }}</div>
             </div>
@@ -189,12 +185,14 @@
             @php
                 $previousItem = $data->get($loop->index + 1);
                 $peopleDiff = $previousItem ? ((int) $item->people_count - (int) $previousItem->people_count) : null;
+                $peopleIn = $peopleDiff !== null && $peopleDiff > 0 ? '+1' : '0';
+                $peopleOut = $peopleDiff !== null && $peopleDiff < 0 ? '-1' : '0';
             @endphp
             <tr>
                 <td>{{ optional($item->created_at)->format('d/m/Y') ?? '-' }}</td>
                 <td>{{ optional($item->created_at)->format('H:i:s') ?? '-' }}</td>
-                <td>{{ $peopleDiff === null ? '--' : ($peopleDiff > 0 ? '+' . $peopleDiff : '0') }}</td>
-                <td>{{ $peopleDiff === null ? '--' : ($peopleDiff < 0 ? '-' . abs($peopleDiff) : '0') }}</td>
+                <td>{{ $peopleDiff === null ? '--' : $peopleIn }}</td>
+                <td>{{ $peopleDiff === null ? '--' : $peopleOut }}</td>
                 <td>{{ $item->room_temperature !== null ? number_format((float) $item->room_temperature, 1) : '-' }}°C</td>
                 <td>{{ $item->humidity !== null ? number_format((float) $item->humidity, 1) : '-' }}%</td>
                 <td>{{ $item->light_level }} lux</td>

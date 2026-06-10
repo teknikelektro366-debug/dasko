@@ -211,37 +211,22 @@ class PdfReportController extends Controller
                 return response()->json(['error' => 'Parameter date_to tidak boleh lebih kecil dari date_from'], 422);
             }
 
-            $reportDates = collect(CarbonPeriod::create($startDate->copy()->startOfDay(), '1 day', $endDate->copy()->startOfDay()))
-                ->map(function (Carbon $date) {
-                    return $date->copy();
-                })
-                ->values();
-            $totalParts = max(1, $reportDates->count());
-            $requestedPart = min(max(1, (int) $request->input('part', 1)), $totalParts);
+            $query = SensorData::whereBetween('created_at', [$startDate, $endDate]);
+            $totalRecords = (clone $query)->count();
 
             if ($request->boolean('meta')) {
-                $totalRecords = SensorData::whereBetween('created_at', [$startDate, $endDate])->count();
-
                 return response()->json([
                     'success' => true,
                     'total_records' => $totalRecords,
-                    'per_file' => '1 hari, maksimal ' . self::PDF_MAX_DETAIL_ROWS . ' record detail',
-                    'total_parts' => $totalParts,
+                    'per_file' => '1 file untuk seluruh rentang tanggal',
+                    'total_parts' => 1,
                     'date_from' => $startDate->format('Y-m-d'),
                     'date_to' => $endDate->format('Y-m-d'),
-                    'dates' => $reportDates->map(function (Carbon $date) {
-                        return $date->format('Y-m-d');
-                    })->all(),
+                    'dates' => [$startDate->format('Y-m-d')],
                 ]);
             }
 
-            $reportDate = $reportDates->get($requestedPart - 1, $startDate->copy());
-            $dayStart = $reportDate->copy()->startOfDay();
-            $dayEnd = $reportDate->copy()->endOfDay();
-
-            $dayQuery = SensorData::whereBetween('created_at', [$dayStart, $dayEnd]);
-            $dayTotalRecords = (clone $dayQuery)->count();
-            $data = (clone $dayQuery)
+            $data = (clone $query)
                 ->select([
                     'id',
                     'created_at',
@@ -251,28 +236,24 @@ class PdfReportController extends Controller
                     'ac_status',
                     'lamp_status',
                 ])
-                ->orderBy('created_at', 'desc')
-                ->limit(self::PDF_MAX_DETAIL_ROWS)
+                ->orderBy('created_at')
                 ->get();
             
-            $summary = $this->calculateEfficiencySummary($data, $dayStart, $dayEnd);
-            $summary['total_records'] = $dayTotalRecords;
+            $summary = $this->calculateEfficiencySummary($data, $startDate, $endDate);
+            $summary['total_records'] = $totalRecords;
             
             $pdfData = [
-                'data' => $data,
+                'data' => collect(),
                 'summary' => $summary,
-                'startDate' => $dayStart,
-                'endDate' => $dayEnd,
-                'is_truncated' => $dayTotalRecords > $data->count(),
-                'displayed_records' => $data->count(),
-                'part_number' => $requestedPart,
-                'total_parts' => $totalParts,
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'is_truncated' => false,
+                'displayed_records' => 0,
+                'part_number' => 1,
+                'total_parts' => 1,
             ];
             
-            $baseFilename = 'laporan_efisiensi_' . $dayStart->format('Y_m_d');
-            $filename = $totalParts > 1
-                ? $baseFilename . '_hari_' . $requestedPart . '_dari_' . $totalParts . '.pdf'
-                : $baseFilename . '.pdf';
+            $filename = 'laporan_efisiensi_' . $startDate->format('Y_m_d') . '_sampai_' . $endDate->format('Y_m_d') . '.pdf';
 
             return $this->downloadPdfWithFallback('reports.pdf.efficiency', $pdfData, $filename);
         } catch (\Throwable $e) {
