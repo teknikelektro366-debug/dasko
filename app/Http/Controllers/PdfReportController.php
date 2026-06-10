@@ -195,25 +195,85 @@ class PdfReportController extends Controller
     public function efficiencyReport(Request $request)
     {
         try {
-            $dateFrom = $request->input('date_from', now()->subDays(7)->format('Y-m-d'));
-            $dateTo = $request->input('date_to', now()->format('Y-m-d'));
-            $startDate = Carbon::parse($dateFrom)->startOfDay();
-            $endDate = Carbon::parse($dateTo)->endOfDay();
+            $dateFrom = (string) $request->input('date_from', now('Asia/Jakarta')->subDays(7)->format('Y-m-d'));
+            $dateTo = (string) $request->input('date_to', now('Asia/Jakarta')->format('Y-m-d'));
+            $startDate = Carbon::createFromFormat('Y-m-d', $dateFrom, 'Asia/Jakarta');
+            $endDate = Carbon::createFromFormat('Y-m-d', $dateTo, 'Asia/Jakarta');
+
+            if ($startDate === false || $endDate === false) {
+                return response()->json(['error' => 'Format date_from/date_to tidak valid, gunakan Y-m-d'], 422);
+            }
+
+            $startDate = $startDate->startOfDay();
+            $endDate = $endDate->endOfDay();
+
+            if ($endDate->lt($startDate)) {
+                return response()->json(['error' => 'Parameter date_to tidak boleh lebih kecil dari date_from'], 422);
+            }
+
+            $reportDates = collect(CarbonPeriod::create($startDate->copy()->startOfDay(), '1 day', $endDate->copy()->startOfDay()))
+                ->map(function (Carbon $date) {
+                    return $date->copy();
+                })
+                ->values();
+            $totalParts = max(1, $reportDates->count());
+            $requestedPart = min(max(1, (int) $request->input('part', 1)), $totalParts);
+
+            if ($request->boolean('meta')) {
+                $totalRecords = SensorData::whereBetween('created_at', [$startDate, $endDate])->count();
+
+                return response()->json([
+                    'success' => true,
+                    'total_records' => $totalRecords,
+                    'per_file' => '1 hari, maksimal ' . self::PDF_MAX_DETAIL_ROWS . ' record detail',
+                    'total_parts' => $totalParts,
+                    'date_from' => $startDate->format('Y-m-d'),
+                    'date_to' => $endDate->format('Y-m-d'),
+                    'dates' => $reportDates->map(function (Carbon $date) {
+                        return $date->format('Y-m-d');
+                    })->all(),
+                ]);
+            }
+
+            $reportDate = $reportDates->get($requestedPart - 1, $startDate->copy());
+            $dayStart = $reportDate->copy()->startOfDay();
+            $dayEnd = $reportDate->copy()->endOfDay();
+
+            $dayQuery = SensorData::whereBetween('created_at', [$dayStart, $dayEnd]);
+            $dayTotalRecords = (clone $dayQuery)->count();
+            $data = (clone $dayQuery)
+                ->select([
+                    'id',
+                    'created_at',
+                    'people_count',
+                    'room_temperature',
+                    'humidity',
+                    'ac_status',
+                    'lamp_status',
+                ])
+                ->orderBy('created_at', 'desc')
+                ->limit(self::PDF_MAX_DETAIL_ROWS)
+                ->get();
             
-            $data = SensorData::whereBetween('created_at', [$startDate, $endDate])
-                               ->orderBy('created_at', 'desc')
-                               ->get();
-            
-            $summary = $this->calculateEfficiencySummary($data, $startDate, $endDate);
+            $summary = $this->calculateEfficiencySummary($data, $dayStart, $dayEnd);
+            $summary['total_records'] = $dayTotalRecords;
             
             $pdfData = [
                 'data' => $data,
                 'summary' => $summary,
-                'startDate' => $startDate,
-                'endDate' => $endDate
+                'startDate' => $dayStart,
+                'endDate' => $dayEnd,
+                'is_truncated' => $dayTotalRecords > $data->count(),
+                'displayed_records' => $data->count(),
+                'part_number' => $requestedPart,
+                'total_parts' => $totalParts,
             ];
             
-            $filename = 'laporan_efisiensi_' . $startDate->format('Y_m_d') . '.pdf';
+            $baseFilename = 'laporan_efisiensi_' . $dayStart->format('Y_m_d');
+            $filename = $totalParts > 1
+                ? $baseFilename . '_hari_' . $requestedPart . '_dari_' . $totalParts . '.pdf'
+                : $baseFilename . '.pdf';
+
             return $this->downloadPdfWithFallback('reports.pdf.efficiency', $pdfData, $filename);
         } catch (\Throwable $e) {
             Log::error('PDF Efficiency Error: ' . $e->getMessage(), [
@@ -223,6 +283,7 @@ class PdfReportController extends Controller
         }
     }
     
+
     /**
      * Generate Custom PDF Report
      * Route: /api/reports/custom
