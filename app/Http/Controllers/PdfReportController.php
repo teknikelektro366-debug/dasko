@@ -46,9 +46,7 @@ class PdfReportController extends Controller
                 MAX(people_count) as max_people,
                 AVG(room_temperature) as avg_temperature,
                 AVG(humidity) as avg_humidity,
-                AVG(light_level) as avg_light,
-                SUM(CASE WHEN UPPER(TRIM(COALESCE(ac_status, ''))) = 'ON' THEN 1 ELSE 0 END) as ac_on_count,
-                SUM(CASE WHEN UPPER(TRIM(COALESCE(lamp_status, ''))) = 'ON' THEN 1 ELSE 0 END) as lamp_on_count
+                AVG(light_level) as avg_light
             ")->first();
 
             $summary = [
@@ -316,9 +314,7 @@ class PdfReportController extends Controller
                 MAX(people_count) as max_people,
                 AVG(room_temperature) as avg_temperature,
                 AVG(humidity) as avg_humidity,
-                AVG(light_level) as avg_light,
-                SUM(CASE WHEN UPPER(TRIM(COALESCE(ac_status, ''))) = 'ON' THEN 1 ELSE 0 END) as ac_on_count,
-                SUM(CASE WHEN UPPER(TRIM(COALESCE(lamp_status, ''))) = 'ON' THEN 1 ELSE 0 END) as lamp_on_count
+                AVG(light_level) as avg_light
             ")->first();
 
             $summary = [
@@ -329,37 +325,46 @@ class PdfReportController extends Controller
                 'avg_temperature' => round((float) ($aggregate->avg_temperature ?? 0), 1),
                 'avg_humidity' => round((float) ($aggregate->avg_humidity ?? 0), 1),
                 'avg_light' => round((float) ($aggregate->avg_light ?? 0), 0),
-                'ac_on_count' => (int) ($aggregate->ac_on_count ?? 0),
-                'lamp_on_count' => (int) ($aggregate->lamp_on_count ?? 0),
                 'device_type' => $deviceType === 'all' ? 'Semua Perangkat' : $deviceType,
             ];
             
             if ($format === 'pdf') {
-                $reportDates = collect(CarbonPeriod::create($startDate->copy()->startOfDay(), '1 day', $endDate->copy()->startOfDay()))
-                    ->map(function (Carbon $date) {
-                        return $date->copy();
-                    })
-                    ->values();
-                $totalParts = max(1, $reportDates->count());
-                $requestedPart = min(max(1, (int) $request->input('part', 1)), $totalParts);
+                $isMultiDay = $startDate->copy()->startOfDay()->ne($endDate->copy()->startOfDay());
 
                 if ($request->boolean('meta')) {
                     return response()->json([
                         'success' => true,
                         'total_records' => $totalRecords,
-                        'per_file' => '1 hari, maksimal ' . self::PDF_MAX_DETAIL_ROWS . ' record detail',
-                        'total_parts' => $totalParts,
+                        'per_file' => $isMultiDay
+                            ? 'Satu file ringkasan untuk seluruh rentang tanggal'
+                            : '1 hari, maksimal ' . self::PDF_MAX_DETAIL_ROWS . ' record detail',
+                        'total_parts' => 1,
                         'date_from' => $startDate->format('Y-m-d'),
                         'date_to' => $endDate->format('Y-m-d'),
-                        'dates' => $reportDates->map(function (Carbon $date) {
-                            return $date->format('Y-m-d');
-                        })->all(),
+                        'dates' => [$startDate->format('Y-m-d')],
                     ]);
                 }
 
-                $reportDate = $reportDates->get($requestedPart - 1, $startDate->copy());
-                $dayStart = $reportDate->copy()->startOfDay();
-                $dayEnd = $reportDate->copy()->endOfDay();
+                if ($isMultiDay) {
+                    $pdfData = [
+                        'data' => collect(),
+                        'summary' => $summary,
+                        'startDate' => $startDate,
+                        'endDate' => $endDate,
+                        'is_truncated' => false,
+                        'displayed_records' => 0,
+                        'summary_only' => true,
+                        'part_number' => 1,
+                        'total_parts' => 1,
+                    ];
+
+                    $filename = 'laporan_konsumsi_' . $startDate->format('Y_m_d') . '_sampai_' . $endDate->format('Y_m_d') . '.pdf';
+
+                    return $this->downloadPdfWithFallback('reports.pdf.custom', $pdfData, $filename);
+                }
+
+                $dayStart = $startDate->copy()->startOfDay();
+                $dayEnd = $startDate->copy()->endOfDay();
 
                 $reportStart = $dayStart->copy()->setTime(7, 0, 0);
                 $reportEnd = $dayStart->copy()->setTime(17, 0, 0);
@@ -376,9 +381,7 @@ class PdfReportController extends Controller
                     MAX(people_count) as max_people,
                     AVG(room_temperature) as avg_temperature,
                     AVG(humidity) as avg_humidity,
-                    AVG(light_level) as avg_light,
-                    SUM(CASE WHEN UPPER(TRIM(COALESCE(ac_status, ''))) = 'ON' THEN 1 ELSE 0 END) as ac_on_count,
-                    SUM(CASE WHEN UPPER(TRIM(COALESCE(lamp_status, ''))) = 'ON' THEN 1 ELSE 0 END) as lamp_on_count
+                    AVG(light_level) as avg_light
                 ")->first();
 
                 $dailySummary = [
@@ -389,8 +392,6 @@ class PdfReportController extends Controller
                     'avg_temperature' => round((float) ($dayAggregate->avg_temperature ?? 0), 1),
                     'avg_humidity' => round((float) ($dayAggregate->avg_humidity ?? 0), 1),
                     'avg_light' => round((float) ($dayAggregate->avg_light ?? 0), 0),
-                    'ac_on_count' => (int) ($dayAggregate->ac_on_count ?? 0),
-                    'lamp_on_count' => (int) ($dayAggregate->lamp_on_count ?? 0),
                     'device_type' => $deviceType === 'all' ? 'Semua Perangkat' : $deviceType,
                 ];
 
@@ -423,18 +424,15 @@ class PdfReportController extends Controller
                     'is_truncated' => $dayTotalRecords > $data->count(),
                     'displayed_records' => $data->count(),
                     'report_hours' => '07:00 - 17:00 WIB',
-                    'part_number' => $requestedPart,
-                    'total_parts' => $totalParts,
+                    'summary_only' => false,
+                    'part_number' => 1,
+                    'total_parts' => 1,
                 ];
-                
-                $baseFilename = 'laporan_konsumsi_' . $dayStart->format('Y_m_d');
-                $filename = $totalParts > 1
-                    ? $baseFilename . '_hari_' . $requestedPart . '_dari_' . $totalParts . '.pdf'
-                    : $baseFilename . '.pdf';
+
+                $filename = 'laporan_konsumsi_' . $dayStart->format('Y_m_d') . '.pdf';
 
                 return $this->downloadPdfWithFallback('reports.pdf.custom', $pdfData, $filename);
             }
-
             return response()->json(['data' => $data, 'summary' => $summary]);
 
         } catch (\Throwable $e) {

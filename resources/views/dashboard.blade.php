@@ -4946,33 +4946,21 @@
                     return false;
                 }
 
-                const meta = await getReportMeta(baseUrl);
-                const totalParts = Number(meta.total_parts || 1);
-                const reportDates = Array.isArray(meta.dates) ? meta.dates : [];
-                const filenameForPart = (part, parts) => {
-                    const reportDate = reportDates[part - 1] || dateFrom;
-                    const dateName = reportDate.replace(/-/g, '_');
-                    return parts > 1
-                        ? `${prefixName}_${dateName}_hari_${part}_dari_${parts}.pdf`
-                        : `${prefixName}_${dateName}.pdf`;
-                };
+                const fromName = dateFrom.replace(/-/g, '_');
+                const toName = dateTo.replace(/-/g, '_');
+                const filename = dateFrom === dateTo
+                    ? `${prefixName}_${fromName}.pdf`
+                    : `${prefixName}_${fromName}_sampai_${toName}.pdf`;
 
-                if (totalParts <= 1) {
-                    const url = `${baseUrl}&part=1`;
-                    console.log('Downloading custom report from:', url);
-                    triggerFileDownload(url, filenameForPart(1, totalParts));
-                    setTimeout(() => {
-                        alert('Download laporan kustom dimulai...');
-                    }, 100);
-                    return false;
-                }
-
-                console.log(`Downloading custom report in ${totalParts} daily files`);
-                downloadReportByParts(baseUrl, filenameForPart, totalParts);
-
+                const url = `${baseUrl}&part=1`;
+                console.log('Downloading custom report from:', url);
+                triggerFileDownload(url, filename);
                 setTimeout(() => {
-                    alert(`Download laporan kustom dimulai dalam ${totalParts} file, masing-masing 1 hari.`);
+                    alert(dateFrom === dateTo
+                        ? 'Download laporan kustom dimulai...'
+                        : 'Download laporan kustom dimulai (1 file ringkasan untuk seluruh rentang tanggal).');
                 }, 100);
+                return false;
             } catch (error) {
                 console.error('Error downloading custom report:', error);
                 alert('Gagal mendownload laporan kustom. Silakan coba lagi.');

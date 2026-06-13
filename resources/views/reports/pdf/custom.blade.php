@@ -139,17 +139,10 @@
                 <div class="summary-label">Rata-rata Cahaya</div>
                 <div class="summary-value">{{ $summary['avg_light'] }} lux</div>
             </div>
-            <div class="summary-item">
-                <div class="summary-label">AC ON</div>
-                <div class="summary-value">{{ $summary['ac_on_count'] }}x</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">Lampu ON</div>
-                <div class="summary-value">{{ $summary['lamp_on_count'] }}x</div>
-            </div>
         </div>
     </div>
 
+@unless($summary_only ?? false)
     <h3>Detail Data Sensor</h3>
     @if(!empty($report_hours))
     <p style="font-size: 10px; color: #2563EB; margin: 0 0 8px 0;">
@@ -219,6 +212,7 @@
             @endforelse
         </tbody>
     </table>
+@endunless
 
     <div class="footer">
         <p>Laporan ini dibuat secara otomatis oleh Smart Energy Monitoring System</p>
